@@ -1,6 +1,6 @@
 /********** Template CSS **********/
 :root {
-    --primary: #B8860B;
+    --primary: #f9d52e;
     --secondary: #51CFED;
     --light: #F8F2F0;
     --dark: #060315;
@@ -163,10 +163,24 @@
 
 
 /*** Header ***/
+.header-carousel .owl-carousel-item {
+    position: relative;
+    height: 700px;
+    overflow: hidden;
+}
+
+.header-carousel .owl-carousel-item img {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
 @media (max-width: 768px) {
     .header-carousel .owl-carousel-item {
         position: relative;
         min-height: 500px;
+        height: 500px;
     }
     
     .header-carousel .owl-carousel-item img {
