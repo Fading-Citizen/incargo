@@ -426,7 +426,7 @@
                 <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="0.3s">
                     <div class="service-item p-4">
                         <div class="overflow-hidden mb-4">
-                            <img class="img-fluid" src="img/service-4.jpg" alt="">
+                            <img class="img-fluid" src="img/transporte-vehiculos-real.jpg" alt="Transporte de Vehículos INCARGO">
                         </div>
                         <h4 class="mb-3">Transporte de Vehículos</h4>
                         <p>Movemos sus vehículos de manera segura y eficiente, cumpliendo con todos los requisitos legales.</p>
@@ -517,32 +517,35 @@
                 </div>
                 <div class="col-lg-7">
                     <div class="bg-light text-center p-5 wow fadeIn" data-wow-delay="0.5s">
-                        <form>
+                        <form action="https://formspree.io/f/xanyarre" method="POST" id="quoteForm">
                             <div class="row g-3">
                                 <div class="col-12 col-sm-6">
-                                    <input type="text" class="form-control border-0" placeholder="Tu Nombre" style="height: 55px;">
+                                    <input type="text" name="nombre" class="form-control border-0" placeholder="Tu Nombre" style="height: 55px;" required>
                                 </div>
                                 <div class="col-12 col-sm-6">
-                                    <input type="email" class="form-control border-0" placeholder="Tu Email" style="height: 55px;">
+                                    <input type="email" name="email" class="form-control border-0" placeholder="Tu Email" style="height: 55px;" required>
                                 </div>
                                 <div class="col-12 col-sm-6">
-                                    <input type="text" class="form-control border-0" placeholder="Tu Teléfono" style="height: 55px;">
+                                    <input type="tel" name="telefono" class="form-control border-0" placeholder="Tu Teléfono" style="height: 55px;" required>
                                 </div>
                                 <div class="col-12 col-sm-6">
-                                    <select class="form-select border-0" style="height: 55px;">
-                                        <option selected>Selecciona un Servicio</option>
-                                        <option value="1">Transporte Nacional</option>
-                                        <option value="2">Carga de Mercancía</option>
-                                        <option value="3">Bodegaje</option>
-                                        <option value="4">Transporte de Vehículos</option>
-                                        <option value="5">Proyectos Logísticos</option>
+                                    <select name="servicio" class="form-select border-0" style="height: 55px;" required>
+                                        <option value="" selected disabled>Selecciona un Servicio</option>
+                                        <option value="Transporte Nacional">Transporte Nacional</option>
+                                        <option value="Carga de Mercancía">Carga de Mercancía</option>
+                                        <option value="Bodegaje">Bodegaje</option>
+                                        <option value="Transporte de Vehículos">Transporte de Vehículos</option>
+                                        <option value="Proyectos Logísticos">Proyectos Logísticos</option>
                                     </select>
                                 </div>
                                 <div class="col-12">
-                                    <textarea class="form-control border-0" placeholder="Mensaje o Notas Especiales"></textarea>
+                                    <textarea name="mensaje" class="form-control border-0" placeholder="Mensaje o Notas Especiales" rows="3"></textarea>
                                 </div>
                                 <div class="col-12">
                                     <button class="btn btn-primary w-100 py-3" type="submit">Enviar Solicitud</button>
+                                </div>
+                                <div class="col-12">
+                                    <div id="formMessage" style="display: none;" class="alert mt-3"></div>
                                 </div>
                             </div>
                         </form>
@@ -670,6 +673,53 @@
 
     <!-- Template Javascript -->
     <script src="js/main.js"></script>
+    
+    <!-- Quote Form Handler -->
+    <script>
+        document.getElementById('quoteForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const form = this;
+            const formMessage = document.getElementById('formMessage');
+            const submitButton = form.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.innerHTML;
+            
+            // Deshabilitar botón y mostrar loading
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Enviando...';
+            
+            // Enviar usando fetch
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'Accept': 'application/json'
+                }
+            }).then(response => {
+                if (response.ok) {
+                    formMessage.className = 'alert alert-success mt-3';
+                    formMessage.innerHTML = '<strong>¡Solicitud enviada con éxito!</strong><br>Nos pondremos en contacto contigo pronto.';
+                    formMessage.style.display = 'block';
+                    form.reset();
+                    
+                    // Ocultar mensaje después de 5 segundos
+                    setTimeout(() => {
+                        formMessage.style.display = 'none';
+                    }, 5000);
+                } else {
+                    throw new Error('Error en el envío');
+                }
+            }).catch(error => {
+                formMessage.className = 'alert alert-danger mt-3';
+                formMessage.innerHTML = '<strong>Error al enviar.</strong><br>Por favor, intenta nuevamente o contáctanos por teléfono.';
+                formMessage.style.display = 'block';
+            }).finally(() => {
+                // Rehabilitar botón
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonText;
+            });
+        });
+    </script>
 </body>
 
 </html>
