@@ -18,6 +18,43 @@
     z-index: 99;
 }
 
+/*** WhatsApp Float Button ***/
+.whatsapp-float {
+    position: fixed;
+    width: 60px;
+    height: 60px;
+    bottom: 120px;
+    right: 45px;
+    background-color: #25d366;
+    color: #FFF;
+    border-radius: 50px;
+    text-align: center;
+    font-size: 30px;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+.whatsapp-float:hover {
+    background-color: #128c7e;
+    color: #FFF;
+    box-shadow: 2px 2px 15px rgba(0, 0, 0, 0.5);
+    transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+    .whatsapp-float {
+        width: 50px;
+        height: 50px;
+        bottom: 100px;
+        right: 20px;
+        font-size: 25px;
+    }
+}
+
 
 /*** Spinner ***/
 #spinner {
