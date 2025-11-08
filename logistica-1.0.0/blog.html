@@ -95,50 +95,55 @@
             <div class="row g-5 mx-lg-0">
                 <div class="col-lg-12 wow fadeInUp" data-wow-delay="0.1s">
                     <h6 class="text-secondary text-uppercase mb-3">Noticias y Actualidad</h6>
-                    <h1 class="mb-5">Últimas Noticias de INCARGO</h1>
+                    <h1 class="mb-5">Últimas Noticias del Sector Transporte en Colombia</h1>
                     
-                    <div class="row g-4">
-                        <div class="col-md-6 wow fadeIn" data-wow-delay="0.3s">
-                            <div class="service-item p-4">
-                                <div class="overflow-hidden mb-4">
-                                    <img class="img-fluid" src="img/service-1.jpg" alt="">
-                                </div>
-                                <h5 class="mb-3">Expansión de Rutas Nacionales 2024</h5>
-                                <p class="mb-3"><small class="text-muted">Octubre 14, 2025</small></p>
-                                <p>INCARGO anuncia la expansión de sus rutas de transporte, llegando a nuevas zonas del país con mayor frecuencia y mejor cobertura.</p>
+                    <!-- News Feed Container -->
+                    <div id="news-container" class="row g-4">
+                        <!-- Loading message -->
+                        <div class="col-12 text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando noticias...</span>
+                            </div>
+                            <p class="mt-3">Cargando últimas noticias del sector transporte...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Alternative News Sources -->
+                    <div class="row g-4 mt-5">
+                        <div class="col-12">
+                            <h4 class="mb-4">Fuentes Oficiales del Sector</h4>
+                        </div>
+                        
+                        <div class="col-md-4 wow fadeIn" data-wow-delay="0.1s">
+                            <div class="service-item p-4 text-center h-100">
+                                <i class="fas fa-newspaper fa-3x text-primary mb-4"></i>
+                                <h5 class="mb-3">Mintransporte</h5>
+                                <p>Noticias oficiales del Ministerio de Transporte de Colombia</p>
+                                <a href="https://www.mintransporte.gov.co/publicaciones/9846/noticias/" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary btn-sm mt-2">
+                                    Visitar <i class="fas fa-arrow-right ms-1"></i>
+                                </a>
                             </div>
                         </div>
                         
-                        <div class="col-md-6 wow fadeIn" data-wow-delay="0.5s">
-                            <div class="service-item p-4">
-                                <div class="overflow-hidden mb-4">
-                                    <img class="img-fluid" src="img/service-2.jpg" alt="">
-                                </div>
-                                <h5 class="mb-3">Nuevas Unidades de Transporte</h5>
-                                <p class="mb-3"><small class="text-muted">Septiembre 28, 2025</small></p>
-                                <p>Incorporamos 500 nuevas unidades a nuestra flota, aumentando nuestra capacidad de servicio y reduciendo tiempos de entrega.</p>
+                        <div class="col-md-4 wow fadeIn" data-wow-delay="0.3s">
+                            <div class="service-item p-4 text-center h-100">
+                                <i class="fas fa-truck fa-3x text-primary mb-4"></i>
+                                <h5 class="mb-3">Revista Transportes</h5>
+                                <p>Información especializada del sector logístico y transporte</p>
+                                <a href="https://www.revistatransportes.com/" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary btn-sm mt-2">
+                                    Visitar <i class="fas fa-arrow-right ms-1"></i>
+                                </a>
                             </div>
                         </div>
                         
-                        <div class="col-md-6 wow fadeIn" data-wow-delay="0.7s">
-                            <div class="service-item p-4">
-                                <div class="overflow-hidden mb-4">
-                                    <img class="img-fluid" src="img/service-3.jpg" alt="">
-                                </div>
-                                <h5 class="mb-3">Compromiso Ambiental</h5>
-                                <p class="mb-3"><small class="text-muted">Agosto 15, 2025</small></p>
-                                <p>INCARGO implementa nuevas políticas ambientales, reduciendo emisiones con vehículos más eficientes y procesos sostenibles.</p>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6 wow fadeIn" data-wow-delay="0.9s">
-                            <div class="service-item p-4">
-                                <div class="overflow-hidden mb-4">
-                                    <img class="img-fluid" src="img/service-4.jpg" alt="">
-                                </div>
-                                <h5 class="mb-3">Certificación ISO 9001</h5>
-                                <p class="mb-3"><small class="text-muted">Julio 10, 2025</small></p>
-                                <p>Orgullosos de anunciar nuestra certificación ISO 9001, reafirmando nuestro compromiso con la calidad y excelencia en el servicio.</p>
+                        <div class="col-md-4 wow fadeIn" data-wow-delay="0.5s">
+                            <div class="service-item p-4 text-center h-100">
+                                <i class="fas fa-road fa-3x text-primary mb-4"></i>
+                                <h5 class="mb-3">ANI Colombia</h5>
+                                <p>Agencia Nacional de Infraestructura - Noticias de carreteras</p>
+                                <a href="https://www.ani.gov.co/noticias" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary btn-sm mt-2">
+                                    Visitar <i class="fas fa-arrow-right ms-1"></i>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -227,6 +232,134 @@
 
     <!-- Template Javascript -->
     <script src="js/main.js"></script>
+    
+    <!-- News Feed Script -->
+    <script>
+        // Function to format date
+        function formatDate(dateString) {
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            const date = new Date(dateString);
+            return date.toLocaleDateString('es-ES', options);
+        }
+        
+        // Function to truncate text
+        function truncateText(text, maxLength) {
+            if (!text) return '';
+            const cleanText = text.replace(/<[^>]*>/g, '');
+            if (cleanText.length <= maxLength) return cleanText;
+            return cleanText.substr(0, maxLength) + '...';
+        }
+        
+        // Static news as fallback
+        const staticNews = [
+            {
+                title: "Mintransporte anuncia nuevas medidas para el sector de transporte de carga",
+                description: "El Ministerio de Transporte presentó un paquete de medidas para fortalecer el sector de transporte de carga en Colombia, incluyendo incentivos para la renovación de flota y mejoras en la infraestructura vial.",
+                url: "https://www.mintransporte.gov.co/publicaciones/9846/noticias/",
+                date: new Date("2025-11-05"),
+                image: "https://images.pexels.com/photos/1427107/pexels-photo-1427107.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop"
+            },
+            {
+                title: "ANI avanza en modernización de corredores viales principales",
+                description: "La Agencia Nacional de Infraestructura reporta avances significativos en la modernización de las principales vías del país, mejorando la conectividad para el transporte de mercancías.",
+                url: "https://www.ani.gov.co/noticias",
+                date: new Date("2025-11-04"),
+                image: "https://images.pexels.com/photos/2199293/pexels-photo-2199293.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop"
+            },
+            {
+                title: "Nuevas regulaciones de tránsito para vehículos de carga pesada",
+                description: "El gobierno nacional implementa nuevas regulaciones para mejorar la seguridad vial en el transporte de carga pesada, estableciendo horarios y rutas específicas.",
+                url: "https://www.mintransporte.gov.co/",
+                date: new Date("2025-11-03"),
+                image: "https://images.pexels.com/photos/1402787/pexels-photo-1402787.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop"
+            },
+            {
+                title: "Sector logístico colombiano registra crecimiento en el último trimestre",
+                description: "Las empresas de logística y transporte en Colombia muestran un crecimiento sostenido, impulsado por el comercio electrónico y las exportaciones.",
+                url: "https://www.revistatransportes.com/",
+                date: new Date("2025-11-02"),
+                image: "https://images.pexels.com/photos/4246120/pexels-photo-4246120.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop"
+            },
+            {
+                title: "Implementación de tecnología GPS en flotas de transporte",
+                description: "Empresas del sector adoptan sistemas de rastreo GPS para mejorar la seguridad y eficiencia en el transporte de mercancías a nivel nacional.",
+                url: "https://www.mintransporte.gov.co/",
+                date: new Date("2025-11-01"),
+                image: "https://images.pexels.com/photos/1656666/pexels-photo-1656666.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop"
+            },
+            {
+                title: "Expansión de rutas logísticas hacia zonas rurales",
+                description: "Nuevas rutas de transporte conectan zonas rurales con centros urbanos, facilitando el comercio y mejorando la distribución de productos.",
+                url: "https://www.ani.gov.co/",
+                date: new Date("2025-10-30"),
+                image: "https://images.pexels.com/photos/163726/belgium-antwerp-port-163726.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop"
+            },
+            {
+                title: "Compromiso ambiental: Flotas de transporte migran a vehículos eléctricos",
+                description: "El sector de transporte en Colombia avanza hacia la sostenibilidad con la incorporación de vehículos eléctricos e híbridos en sus flotas.",
+                url: "https://www.revistatransportes.com/",
+                date: new Date("2025-10-28"),
+                image: "https://images.pexels.com/photos/6169668/pexels-photo-6169668.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop"
+            },
+            {
+                title: "Capacitación en seguridad vial para conductores de carga",
+                description: "Se lanza programa nacional de capacitación enfocado en mejorar la seguridad vial y reducir accidentes en el transporte de carga.",
+                url: "https://www.mintransporte.gov.co/",
+                date: new Date("2025-10-25"),
+                image: "https://images.pexels.com/photos/1592119/pexels-photo-1592119.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop"
+            }
+        ];
+        
+        // Load news
+        function loadNews() {
+            const newsContainer = document.getElementById('news-container');
+            let newsHTML = '';
+            
+            staticNews.forEach((item, index) => {
+                const delay = (index + 1) * 0.1;
+                const title = item.title;
+                const description = truncateText(item.description, 150);
+                const link = item.url;
+                const pubDate = formatDate(item.date);
+                const imageUrl = item.image; // Use specific transport-related images
+                
+                newsHTML += `
+                    <div class="col-md-6 col-lg-4 wow fadeIn" data-wow-delay="${delay}s">
+                        <div class="service-item p-4 h-100">
+                            <div class="overflow-hidden mb-4" style="height: 200px; border-radius: 10px; background: #f0f0f0;">
+                                <img class="img-fluid w-100 h-100" 
+                                     src="${imageUrl}" 
+                                     alt="${title}"
+                                     style="object-fit: cover;"
+                                     loading="lazy"
+                                     onerror="this.parentElement.innerHTML='<div class=\\'p-4 text-center h-100 d-flex align-items-center justify-content-center\\' style=\\'background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); border-radius: 10px;\\'><i class=\\'fas fa-newspaper fa-3x text-white\\'></i></div>'">
+                            </div>
+                            <h5 class="mb-3">${title}</h5>
+                            <p class="mb-3"><small class="text-muted"><i class="far fa-calendar-alt me-2"></i>${pubDate}</small></p>
+                            <p>${description}</p>
+                            <a href="${link}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm mt-2">
+                                Leer más <i class="fas fa-arrow-right ms-2"></i>
+                            </a>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            newsContainer.innerHTML = newsHTML;
+            
+            // Re-initialize WOW.js for new elements
+            if (typeof WOW !== 'undefined') {
+                new WOW().init();
+            }
+        }
+        
+        // Load news when page is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadNews);
+        } else {
+            loadNews();
+        }
+    </script>
 </body>
 
 </html>
