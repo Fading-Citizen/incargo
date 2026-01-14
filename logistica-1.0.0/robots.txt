@@ -1,0 +1,32 @@
+# robots.txt para INCARGO
+# Permitir acceso a todos los bots de búsqueda
+
+User-agent: *
+Allow: /
+
+# Disallow access to admin or private directories if any exist
+Disallow: /admin/
+Disallow: /private/
+
+# Sitemap location
+Sitemap: https://incargo.com/sitemap.xml
+
+# Googlebot specific rules
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+# Bingbot specific rules
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 0
+
+# Specific rules for image indexing
+User-agent: Googlebot-Image
+Allow: /img/
+
+# Allow all search engines to access CSS and JavaScript files
+User-agent: *
+Allow: /css/
+Allow: /js/
+Allow: /lib/
