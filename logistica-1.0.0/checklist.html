@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0d6efd">
+<title>Inspección Preoperacional - Incargo</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+<style>
+  * { -webkit-tap-highlight-color: transparent; }
+  body { background: #f4f6f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding-bottom: 120px; }
+  .header-strip { background: linear-gradient(135deg,#0d6efd,#0a58ca); color:#fff; padding: 16px; position: sticky; top:0; z-index:100; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+  .header-strip h5 { margin:0; font-size:1.1rem; }
+  .header-strip small { opacity:.85; }
+  .section-card { background:#fff; border-radius:12px; padding:14px 14px 6px; margin-bottom:14px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  .section-title { font-weight:700; color:#0d6efd; text-transform:uppercase; font-size:.82rem; letter-spacing:.5px; margin: 4px 0 12px; display:flex; align-items:center; gap:8px; }
+  .section-title i { background:#e7f1ff; padding:6px 8px; border-radius:6px; font-size:.9rem; }
+  .item-row { background:#fafbfc; border-radius:10px; padding:10px 12px; margin-bottom:8px; }
+  .item-label { font-size:.92rem; font-weight:500; margin-bottom:8px; }
+  .btn-group-3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px; }
+  .btn-group-3 .btn { padding: 10px 0; font-size:.82rem; font-weight:600; border-radius:8px; }
+  .btn-check:checked + .btn-bueno { background:#198754; color:#fff; border-color:#198754; }
+  .btn-check:checked + .btn-malo { background:#dc3545; color:#fff; border-color:#dc3545; }
+  .btn-check:checked + .btn-na { background:#6c757d; color:#fff; border-color:#6c757d; }
+  .obs-input { width:100%; border:1px solid #e0e3e7; border-radius:8px; padding:8px 10px; font-size:.85rem; margin-top:6px; }
+  .obs-input:focus { outline:none; border-color:#0d6efd; }
+  .progress-bar-bottom { position:fixed; bottom:0; left:0; right:0; background:#fff; padding:12px 16px; box-shadow:0 -2px 12px rgba(0,0,0,.08); z-index:90; }
+  .progress { height:6px; border-radius:4px; }
+  .fab-submit { position:fixed; bottom:70px; right:16px; width:60px; height:60px; border-radius:50%; background:#198754; color:#fff; border:none; font-size:1.4rem; box-shadow:0 4px 12px rgba(25,135,84,.4); z-index:95; display:flex; align-items:center; justify-content:center; }
+  .form-control, .form-select { border-radius:10px; padding:10px 12px; font-size:.95rem; }
+  .form-label { font-size:.82rem; font-weight:600; color:#495057; margin-bottom:4px; }
+  .signature-pad { border:2px dashed #adb5bd; border-radius:10px; background:#fff; width:100%; height:140px; cursor:crosshair; touch-action:none; }
+  .signature-clear { font-size:.8rem; padding:4px 10px; }
+  .photo-preview { max-width:100%; max-height:200px; border-radius:10px; margin-top:8px; display:none; }
+  .toast-ok { position:fixed; top:80px; left:50%; transform:translateX(-50%); background:#198754; color:#fff; padding:14px 24px; border-radius:30px; box-shadow:0 4px 16px rgba(0,0,0,.2); z-index:200; font-weight:600; display:none; }
+  .spinner-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:300; flex-direction:column; color:#fff; }
+  .dark-input { background:#f1f3f6; border:1px solid #e0e3e7; }
+  textarea { resize:vertical; }
+</style>
+</head>
+<body>
+
+<div class="header-strip">
+  <h5><i class="fa-solid fa-clipboard-check me-2"></i>Inspección Preoperacional</h5>
+  <small>Código: SV-INSPP-01 · Versión 001</small>
+</div>
+
+<form id="checklistForm" class="container py-3" style="max-width:720px;">
+
+  <!-- DATOS GENERALES -->
+  <div class="section-card">
+    <div class="section-title"><i class="fa-solid fa-id-card"></i>Datos Generales</div>
+    <div class="row g-2">
+      <div class="col-6">
+        <label class="form-label">Fecha</label>
+        <input type="date" class="form-control" name="fecha" id="fecha" required>
+      </div>
+      <div class="col-6">
+        <label class="form-label">Ciudad</label>
+        <input type="text" class="form-control" name="ciudad" placeholder="Ej. Medellín" required>
+      </div>
+      <div class="col-12">
+        <label class="form-label">Empresa</label>
+        <input type="text" class="form-control" name="empresa" value="Incargo" required>
+      </div>
+      <div class="col-12">
+        <label class="form-label">Nombre del Conductor</label>
+        <input type="text" class="form-control" name="conductor" placeholder="Nombre completo" required>
+      </div>
+      <div class="col-6">
+        <label class="form-label">N° de Licencia</label>
+        <input type="text" class="form-control" name="licencia" required>
+      </div>
+      <div class="col-6">
+        <label class="form-label">Placa</label>
+        <input type="text" class="form-control text-uppercase" name="placa" placeholder="ABC-123" required>
+      </div>
+      <div class="col-6">
+        <label class="form-label">Clase de Vehículo</label>
+        <select class="form-select" name="claseVehiculo" required>
+          <option value="">Seleccionar…</option>
+          <option>Camión</option>
+          <option>Camioneta</option>
+          <option>Furgón</option>
+          <option>Tractocamión</option>
+          <option>Volqueta</option>
+          <option>Motocicleta</option>
+        </select>
+      </div>
+      <div class="col-6">
+        <label class="form-label">Modelo</label>
+        <input type="text" class="form-control" name="modelo" placeholder="Ej. 2022">
+      </div>
+      <div class="col-6">
+        <label class="form-label">Fecha SOAT</label>
+        <input type="date" class="form-control" name="fechaSoat">
+      </div>
+      <div class="col-6">
+        <label class="form-label">Fecha Tecnomecánica</label>
+        <input type="date" class="form-control" name="fechaTecno">
+      </div>
+      <div class="col-6">
+        <label class="form-label">GPS</label>
+        <input type="text" class="form-control" name="gps" placeholder="S/N">
+      </div>
+      <div class="col-6">
+        <label class="form-label">Tarjeta de Propiedad</label>
+        <input type="text" class="form-control" name="tarjetaProp" placeholder="S/N">
+      </div>
+    </div>
+  </div>
+
+  <!-- MOTOR -->
+  <div class="section-card" data-section="MOTOR">
+    <div class="section-title"><i class="fa-solid fa-engine"></i>Motor</div>
+    <div id="section-MOTOR"></div>
+  </div>
+
+  <!-- LLANTAS -->
+  <div class="section-card" data-section="LLANTAS">
+    <div class="section-title"><i class="fa-solid fa-circle-notch"></i>Llantas</div>
+    <div id="section-LLANTAS"></div>
+  </div>
+
+  <!-- CABINA -->
+  <div class="section-card" data-section="CABINA">
+    <div class="section-title"><i class="fa-solid fa-car-rear"></i>Cabina</div>
+    <div id="section-CABINA"></div>
+  </div>
+
+  <!-- CARROCERÍA -->
+  <div class="section-card" data-section="CARROCERIA">
+    <div class="section-title"><i class="fa-solid fa-truck-front"></i>Carrocería</div>
+    <div id="section-CARROCERIA"></div>
+  </div>
+
+  <!-- EQUIPO DE CARRETERA -->
+  <div class="section-card" data-section="EQUIPO">
+    <div class="section-title"><i class="fa-solid fa-suitcase-rolling"></i>Equipo de Carretera</div>
+    <div id="section-EQUIPO"></div>
+  </div>
+
+  <!-- FOTO PLACA -->
+  <div class="section-card">
+    <div class="section-title"><i class="fa-solid fa-camera"></i>Evidencia (opcional)</div>
+    <input type="file" accept="image/*" capture="environment" id="fotoPlaca" class="form-control">
+    <img id="fotoPreview" class="photo-preview" alt="vista previa">
+  </div>
+
+  <!-- FIRMA -->
+  <div class="section-card">
+    <div class="section-title"><i class="fa-solid fa-signature"></i>Firma del Conductor</div>
+    <canvas id="signaturePad" class="signature-pad"></canvas>
+    <button type="button" class="btn btn-sm btn-outline-secondary signature-clear mt-2" id="clearSignature">
+      <i class="fa-solid fa-eraser"></i> Borrar firma
+    </button>
+  </div>
+
+  <!-- BOTÓN -->
+  <div class="d-grid mt-3">
+    <button type="submit" class="btn btn-primary btn-lg fw-bold">
+      <i class="fa-solid fa-paper-plane me-2"></i>Enviar Inspección
+    </button>
+  </div>
+
+</form>
+
+<!-- progreso y FAB -->
+<div class="progress-bar-bottom">
+  <div class="d-flex justify-content-between mb-1">
+    <small class="text-muted">Progreso</small>
+    <small id="progressText">0%</small>
+  </div>
+  <div class="progress"><div id="progressBar" class="progress-bar bg-success" style="width:0%"></div></div>
+</div>
+
+<div class="toast-ok" id="toastOk">✅ Inspección enviada con éxito</div>
+<div class="spinner-overlay" id="spinner">
+  <div class="spinner-border text-light mb-2" role="status"></div>
+  <span>Enviando…</span>
+</div>
+
+<script>
+// ============= CONFIGURACIÓN =============
+// Reemplaza esta URL con la de tu Web App de Google Apps Script
+const ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbwTBTO-wMKFs9ogYH3qELSk8rx14WnWWy6mM6qIKu_dr0wsgWq-heR_Q1V9LvCKKoNp/exec';
+// ==========================================
+
+// Set fecha hoy
+document.getElementById('fecha').valueAsDate = new Date();
+
+// Items del checklist
+const ITEMS = {
+  MOTOR: [
+    "Nivel aceite motor",
+    "Nivel de agua radiador",
+    "Nivel aceite dirección",
+    "Nivel aceite transmisión",
+    "Nivel de refrigerante",
+    "Nivel agua parabrisas",
+    "Filtro aire motor",
+    "Batería y niveles de electrolito",
+    "Estado y tensión de correas y bandas"
+  ],
+  LLANTAS: [
+    "Presión de las llantas",
+    "Estado de los rines",
+    "Tuercas completas y apretadas",
+    "Revisión por cortaduras, golpes",
+    "Llanta de repuesto"
+  ],
+  CABINA: [
+    "Estado interno del vehículo",
+    "Indicadores de tableros / instrumentos",
+    "Bocina",
+    "Monitor de velocidad",
+    "Vidrios y puertas en buen estado",
+    "Alarma de reversa",
+    "Cinturones de seguridad"
+  ],
+  CARROCERIA: [
+    "Estado exterior del vehículo",
+    "Placas completas y en buen estado",
+    "Luces delanteras (altas y bajas)",
+    "Luces exploradoras",
+    "Luces direccionales",
+    "Luces de parqueo",
+    "Piso del furgón o carrocería",
+    "Carpa o furgo",
+    "Luces de frenos",
+    "Freno de motor",
+    "Freno de emergencia",
+    "Vidrio panorámico y espejos laterales"
+  ],
+  EQUIPO: [
+    "Extintor de incendios y soporte",
+    "Chaleco reflectivo",
+    "Linterna",
+    "Guantes",
+    "Gato y cruceta",
+    "2 conos o triángulos",
+    "Juego de llaves fijas",
+    "Alicate",
+    "Llave expansiva",
+    "Calibrador",
+    "2 tacos para el bloqueo del vehículo",
+    "Paleta PARE y SIGA",
+    "Botiquín de primeros auxilios"
+  ]
+};
+
+// Renderizar secciones
+let itemCounter = 0;
+const allItems = [];
+Object.entries(ITEMS).forEach(([sec, list]) => {
+  const container = document.getElementById('section-' + sec);
+  list.forEach(label => {
+    const id = 'item_' + (itemCounter++);
+    allItems.push(id);
+    container.insertAdjacentHTML('beforeend', `
+      <div class="item-row" data-item>
+        <div class="item-label">${label}</div>
+        <div class="btn-group btn-group-3" role="group">
+          <input type="radio" class="btn-check" name="${id}" id="${id}_b" value="BUENO">
+          <label class="btn btn-outline-success btn-bueno" for="${id}_b">Bueno</label>
+
+          <input type="radio" class="btn-check" name="${id}" id="${id}_m" value="MALO">
+          <label class="btn btn-outline-danger btn-malo" for="${id}_m">Malo</label>
+
+          <input type="radio" class="btn-check" name="${id}" id="${id}_n" value="NO APLICA">
+          <label class="btn btn-outline-secondary btn-na" for="${id}_n">N/A</label>
+        </div>
+        <input type="text" class="obs-input" placeholder="Observación (opcional)" data-obs="${id}">
+      </div>
+    `);
+  });
+});
+
+// Progreso
+function updateProgress() {
+  const answered = document.querySelectorAll('[data-item] input[type=radio]:checked').length;
+  const pct = Math.round((answered / allItems.length) * 100);
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressText').textContent = `${answered}/${allItems.length} · ${pct}%`;
+}
+document.querySelectorAll('[data-item] input[type=radio]').forEach(r => r.addEventListener('change', updateProgress));
+
+// Firma
+const canvas = document.getElementById('signaturePad');
+const ctx = canvas.getContext('2d');
+function fitCanvas() {
+  const ratio = window.devicePixelRatio || 1;
+  canvas.width = canvas.offsetWidth * ratio;
+  canvas.height = canvas.offsetHeight * ratio;
+  ctx.scale(ratio, ratio);
+}
+fitCanvas();
+window.addEventListener('resize', fitCanvas);
+let drawing = false, lastX = 0, lastY = 0;
+canvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; const t = e.touches[0]; lastX = t.clientX - canvas.getBoundingClientRect().left; lastY = t.clientY - canvas.getBoundingClientRect().top; });
+canvas.addEventListener('touchmove', e => { e.preventDefault(); if (!drawing) return; const t = e.touches[0]; draw(t.clientX - canvas.getBoundingClientRect().left, t.clientY - canvas.getBoundingClientRect().top); });
+canvas.addEventListener('touchend', () => drawing = false);
+canvas.addEventListener('mousedown', e => { drawing = true; lastX = e.offsetX; lastY = e.offsetY; });
+canvas.addEventListener('mousemove', e => { if (!drawing) return; draw(e.offsetX, e.offsetY); });
+canvas.addEventListener('mouseup', () => drawing = false);
+canvas.addEventListener('mouseleave', () => drawing = false);
+function draw(x, y) {
+  ctx.beginPath();
+  ctx.moveTo(lastX, lastY);
+  ctx.lineTo(x, y);
+  ctx.strokeStyle = '#111';
+  ctx.lineWidth = 2.2;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  lastX = x; lastY = y;
+}
+document.getElementById('clearSignature').addEventListener('click', () => ctx.clearRect(0, 0, canvas.width, canvas.height));
+
+// Foto placa
+let fotoBase64 = '';
+document.getElementById('fotoPlaca').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    fotoBase64 = ev.target.result;
+    const img = document.getElementById('fotoPreview');
+    img.src = fotoBase64;
+    img.style.display = 'block';
+  };
+  r.readAsDataURL(f);
+});
+
+// Toast
+function toast(msg) {
+  const t = document.getElementById('toastOk');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 2500);
+}
+
+// Submit
+document.getElementById('checklistForm').addEventListener('submit', async e => {
+  e.preventDefault();
+
+  // Validar 100%
+  const answered = document.querySelectorAll('[data-item] input[type=radio]:checked').length;
+  if (answered < allItems.length) {
+    if (!confirm(`Faltan ${allItems.length - answered} items por responder. ¿Enviar de todas formas?`)) return;
+  }
+
+  // Recolectar
+  const items = [];
+  document.querySelectorAll('[data-item]').forEach(row => {
+    const radio = row.querySelector('input[type=radio]:checked');
+    const obs = row.querySelector('[data-obs]').value || '';
+    if (radio) {
+      items.push({ label: row.querySelector('.item-label').textContent, value: radio.value, obs });
+    }
+  });
+
+  const firmaBase64 = canvas.toDataURL('image/png');
+  if (!firmaBase64 || firmaBase64.length < 5000) {
+    if (!confirm('No se detectó firma. ¿Enviar sin firma?')) return;
+  }
+
+  const fd = new FormData(e.target);
+  const payload = Object.fromEntries(fd.entries());
+  payload.items = items;
+  payload.firma = firmaBase64;
+  payload.fotoPlaca = fotoBase64;
+
+  // Mostrar spinner
+  document.getElementById('spinner').style.display = 'flex';
+
+  try {
+    if (ENDPOINT_URL.includes('PEGAR_AQUI')) {
+      // Modo demo si no hay endpoint configurado
+      console.warn('Falta configurar ENDPOINT_URL');
+      await new Promise(r => setTimeout(r, 800));
+      console.log('Datos:', payload);
+      document.getElementById('spinner').style.display = 'none';
+      toast('✅ Inspección enviada (modo demo)');
+      setTimeout(() => location.reload(), 1500);
+      return;
+    }
+
+    await fetch(ENDPOINT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+
+    document.getElementById('spinner').style.display = 'none';
+    toast('✅ Inspección enviada con éxito');
+    setTimeout(() => location.reload(), 2000);
+  } catch (err) {
+    document.getElementById('spinner').style.display = 'none';
+    alert('Error al enviar: ' + err.message);
+  }
+});
+</script>
+</body>
+</html>

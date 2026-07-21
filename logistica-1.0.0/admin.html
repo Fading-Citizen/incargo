@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard de Inspecciones · Incargo</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+<style>
+  body { background:#f4f6f9; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  .navbar-dark { background: linear-gradient(135deg,#0d6efd,#0a58ca); }
+  .stat-card { border-radius:12px; padding:18px; color:#fff; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+  .stat-card .num { font-size:2.1rem; font-weight:700; }
+  .table-card { background:#fff; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  .filter-bar { background:#fff; border-radius:12px; padding:14px; margin-bottom:14px; }
+  .badge-malo { background:#dc3545; }
+  .badge-bueno { background:#198754; }
+  .badge-na { background:#6c757d; }
+  .lock-screen { min-height:100vh; display:flex; align-items:center; justify-content:center; background:#0d6efd; }
+  .lock-card { background:#fff; border-radius:14px; padding:30px; max-width:360px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,.2); }
+  details summary { cursor:pointer; padding:6px 8px; background:#f8f9fa; border-radius:6px; margin-bottom:4px; }
+  pre { font-size:.78rem; max-height:200px; overflow:auto; background:#f1f3f6; padding:8px; border-radius:6px; }
+  th { font-size:.8rem; text-transform:uppercase; color:#6c757d; }
+</style>
+</head>
+<body>
+
+<!-- PANTALLA DE LOGIN -->
+<div id="lockScreen" class="lock-screen">
+  <div class="lock-card">
+    <div class="text-center mb-3">
+      <i class="fa-solid fa-shield-halved fa-3x text-primary"></i>
+      <h4 class="mt-2 mb-0">Incargo Admin</h4>
+      <small class="text-muted">Panel de control de inspecciones</small>
+    </div>
+    <label class="form-label small fw-bold">Contraseña</label>
+    <input type="password" id="adminPass" class="form-control" placeholder="••••••">
+    <button class="btn btn-primary w-100 mt-3" id="loginBtn">
+      <i class="fa-solid fa-arrow-right me-1"></i>Ingresar
+    </button>
+    <div id="loginError" class="text-danger small mt-2 text-center" style="display:none;">Contraseña incorrecta</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none;">
+  <nav class="navbar navbar-dark px-3">
+    <span class="navbar-brand"><i class="fa-solid fa-clipboard-check me-2"></i>Inspecciones · Incargo</span>
+    <button class="btn btn-sm btn-outline-light" id="logoutBtn"><i class="fa-solid fa-right-from-bracket me-1"></i>Salir</button>
+  </nav>
+
+  <div class="container py-4">
+
+    <!-- KPIs -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-3"><div class="stat-card bg-primary"><div class="num" id="kpiTotal">0</div><small>Total inspecciones</small></div></div>
+      <div class="col-md-3"><div class="stat-card bg-success"><div class="num" id="kpiHoy">0</div><small>Hoy</small></div></div>
+      <div class="col-md-3"><div class="stat-card bg-warning text-dark"><div class="num" id="kpiAlertas">0</div><small>Con items MALO</small></div></div>
+      <div class="col-md-3"><div class="stat-card bg-info text-dark"><div class="num" id="kpiVehiculos">0</div><small>Vehículos únicos</small></div></div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filter-bar">
+      <div class="row g-2">
+        <div class="col-md-4"><input type="text" id="searchInput" class="form-control" placeholder="🔍 Buscar por placa, conductor…"></div>
+        <div class="col-md-3"><input type="date" id="filterFecha" class="form-control"></div>
+        <div class="col-md-3">
+          <select id="filterEstado" class="form-select">
+            <option value="">Todos los estados</option>
+            <option value="MALO">⚠️ Con items MALO</option>
+            <option value="OK">✅ Sin items MALO</option>
+          </select>
+        </div>
+        <div class="col-md-2 d-flex gap-1">
+          <button class="btn btn-success flex-fill" id="exportCsvBtn"><i class="fa-solid fa-file-csv"></i></button>
+          <button class="btn btn-danger flex-fill" id="exportPdfBtn"><i class="fa-solid fa-file-pdf"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="table-card p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="mb-0">Inspecciones registradas</h6>
+        <button class="btn btn-sm btn-outline-primary" id="refreshBtn"><i class="fa-solid fa-rotate"></i> Actualizar</button>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Fecha</th>
+              <th>Placa</th>
+              <th>Conductor</th>
+              <th>Vehículo</th>
+              <th>Ciudad</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div id="empty" class="text-center py-4 text-muted" style="display:none;">
+        <i class="fa-solid fa-inbox fa-2x mb-2"></i>
+        <div>No hay inspecciones aún</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal Detalle -->
+  <div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Detalle de Inspección</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="detailBody"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============= CONFIGURACIÓN =============
+// 1. Pega aquí la URL de tu Apps Script (la misma del checklist.html)
+const ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbwTBTO-wMKFs9ogYH3qELSk8rx14WnWWy6mM6qIKu_dr0wsgWq-heR_Q1V9LvCKKoNp/exec';
+
+// 2. Cambia esta contraseña por la tuya
+const ADMIN_PASSWORD = 'incargo2024';
+// ==========================================
+
+let allData = [];
+
+// AUTH
+document.getElementById('loginBtn').addEventListener('click', () => {
+  if (document.getElementById('adminPass').value === ADMIN_PASSWORD) {
+    localStorage.setItem('incargo_admin', 'ok');
+    showApp();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+  }
+});
+document.getElementById('adminPass').addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('loginBtn').click(); });
+document.getElementById('logoutBtn').addEventListener('click', () => { localStorage.removeItem('incargo_admin'); location.reload(); });
+if (localStorage.getItem('incargo_admin') === 'ok') showApp();
+
+function showApp() {
+  document.getElementById('lockScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  cargar();
+}
+
+// CARGAR DATOS
+async function cargar() {
+  if (ENDPOINT_URL.includes('PEGAR_AQUI')) {
+    // Datos demo si no hay URL configurada
+    allData = generarDemo();
+    render();
+    return;
+  }
+
+  try {
+    const res = await fetch(ENDPOINT_URL + '?action=list');
+    allData = await res.json();
+    render();
+  } catch (err) {
+    console.error('Error cargando:', err);
+    allData = [];
+    render();
+  }
+}
+
+document.getElementById('refreshBtn').addEventListener('click', cargar);
+document.getElementById('searchInput').addEventListener('input', render);
+document.getElementById('filterFecha').addEventListener('change', render);
+document.getElementById('filterEstado').addEventListener('change', render);
+
+// RENDER
+function render() {
+  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+  const f = document.getElementById('filterFecha').value;
+  const est = document.getElementById('filterEstado').value;
+
+  const filtered = allData.filter(r => {
+    const matchQ = !q || (r.placa + ' ' + r.conductor + ' ' + r.ciudad).toLowerCase().includes(q);
+    const matchF = !f || r.fecha === f;
+    const itemsArr = parseItems(r.items);
+    const hasMalo = itemsArr.some(it => it.value === 'MALO');
+    const matchEst = !est || (est === 'MALO' && hasMalo) || (est === 'OK' && !hasMalo);
+    return matchQ && matchF && matchEst;
+  }).reverse();
+
+  // KPIs
+  document.getElementById('kpiTotal').textContent = allData.length;
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('kpiHoy').textContent = allData.filter(r => r.ts && r.ts.startsWith(today)).length;
+  document.getElementById('kpiAlertas').textContent = allData.filter(r => parseItems(r.items).some(it => it.value === 'MALO')).length;
+  const placas = new Set(allData.map(r => r.placa).filter(Boolean));
+  document.getElementById('kpiVehiculos').textContent = placas.size;
+
+  // Tabla
+  const tbody = document.getElementById('tbody');
+  document.getElementById('empty').style.display = filtered.length === 0 ? 'block' : 'none';
+  tbody.innerHTML = filtered.map((r, i) => {
+    const items = parseItems(r.items);
+    const hasMalo = items.some(it => it.value === 'MALO');
+    return `<tr>
+      <td>${filtered.length - i}</td>
+      <td>${r.fecha || '-'}<br><small class="text-muted">${(r.ts || '').split('T')[1]?.slice(0,5) || ''}</small></td>
+      <td><strong class="text-uppercase">${r.placa || '-'}</strong></td>
+      <td>${r.conductor || '-'}</td>
+      <td>${r.claseVehiculo || '-'}<br><small class="text-muted">${r.modelo || ''}</small></td>
+      <td>${r.ciudad || '-'}</td>
+      <td>${hasMalo ? '<span class="badge badge-malo">⚠️ Requiere atención</span>' : '<span class="badge badge-bueno">✅ OK</span>'}</td>
+      <td><button class="btn btn-sm btn-outline-primary" onclick="verDetalle(${allData.indexOf(r)})"><i class="fa-solid fa-eye"></i></button></td>
+    </tr>`;
+  }).join('');
+}
+
+function parseItems(raw) {
+  try { return JSON.parse(raw || '[]'); } catch { return []; }
+}
+
+window.verDetalle = idx => {
+  const r = allData[idx];
+  const items = parseItems(r.items);
+  const maloHtml = items.filter(i => i.value === 'MALO').map(i => `<li class="text-danger"><strong>${i.label}</strong>${i.obs ? ' — ' + i.obs : ''}</li>`).join('');
+  const okHtml = items.filter(i => i.value === 'BUENO' || i.value === 'NO APLICA').map(i => `<li class="text-success">✓ ${i.label} <small class="text-muted">(${i.value})</small></li>`).join('');
+
+  document.getElementById('detailBody').innerHTML = `
+    <div class="row g-2 mb-3">
+      <div class="col-6"><strong>Fecha:</strong> ${r.fecha}</div>
+      <div class="col-6"><strong>Conductor:</strong> ${r.conductor}</div>
+      <div class="col-6"><strong>Placa:</strong> <span class="text-uppercase">${r.placa}</span></div>
+      <div class="col-6"><strong>Licencia:</strong> ${r.licencia}</div>
+      <div class="col-6"><strong>Vehículo:</strong> ${r.claseVehiculo} ${r.modelo}</div>
+      <div class="col-6"><strong>Ciudad:</strong> ${r.ciudad}</div>
+      <div class="col-6"><strong>SOAT:</strong> ${r.fechaSoat || '-'}</div>
+      <div class="col-6"><strong>Tecnomecánica:</strong> ${r.fechaTecno || '-'}</div>
+    </div>
+    ${maloHtml ? `<h6 class="text-danger"><i class="fa-solid fa-triangle-exclamation"></i> Items MALO</h6><ul>${maloHtml}</ul>` : ''}
+    <h6 class="text-success"><i class="fa-solid fa-check-circle"></i> Items OK</h6>
+    <details><summary>Ver todos (${items.length})</summary><ul>${okHtml}</ul></details>
+    ${r.fotoPlaca ? `<h6 class="mt-3">Foto placa</h6><img src="${r.fotoPlaca}" class="img-fluid rounded" />` : ''}
+    ${r.firma ? `<h6 class="mt-3">Firma</h6><img src="${r.firma}" class="img-fluid rounded" style="max-height:140px;border:1px solid #ddd;" />` : ''}
+  `;
+  new bootstrap.Modal(document.getElementById('detailModal')).show();
+};
+
+// EXPORTAR
+document.getElementById('exportCsvBtn').addEventListener('click', () => {
+  const headers = ['Fecha','Hora','Placa','Conductor','Licencia','Vehiculo','Modelo','Ciudad','SOAT','Tecnomec','Items'];
+  const rows = allData.map(r => {
+    const items = parseItems(r.items);
+    return [
+      r.fecha, (r.ts||'').split('T')[1]?.slice(0,5) || '',
+      r.placa, r.conductor, r.licencia,
+      r.claseVehiculo, r.modelo, r.ciudad,
+      r.fechaSoat, r.fechaTecno,
+      items.filter(i=>i.value==='MALO').map(i=>i.label).join(' | ')
+    ];
+  });
+  const csv = [headers, ...rows].map(row => row.map(c => `"${(c||'').toString().replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `inspecciones_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+});
+
+document.getElementById('exportPdfBtn').addEventListener('click', () => window.print());
+
+// DEMO
+function generarDemo() {
+  return [
+    { ts:new Date().toISOString(), fecha:new Date().toISOString().split('T')[0], placa:'ABC-123', conductor:'Juan Pérez', licencia:'12345678', claseVehiculo:'Camión', modelo:'2022', ciudad:'Medellín', fechaSoat:'2025-01-15', fechaTecno:'2025-03-20', items:JSON.stringify([{label:'Luces delanteras (altas y bajas)',value:'MALO',obs:'Baja izquierda no enciende'}]) }
+  ];
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
