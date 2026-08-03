@@ -121,6 +121,35 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal Firma Supervisor -->
+  <div class="modal fade" id="supervisorModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Firma del Supervisor</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label">Nombre del supervisor</label>
+          <input type="text" id="supervisorName" class="form-control mb-2" placeholder="Nombre completo">
+          <label class="form-label">Cargo</label>
+          <input type="text" id="supervisorCargo" class="form-control mb-3" placeholder="Ej. Jefe de Operaciones">
+          <label class="form-label">Firma</label>
+          <canvas id="supSignaturePad" class="signature-pad"></canvas>
+          <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="clearSupSignature">
+            <i class="fa-solid fa-eraser"></i> Borrar
+          </button>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-success" id="generarPdfBtn">
+            <i class="fa-solid fa-file-pdf me-1"></i> Generar PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -215,7 +244,8 @@ function render() {
       <td>${r.claseVehiculo || '-'}<br><small class="text-muted">${r.modelo || ''}</small></td>
       <td>${r.ciudad || '-'}</td>
       <td>${hasMalo ? '<span class="badge badge-malo">⚠️ Requiere atención</span>' : '<span class="badge badge-bueno">✅ OK</span>'}</td>
-      <td><button class="btn btn-sm btn-outline-primary" onclick="verDetalle(${allData.indexOf(r)})"><i class="fa-solid fa-eye"></i></button></td>
+      <td><button class="btn btn-sm btn-outline-primary" onclick="verDetalle(${allData.indexOf(r)})"><i class="fa-solid fa-eye"></i></button>
+          <button class="btn btn-sm btn-success" onclick="abrirPdf(${allData.indexOf(r)})"><i class="fa-solid fa-file-pdf"></i></button></td>
     </tr>`;
   }).join('');
 }
@@ -249,6 +279,204 @@ window.verDetalle = idx => {
   `;
   new bootstrap.Modal(document.getElementById('detailModal')).show();
 };
+
+// ============= PDF REPORTE =============
+let currentPdfRow = null;
+let supCanvas, supCtx;
+
+function setupSupSignature() {
+  supCanvas = document.getElementById('supSignaturePad');
+  supCtx = supCanvas.getContext('2d');
+  const ratio = window.devicePixelRatio || 1;
+  supCanvas.width = supCanvas.offsetWidth * ratio;
+  supCanvas.height = supCanvas.offsetHeight * ratio;
+  supCtx.scale(ratio, ratio);
+
+  let drawing = false, lastX = 0, lastY = 0;
+  function draw(x, y) {
+    supCtx.beginPath();
+    supCtx.moveTo(lastX, lastY);
+    supCtx.lineTo(x, y);
+    supCtx.strokeStyle = '#111';
+    supCtx.lineWidth = 2;
+    supCtx.lineCap = 'round';
+    supCtx.stroke();
+    lastX = x; lastY = y;
+  }
+  supCanvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; const t = e.touches[0]; lastX = t.clientX - supCanvas.getBoundingClientRect().left; lastY = t.clientY - supCanvas.getBoundingClientRect().top; });
+  supCanvas.addEventListener('touchmove', e => { e.preventDefault(); if (!drawing) return; const t = e.touches[0]; draw(t.clientX - supCanvas.getBoundingClientRect().left, t.clientY - supCanvas.getBoundingClientRect().top); });
+  supCanvas.addEventListener('touchend', () => drawing = false);
+  supCanvas.addEventListener('mousedown', e => { drawing = true; lastX = e.offsetX; lastY = e.offsetY; });
+  supCanvas.addEventListener('mousemove', e => { if (!drawing) return; draw(e.offsetX, e.offsetY); });
+  supCanvas.addEventListener('mouseup', () => drawing = false);
+  supCanvas.addEventListener('mouseleave', () => drawing = false);
+
+  document.getElementById('clearSupSignature').addEventListener('click', () => {
+    supCtx.clearRect(0, 0, supCanvas.width, supCanvas.height);
+  });
+}
+
+window.abrirPdf = idx => {
+  currentPdfRow = allData[idx];
+  document.getElementById('supervisorName').value = '';
+  document.getElementById('supervisorCargo').value = '';
+  if (supCtx) supCtx.clearRect(0, 0, supCanvas.width, supCanvas.height);
+  if (!supCanvas) setupSupSignature();
+  new bootstrap.Modal(document.getElementById('supervisorModal')).show();
+};
+
+document.getElementById('generarPdfBtn').addEventListener('click', () => {
+  if (!currentPdfRow) return;
+  const supName = document.getElementById('supervisorName').value.trim();
+  const supCargo = document.getElementById('supervisorCargo').value.trim();
+  if (!supName) { alert('Por favor ingresa el nombre del supervisor'); return; }
+  const supFirma = supCanvas.toDataURL('image/png');
+  if (supFirma.length < 5000) { if (!confirm('No se detectó firma del supervisor. ¿Continuar?')) return; }
+
+  bootstrap.Modal.getInstance(document.getElementById('supervisorModal')).hide();
+  setTimeout(() => generarReportePDF(currentPdfRow, { name: supName, cargo: supCargo, firma: supFirma }), 300);
+});
+
+function generarReportePDF(row, supervisor) {
+  const items = parseItems(row.items);
+  const fotos = (row.fotos || '').split('|').filter(Boolean);
+
+  // Logo Incargo
+  const logoUrl = 'img/incargo-logo.png'; // fallback
+  const logoSvg = `data:image/svg+xml;utf8,${encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60">
+      <rect width="200" height="60" fill="#0d6efd" rx="6"/>
+      <text x="100" y="38" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#fff" text-anchor="middle">INCARGO</text>
+    </svg>
+  `)}`;
+
+  const w = window.open('', '_blank');
+  if (!w) { alert('Permite ventanas emergentes para generar el PDF'); return; }
+
+  const maloItems = items.filter(i => i.value === 'MALO' || i.value === 'BAJO');
+  const estado = maloItems.length > 0
+    ? `<span style="color:#dc3545;font-weight:bold;">⚠️ REQUIERE ATENCIÓN</span>`
+    : `<span style="color:#198754;font-weight:bold;">✅ APROBADO</span>`;
+
+  const itemsRows = items.map(i => {
+    const color = (i.value === 'MALO' || i.value === 'BAJO') ? '#dc3545'
+                : (i.value === 'REGULAR' || i.value === 'MEDIO') ? '#ffc107'
+                : '#198754';
+    return `<tr>
+      <td style="padding:6px;border:1px solid #ddd;">${i.label}</td>
+      <td style="padding:6px;border:1px solid #ddd;text-align:center;color:${color};font-weight:bold;">${i.value}</td>
+      <td style="padding:6px;border:1px solid #ddd;">${i.obs || ''}</td>
+    </tr>`;
+  }).join('');
+
+  const fotosHtml = fotos.length > 0
+    ? `<h3 style="margin-top:30px;">Evidencia fotográfica</h3>
+       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+         ${fotos.slice(0,9).map(f => `<img src="${f}" style="width:100%;border-radius:6px;border:1px solid #ddd;" />`).join('')}
+       </div>`
+    : '';
+
+  w.document.write(`
+    <!DOCTYPE html>
+    <html><head><title>Inspección ${row.placa} - ${row.fecha}</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 30px; color: #212529; }
+      .header { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid #0d6efd; padding-bottom: 14px; margin-bottom: 20px; }
+      .header img { height: 60px; }
+      .header h1 { margin: 0; color: #0d6efd; font-size: 22px; }
+      .header small { color: #6c757d; }
+      .info-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; margin-bottom: 20px; }
+      .info-grid div { padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
+      .info-grid strong { display:inline-block; min-width: 130px; color:#495057; }
+      table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+      th { background: #0d6efd; color: #fff; padding: 8px; text-align: left; }
+      .firmas { display:grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 60px; }
+      .firma-block { text-align:center; }
+      .firma-block img { max-height: 100px; max-width: 220px; }
+      .firma-line { border-top: 1px solid #212529; margin-top: 4px; padding-top: 6px; font-size: 12px; }
+      .footer { margin-top: 40px; padding-top: 14px; border-top: 1px solid #ddd; text-align:center; font-size: 11px; color: #6c757d; }
+      .estado-banner { text-align:center; padding: 14px; border-radius: 6px; margin: 14px 0; font-size: 16px; }
+      @media print { body { padding: 10mm; } .no-print { display:none; } }
+    </style></head><body>
+
+    <div class="header">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <img src="${logoSvg}" alt="Incargo">
+        <div>
+          <h1>CERTIFICADO DE INSPECCIÓN PREOPERACIONAL</h1>
+          <small>Código: SV-INSPP-01 · Versión 002</small>
+        </div>
+      </div>
+      <div style="text-align:right;font-size:12px;color:#6c757d;">
+        <div><strong>Fecha de emisión:</strong> ${new Date().toLocaleDateString('es-CO')}</div>
+        <div><strong>Hora:</strong> ${new Date().toLocaleTimeString('es-CO')}</div>
+      </div>
+    </div>
+
+    <div class="estado-banner" style="background:${maloItems.length ? '#f8d7da' : '#d1e7dd'};">
+      Resultado: ${estado}
+    </div>
+
+    <h2 style="color:#0d6efd;border-bottom:2px solid #0d6efd;padding-bottom:6px;">Datos Generales</h2>
+    <div class="info-grid">
+      <div><strong>Fecha:</strong> ${row.fecha || '-'}</div>
+      <div><strong>Ciudad:</strong> ${row.ciudad || '-'}</div>
+      <div><strong>Empresa:</strong> ${row.empresa || '-'}</div>
+      <div><strong>Conductor:</strong> ${row.conductor || '-'}</div>
+      <div><strong>N° Licencia:</strong> ${row.licencia || '-'}</div>
+      <div><strong>Placa:</strong> <strong>${(row.placa||'').toUpperCase()}</strong></div>
+      <div><strong>Placa Semirremolque:</strong> ${row.placasemirremolque || 'N/A'}</div>
+      <div><strong>Clase de Vehículo:</strong> ${row.clasevehiculo || '-'}</div>
+      <div><strong>Tipo Carrocería:</strong> ${row.tipocarroceria || '-'}</div>
+      <div><strong>Modelo:</strong> ${row.modelo || '-'}</div>
+      <div><strong>GPS:</strong> ${row.gps || '-'}</div>
+      <div><strong>Tarjeta Propiedad:</strong> ${row.tarjetaprop || '-'}</div>
+      <div><strong>Fecha SOAT:</strong> ${row.fechasoat || '-'}</div>
+      <div><strong>Fecha Tecnomecánica:</strong> ${row.fechatecno || '-'}</div>
+      <div><strong>Tipo de Transporte:</strong> ${row.tipotransporte || 'N/A'}</div>
+    </div>
+
+    <h2 style="color:#0d6efd;border-bottom:2px solid #0d6efd;padding-bottom:6px;">Resultado del Checklist</h2>
+    <table>
+      <thead><tr><th style="width:50%;">Ítem</th><th style="width:15%;">Estado</th><th>Observación</th></tr></thead>
+      <tbody>${itemsRows}</tbody>
+    </table>
+
+    ${fotosHtml}
+
+    <div class="firmas">
+      <div class="firma-block">
+        ${row.firma ? `<img src="${row.firma}" alt="firma conductor">` : '<div style="height:100px;"></div>'}
+        <div class="firma-line">
+          <strong>${row.conductor || 'Conductor'}</strong><br>
+          <small>Conductor</small><br>
+          <small>CC: ${row.licencia || '-'}</small>
+        </div>
+      </div>
+      <div class="firma-block">
+        ${supervisor.firma ? `<img src="${supervisor.firma}" alt="firma supervisor">` : '<div style="height:100px;"></div>'}
+        <div class="firma-line">
+          <strong>${supervisor.name}</strong><br>
+          <small>${supervisor.cargo || 'Supervisor'}</small><br>
+          <small>Incargo</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Documento generado el ${new Date().toLocaleString('es-CO')} · Incargo · Sistema de Inspección Preoperacional v2
+    </div>
+
+    <div class="no-print" style="text-align:center;margin-top:30px;">
+      <button onclick="window.print()" style="background:#0d6efd;color:#fff;border:none;padding:12px 30px;border-radius:6px;font-size:14px;cursor:pointer;">
+        🖨️ Imprimir / Guardar como PDF
+      </button>
+    </div>
+
+    </body></html>
+  `);
+  w.document.close();
+}
 
 // EXPORTAR
 document.getElementById('exportCsvBtn').addEventListener('click', () => {
