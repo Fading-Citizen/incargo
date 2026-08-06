@@ -15,6 +15,7 @@ const HEADERS = [
   'PLACA_SEMIRREMOLQUE',
   'MODELO',
   'GPS',
+  'TARJETA_PROPIEDAD',
   'SOAT',
   'TECNOMEC',
   'TIPO_TRANSPORTE',
@@ -37,6 +38,8 @@ function doPost(e) {
       sheet.getRange(1, 1, 1, HEADERS.length)
         .setFontWeight('bold').setBackground('#0d6efd').setFontColor('#ffffff');
       sheet.setFrozenRows(1);
+    } else {
+      ensureTarjetaHeader(sheet);
     }
 
     const data = JSON.parse(e.postData.contents);
@@ -67,6 +70,7 @@ function doPost(e) {
       data.placaSemirremolque || '',
       data.modelo || '',
       data.gps || '',
+      data.tarjetaProp || '',
       data.fechaSoat || '',
       data.fechaTecno || '',
       tipoTransporte,
@@ -132,13 +136,16 @@ function rowToObject(row, headers) {
 function rowWithoutHeadersToObject(row) {
   const itemsIndex = row.findIndex(value =>
     typeof value === 'string' && value.trim().startsWith('['));
-  const isLegacy = itemsIndex >= 0 && itemsIndex <= 12;
-  const indexes = isLegacy
+  const indexes = itemsIndex >= 0 && itemsIndex <= 12
     ? { items: 12, firma: 13, fotos: 14, claseVehiculo: 7, modelo: 8,
-      gps: 9, fechaSoat: 10, fechaTecno: 11 }
+      gps: 9, tarjetaProp: null, fechaSoat: 10, fechaTecno: 11 }
+    : itemsIndex === 16
+    ? { items: 16, firma: 17, fotos: 18, claseVehiculo: 7,
+      tipoCarroceria: 8, placasemirremolque: 9, modelo: 10, gps: 11,
+      tarjetaProp: 12, fechaSoat: 13, fechaTecno: 14, tipoTransporte: 15 }
     : { items: 15, firma: 16, fotos: 17, claseVehiculo: 7,
       tipoCarroceria: 8, placasemirremolque: 9, modelo: 10, gps: 11,
-      fechaSoat: 12, fechaTecno: 13, tipoTransporte: 14 };
+      tarjetaProp: null, fechaSoat: 12, fechaTecno: 13, tipoTransporte: 14 };
 
   return {
     ts: toIso(row[0]),
@@ -153,6 +160,7 @@ function rowWithoutHeadersToObject(row) {
     placasemirremolque: row[indexes.placasemirremolque] || '',
     modelo: row[indexes.modelo] || '',
     gps: row[indexes.gps] || '',
+    tarjetaProp: indexes.tarjetaProp === null ? '' : (row[indexes.tarjetaProp] || ''),
     fechaSoat: row[indexes.fechaSoat] || '',
     fechaTecno: row[indexes.fechaTecno] || '',
     tipoTransporte: row[indexes.tipoTransporte] || '',
@@ -160,6 +168,19 @@ function rowWithoutHeadersToObject(row) {
     firma: row[indexes.firma] || '',
     fotos: row[indexes.fotos] || ''
   };
+}
+
+function ensureTarjetaHeader(sheet) {
+  const lastColumn = sheet.getLastColumn();
+  if (!lastColumn) return;
+  const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0]
+    .map(value => String(value).toLowerCase().replace(/\s|_/g, ''));
+  if (headers.includes('tarjetapropiedad')) return;
+  if (!headers.includes('timestamp')) return;
+
+  sheet.insertColumnAfter(12);
+  sheet.getRange(1, 13).setValue('TARJETA_PROPIEDAD')
+    .setFontWeight('bold').setBackground('#0d6efd').setFontColor('#ffffff');
 }
 
 function toIso(value) {
@@ -175,7 +196,7 @@ function headerToKey(h, idx) {
     'conductor':'conductor','licencia':'licencia','empresa':'empresa',
     'clasevehiculo':'clasevehiculo','tipocarroceria':'tipocarroceria',
     'placasemirremolque':'placasemirremolque','modelo':'modelo',
-    'gps':'gps','soat':'fechasoat','tecnomec':'fechatecno',
+    'gps':'gps','tarjetapropiedad':'tarjetaProp','soat':'fechasoat','tecnomec':'fechatecno',
     'tipotransporte':'tipotransporte','itemsjson':'items',
     'firmab64':'firma','fotosb64':'fotos'
   };
