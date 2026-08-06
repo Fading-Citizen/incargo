@@ -105,6 +105,7 @@
         <i class="fa-solid fa-inbox fa-2x mb-2"></i>
         <div>No hay inspecciones aún</div>
       </div>
+      <div id="loadError" class="alert alert-danger mb-0" style="display:none;"></div>
     </div>
 
   </div>
@@ -193,12 +194,21 @@ async function cargar() {
 
   try {
     const res = await fetch(ENDPOINT_URL + '?action=list');
-    allData = await res.json();
+    if (!res.ok) throw new Error(`El servidor respondió con estado ${res.status}.`);
+    const data = await res.json();
+    if (!Array.isArray(data)) {
+      throw new Error(data.error || 'El endpoint no devolvió una lista de inspecciones.');
+    }
+    document.getElementById('loadError').style.display = 'none';
+    allData = data;
     render();
   } catch (err) {
     console.error('Error cargando:', err);
     allData = [];
     render();
+    const loadError = document.getElementById('loadError');
+    loadError.textContent = `No se pudieron cargar las inspecciones: ${err.message} Verifica que el despliegue de Apps Script permita el acceso a cualquier persona.`;
+    loadError.style.display = 'block';
   }
 }
 
