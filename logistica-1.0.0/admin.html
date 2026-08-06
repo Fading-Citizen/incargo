@@ -537,7 +537,8 @@ function generarReportePDF(row, supervisor) {
       .firma-line { border-top: 1px solid #212529; margin-top: 4px; padding-top: 6px; font-size: 12px; }
       .footer { margin-top: 40px; padding-top: 14px; border-top: 2px solid #f9d52e; text-align:center; font-size: 11px; color: #6c757d; }
       .estado-banner { text-align:center; padding: 14px; border-radius: 6px; margin: 14px 0; font-size: 16px; border-left: 6px solid #51CFED; }
-      @media print { body { padding: 10mm; } .no-print { display:none; } }
+      body { padding: 10mm; }
+      .no-print { display:none; }
     </style></head><body>
 
     <div class="header">
@@ -607,11 +608,23 @@ function generarReportePDF(row, supervisor) {
       Documento generado el ${new Date().toLocaleDateString('es-CO')} · Incargo · Sistema de Inspección Preoperacional v2
     </div>
 
-    <div class="no-print" style="text-align:center;margin-top:30px;">
-      <button onclick="window.print()" style="background:#f9d52e;color:#060315;border:none;padding:12px 30px;border-radius:6px;font-size:14px;font-weight:bold;cursor:pointer;">
-        🖨️ Imprimir / Guardar como PDF
-      </button>
-    </div>
+    <div class="no-print">Generando certificado...</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
+    <script>
+      window.addEventListener('load', function () {
+        html2pdf().set({
+          margin: 8,
+          filename: 'Inspeccion_${row.placa}_${dateKey(row.fecha)}.pdf',
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: { scale: 2, useCORS: true, allowTaint: false, backgroundColor: '#ffffff' },
+          pagebreak: { mode: ['css', 'legacy'] },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        }).from(document.body).save().then(function () {
+          window.close();
+        });
+      });
+    <\/script>
 
     </body></html>
   `);
