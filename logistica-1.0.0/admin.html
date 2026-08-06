@@ -625,11 +625,13 @@ function generarReportePDF(row, supervisor) {
   }).join('');
 
   const fotosHtml = fotos.length > 0
-    ? `<h3 style="margin-top:30px;">Evidencia fotográfica</h3>
-       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-         ${fotos.slice(0,9).map(f => `<img src="${f}" style="width:100%;border-radius:6px;border:1px solid #ddd;" />`).join('')}
-       </div>`
-    : (invalidPhotoCount > 0 ? '<p style="color:#856404;background:#fff3cd;padding:10px;border-left:4px solid #f9d52e;">Las evidencias fotográficas están incompletas y deben cargarse nuevamente.</p>' : '');
+    ? `<section class="pdf-evidence pdf-keep">
+         <h3>Evidencia fotográfica</h3>
+         <div class="pdf-photo-grid">
+           ${fotos.slice(0,9).map((f, index) => `<div class="pdf-photo pdf-keep"><img src="${f}" alt="Evidencia ${index + 1}" /></div>`).join('')}
+         </div>
+       </section>`
+    : (invalidPhotoCount > 0 ? '<section class="pdf-evidence pdf-keep"><p style="color:#856404;background:#fff3cd;padding:10px;border-left:4px solid #f9d52e;">Las evidencias fotográficas están incompletas y deben cargarse nuevamente.</p></section>' : '');
 
   w.document.write(`
     <!DOCTYPE html>
@@ -646,7 +648,16 @@ function generarReportePDF(row, supervisor) {
       table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
       th { background: #060315; color: #fff; padding: 8px; text-align: left; border-bottom: 3px solid #51CFED; }
       td { border-color: #e8e3e1 !important; }
-      .firmas { display:grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 60px; }
+      thead { display: table-header-group; }
+      tr, img, .pdf-keep { break-inside: avoid; page-break-inside: avoid; }
+      .pdf-evidence { break-before: page; page-break-before: always; margin-top: 0; }
+      .pdf-evidence h3 { margin: 0 0 16px; }
+      .pdf-photo-grid { font-size: 0; }
+      .pdf-photo { display:inline-block; vertical-align:top; width:31.5%; margin:0 1.5% 16px 0; text-align:center; }
+      .pdf-photo:nth-child(3n) { margin-right:0; }
+      .pdf-photo img { display:block; width:100%; max-height:230px; object-fit:contain; border:1px solid #ddd; border-radius:6px; }
+      .pdf-signatures { break-before: page; page-break-before: always; }
+      .firmas { display:grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 28px; }
       .firma-block { text-align:center; }
       .firma-block img { max-height: 100px; max-width: 220px; }
       .firma-line { border-top: 1px solid #212529; margin-top: 4px; padding-top: 6px; font-size: 12px; }
@@ -700,6 +711,7 @@ function generarReportePDF(row, supervisor) {
 
     ${fotosHtml}
 
+    <div class="pdf-signatures pdf-keep">
     <div class="firmas">
       <div class="firma-block">
         ${row.firma ? `<img src="${row.firma}" alt="firma conductor">` : '<div style="height:100px;"></div>'}
@@ -722,6 +734,7 @@ function generarReportePDF(row, supervisor) {
     <div class="footer">
       Documento generado el ${new Date().toLocaleDateString('es-CO')} · Incargo · Sistema de Inspección Preoperacional v2
     </div>
+    </div>
 
     <div class="no-print">Generando certificado...</div>
 
@@ -733,7 +746,7 @@ function generarReportePDF(row, supervisor) {
           filename: 'Inspeccion_${row.placa}_${dateKey(row.fecha)}.pdf',
           image: { type: 'jpeg', quality: 0.95 },
           html2canvas: { scale: 2, useCORS: true, allowTaint: false, backgroundColor: '#ffffff' },
-          pagebreak: { mode: ['css', 'legacy'] },
+          pagebreak: { mode: ['css', 'legacy'], avoid: ['.pdf-keep', 'tr', 'img'] },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         }).from(document.body).save().then(function () {
           window.close();
