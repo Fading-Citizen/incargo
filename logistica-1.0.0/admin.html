@@ -476,6 +476,8 @@ document.getElementById('guardarEdicionBtn').addEventListener('click', async () 
   if (pendingEditSignature) payload.firma = pendingEditSignature;
 
   const button = document.getElementById('guardarEdicionBtn');
+  const expectedPhotos = pendingEditPhotos ? [...pendingEditPhotos] : null;
+  const expectedSignature = pendingEditSignature;
   button.disabled = true;
   try {
     await fetch(ENDPOINT_URL, {
@@ -485,10 +487,20 @@ document.getElementById('guardarEdicionBtn').addEventListener('click', async () 
       body: JSON.stringify(payload)
     });
     bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
-    toast('Cambios guardados');
     pendingEditPhotos = null;
     pendingEditSignature = null;
     await cargar();
+    const updatedRow = allData.find(item => item._rowNumber === row._rowNumber);
+    const photosSaved = !expectedPhotos || (updatedRow && expectedPhotos.every(photo =>
+      updatedRow.fotos && updatedRow.fotos.includes(photo.slice(0, 80))
+    ));
+    const signatureSaved = !expectedSignature || (updatedRow && updatedRow.firma &&
+      updatedRow.firma.includes(expectedSignature.slice(0, 80)));
+    if (!photosSaved || !signatureSaved) {
+      alert('Los datos generales se guardaron, pero las imágenes no se actualizaron. Copia el Apps Script más reciente y crea una nueva versión de la implementación web.');
+      return;
+    }
+    toast('Cambios guardados');
   } catch (err) {
     alert('No se pudieron guardar los cambios: ' + err.message);
   } finally {
