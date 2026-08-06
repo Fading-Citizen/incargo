@@ -142,6 +142,42 @@
     </div>
   </div>
 
+  <!-- Modal Editar datos generales -->
+  <div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="fa-solid fa-pen-to-square me-2"></i>Editar inspección</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-info small">Puedes actualizar los datos del vehículo y sus fechas. El checklist, las fotos y las firmas se conservan.</div>
+          <div class="row g-2">
+            <div class="col-md-6"><label class="form-label">Fecha</label><input type="date" id="editFecha" class="form-control"></div>
+            <div class="col-md-6"><label class="form-label">Ciudad</label><input type="text" id="editCiudad" class="form-control"></div>
+            <div class="col-md-6"><label class="form-label">Empresa</label><input type="text" id="editEmpresa" class="form-control"></div>
+            <div class="col-md-6"><label class="form-label">Conductor</label><input type="text" id="editConductor" class="form-control"></div>
+            <div class="col-md-6"><label class="form-label">N° de licencia</label><input type="text" id="editLicencia" class="form-control"></div>
+            <div class="col-md-6"><label class="form-label">Placa</label><input type="text" id="editPlaca" class="form-control text-uppercase"></div>
+            <div class="col-md-6"><label class="form-label">Clase de vehículo</label><input type="text" id="editClaseVehiculo" class="form-control"></div>
+            <div class="col-md-6"><label class="form-label">Tipo de carrocería</label><input type="text" id="editTipoCarroceria" class="form-control"></div>
+            <div class="col-md-6"><label class="form-label">Placa semirremolque</label><input type="text" id="editPlacasemirremolque" class="form-control text-uppercase"></div>
+            <div class="col-md-6"><label class="form-label">Modelo</label><input type="text" id="editModelo" class="form-control"></div>
+            <div class="col-md-6"><label class="form-label">GPS</label><input type="text" id="editGps" class="form-control"></div>
+            <div class="col-md-6"><label class="form-label">Tarjeta de propiedad</label><input type="text" id="editTarjetaProp" class="form-control"></div>
+            <div class="col-md-6"><label class="form-label">Fecha SOAT</label><input type="date" id="editFechaSoat" class="form-control"></div>
+            <div class="col-md-6"><label class="form-label">Fecha tecnomecánica</label><input type="date" id="editFechaTecno" class="form-control"></div>
+            <div class="col-md-6"><label class="form-label">Tipo de transporte</label><input type="text" id="editTipoTransporte" class="form-control"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-brand-dark" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-brand" id="guardarEdicionBtn"><i class="fa-solid fa-floppy-disk me-1"></i>Guardar cambios</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Firma Supervisor -->
   <div class="modal fade" id="supervisorModal" tabindex="-1">
     <div class="modal-dialog">
@@ -273,7 +309,8 @@ function render() {
       <td>${r.claseVehiculo || '-'}<br><small class="text-muted">${r.modelo || ''}</small></td>
       <td>${r.ciudad || '-'}</td>
       <td>${hasMalo ? '<span class="badge badge-malo">⚠️ Requiere atención</span>' : '<span class="badge badge-bueno">✅ OK</span>'}</td>
-      <td><button class="btn btn-sm btn-outline-primary" onclick="verDetalle(${allData.indexOf(r)})"><i class="fa-solid fa-eye"></i></button>
+        <td><button class="btn btn-sm btn-outline-brand" onclick="editarInspeccion(${allData.indexOf(r)})" title="Editar datos generales"><i class="fa-solid fa-pen"></i></button>
+          <button class="btn btn-sm btn-outline-brand" onclick="verDetalle(${allData.indexOf(r)})" title="Ver detalle"><i class="fa-solid fa-eye"></i></button>
           <button class="btn btn-sm btn-brand" onclick="abrirPdf(${allData.indexOf(r)})"><i class="fa-solid fa-file-pdf"></i></button></td>
     </tr>`;
   }).join('');
@@ -282,6 +319,79 @@ function render() {
 function parseItems(raw) {
   try { return JSON.parse(raw || '[]'); } catch { return []; }
 }
+
+function setEditField(id, value) {
+  document.getElementById(id).value = value == null ? '' : value;
+}
+
+window.editarInspeccion = idx => {
+  const row = allData[idx];
+  if (!row || !row._rowNumber) {
+    alert('Esta versión del Apps Script todavía no permite editar filas. Publica la nueva versión y vuelve a cargar el portal.');
+    return;
+  }
+
+  currentEditIndex = idx;
+  setEditField('editFecha', dateKey(row.fecha));
+  setEditField('editCiudad', row.ciudad);
+  setEditField('editEmpresa', row.empresa);
+  setEditField('editConductor', row.conductor);
+  setEditField('editLicencia', row.licencia);
+  setEditField('editPlaca', row.placa);
+  setEditField('editClaseVehiculo', row.claseVehiculo);
+  setEditField('editTipoCarroceria', row.tipoCarroceria);
+  setEditField('editPlacasemirremolque', row.placasemirremolque);
+  setEditField('editModelo', row.modelo);
+  setEditField('editGps', row.gps);
+  setEditField('editTarjetaProp', row.tarjetaProp);
+  setEditField('editFechaSoat', dateKey(row.fechaSoat));
+  setEditField('editFechaTecno', dateKey(row.fechaTecno));
+  setEditField('editTipoTransporte', row.tipoTransporte);
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('editModal')).show();
+};
+
+let currentEditIndex = null;
+document.getElementById('guardarEdicionBtn').addEventListener('click', async () => {
+  if (currentEditIndex === null) return;
+  const row = allData[currentEditIndex];
+  const payload = {
+    action: 'update',
+    rowNumber: row._rowNumber,
+    fecha: document.getElementById('editFecha').value,
+    ciudad: document.getElementById('editCiudad').value.trim(),
+    empresa: document.getElementById('editEmpresa').value.trim(),
+    conductor: document.getElementById('editConductor').value.trim(),
+    licencia: document.getElementById('editLicencia').value.trim(),
+    placa: document.getElementById('editPlaca').value.trim().toUpperCase(),
+    claseVehiculo: document.getElementById('editClaseVehiculo').value.trim(),
+    tipoCarroceria: document.getElementById('editTipoCarroceria').value.trim(),
+    placasemirremolque: document.getElementById('editPlacasemirremolque').value.trim().toUpperCase(),
+    modelo: document.getElementById('editModelo').value.trim(),
+    gps: document.getElementById('editGps').value.trim(),
+    tarjetaProp: document.getElementById('editTarjetaProp').value.trim(),
+    fechaSoat: document.getElementById('editFechaSoat').value,
+    fechaTecno: document.getElementById('editFechaTecno').value,
+    tipoTransporte: document.getElementById('editTipoTransporte').value.trim()
+  };
+
+  const button = document.getElementById('guardarEdicionBtn');
+  button.disabled = true;
+  try {
+    await fetch(ENDPOINT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+    toast('Cambios guardados');
+    await cargar();
+  } catch (err) {
+    alert('No se pudieron guardar los cambios: ' + err.message);
+  } finally {
+    button.disabled = false;
+  }
+});
 
 function dateKey(value) {
   if (!value) return '';

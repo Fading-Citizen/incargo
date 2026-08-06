@@ -43,6 +43,11 @@ function doPost(e) {
     }
 
     const data = JSON.parse(e.postData.contents);
+    if (data.action === 'update') {
+      const response = actualizarInspeccion(sheet, data);
+      lock.releaseLock();
+      return response;
+    }
 
     const truncateB64 = (s, maxLen = 30000) => {
       if (!s) return '';
@@ -104,9 +109,9 @@ function doGet(e) {
     const hasHeaders = values[0].some(value => isHeader(String(value)));
     const headers = hasHeaders ? values[0] : HEADERS;
     const rows = hasHeaders ? values.slice(1) : values;
-    const data = rows.map(row => hasHeaders
-      ? rowToObject(row, headers)
-      : rowWithoutHeadersToObject(row));
+    const data = rows.map((row, index) => hasHeaders
+      ? rowToObject(row, headers, index + 2)
+      : rowWithoutHeadersToObject(row, index + 1));
 
     return ContentService.createTextOutput(JSON.stringify(data))
       .setMimeType(ContentService.MimeType.JSON);
@@ -123,8 +128,8 @@ function isHeader(value) {
     'licencia', 'empresa', 'clasevehiculo', 'itemsjson'].includes(norm);
 }
 
-function rowToObject(row, headers) {
-  const obj = { ts: toIso(row[0]) };
+function rowToObject(row, headers, rowNumber) {
+  const obj = { _rowNumber: rowNumber, ts: toIso(row[0]) };
   headers.forEach((h, i) => {
     if (i === 0) return;
     const key = headerToKey(String(h), i);
@@ -133,10 +138,10 @@ function rowToObject(row, headers) {
   return obj;
 }
 
-function rowWithoutHeadersToObject(row) {
+function getNoHeaderIndexes(row) {
   const itemsIndex = row.findIndex(value =>
     typeof value === 'string' && value.trim().startsWith('['));
-  const indexes = itemsIndex >= 0 && itemsIndex <= 12
+  return itemsIndex >= 0 && itemsIndex <= 12
     ? { items: 12, firma: 13, fotos: 14, claseVehiculo: 7, modelo: 8,
       gps: 9, tarjetaProp: null, fechaSoat: 10, fechaTecno: 11 }
     : itemsIndex === 16
@@ -146,8 +151,13 @@ function rowWithoutHeadersToObject(row) {
     : { items: 15, firma: 16, fotos: 17, claseVehiculo: 7,
       tipoCarroceria: 8, placasemirremolque: 9, modelo: 10, gps: 11,
       tarjetaProp: null, fechaSoat: 12, fechaTecno: 13, tipoTransporte: 14 };
+}
+
+function rowWithoutHeadersToObject(row, rowNumber) {
+  const indexes = getNoHeaderIndexes(row);
 
   return {
+    _rowNumber: rowNumber,
     ts: toIso(row[0]),
     fecha: row[1] || '',
     ciudad: row[2] || '',
@@ -168,6 +178,56 @@ function rowWithoutHeadersToObject(row) {
     firma: row[indexes.firma] || '',
     fotos: row[indexes.fotos] || ''
   };
+}
+
+function actualizarInspeccion(sheet, data) {
+  const rowNumber = Number(data.rowNumber);
+  const lastColumn = sheet.getLastColumn();
+  if (!Number.isInteger(rowNumber) || rowNumber < 1 || rowNumber > sheet.getLastRow()) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Fila de inspección inválida.' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const row = sheet.getRange(rowNumber, 1, 1, lastColumn).getValues()[0];
+  const headerValues = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+  const hasHeaders = headerValues.some(value => isHeader(String(value)));
+  const editableFields = [
+    'fecha', 'ciudad', 'empresa', 'conductor', 'licencia', 'placa',
+    'claseVehiculo', 'tipoCarroceria', 'placasemirremolque', 'modelo',
+    'gps', 'tarjetaProp', 'fechaSoat', 'fechaTecno', 'tipoTransporte'
+  ];
+
+  if (hasHeaders) {
+    headerValues.forEach((header, index) => {
+      const key = headerToKey(String(header), index);
+      if (editableFields.includes(key) && data[key] !== undefined) row[index] = data[key];
+    });
+  } else {
+    const indexes = getNoHeaderIndexes(row);
+    const fieldIndexes = {
+      fecha: 1, ciudad: 2, empresa: 6, conductor: 4, licencia: 5,
+      placa: 3, claseVehiculo: indexes.claseVehiculo,
+      tipoCarroceria: indexes.tipoCarroceria,
+      placasemirremolque: indexes.placasemirremolque,
+      modelo: indexes.modelo, gps: indexes.gps, tarjetaProp: indexes.tarjetaProp,
+      fechaSoat: indexes.fechaSoat, fechaTecno: indexes.fechaTecno,
+      tipoTransporte: indexes.tipoTransporte
+    };
+    editableFields.forEach(key => {
+      const index = fieldIndexes[key];
+      if (index !== null && index !== undefined && data[key] !== undefined) row[index] = data[key];
+    });
+  }
+
+  if (data.placa !== undefined) {
+    const placaIndex = hasHeaders
+      ? headerValues.findIndex(header => headerToKey(String(header), 0) === 'placa')
+      : 3;
+    if (placaIndex >= 0) row[placaIndex] = String(data.placa).toUpperCase();
+  }
+  sheet.getRange(rowNumber, 1, 1, lastColumn).setValues([row]);
+  return ContentService.createTextOutput(JSON.stringify({ ok: true, row: rowNumber }))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 function ensureTarjetaHeader(sheet) {
