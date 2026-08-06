@@ -194,7 +194,8 @@ function actualizarInspeccion(sheet, data) {
   const editableFields = [
     'fecha', 'ciudad', 'empresa', 'conductor', 'licencia', 'placa',
     'claseVehiculo', 'tipoCarroceria', 'placasemirremolque', 'modelo',
-    'gps', 'tarjetaProp', 'fechaSoat', 'fechaTecno', 'tipoTransporte'
+    'gps', 'tarjetaProp', 'fechaSoat', 'fechaTecno', 'tipoTransporte',
+    'firma', 'fotos'
   ];
 
   if (hasHeaders) {
@@ -211,7 +212,7 @@ function actualizarInspeccion(sheet, data) {
       placasemirremolque: indexes.placasemirremolque,
       modelo: indexes.modelo, gps: indexes.gps, tarjetaProp: indexes.tarjetaProp,
       fechaSoat: indexes.fechaSoat, fechaTecno: indexes.fechaTecno,
-      tipoTransporte: indexes.tipoTransporte
+      tipoTransporte: indexes.tipoTransporte, firma: indexes.firma, fotos: indexes.fotos
     };
     editableFields.forEach(key => {
       const index = fieldIndexes[key];
