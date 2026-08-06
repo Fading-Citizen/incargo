@@ -34,6 +34,8 @@
   .lock-card { background:#fff; border-top:6px solid var(--brand-yellow); border-radius:10px; padding:30px; max-width:360px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,.24); }
   .modal-header { background:var(--brand-ink); color:#fff; border-bottom:4px solid var(--brand-yellow); }
   .modal-header .btn-close { filter:invert(1); }
+  .fixed-signature-preview { height:140px; border:2px dashed var(--brand-cyan); border-radius:8px; background:#fff; display:flex; align-items:center; justify-content:center; margin-bottom:8px; overflow:hidden; }
+  .fixed-signature-preview img { width:100%; height:100%; object-fit:contain; }
   details summary { cursor:pointer; padding:6px 8px; background:var(--brand-light); border-radius:6px; margin-bottom:4px; }
   pre { font-size:.78rem; max-height:200px; overflow:auto; background:#f1f3f6; padding:8px; border-radius:6px; }
   th { font-size:.8rem; text-transform:uppercase; color:var(--brand-ink); }
@@ -153,11 +155,11 @@
           <input type="text" id="supervisorName" class="form-control mb-2" placeholder="Nombre completo">
           <label class="form-label">Cargo</label>
           <input type="text" id="supervisorCargo" class="form-control mb-3" placeholder="Ej. Jefe de Operaciones">
-          <label class="form-label">Firma</label>
-          <canvas id="supSignaturePad" class="signature-pad"></canvas>
-          <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="clearSupSignature">
-            <i class="fa-solid fa-eraser"></i> Borrar
-          </button>
+          <label class="form-label">Firma fija del supervisor</label>
+          <div class="fixed-signature-preview">
+            <img src="img/firma.png" alt="Firma de YURLEI LAZO">
+          </div>
+          <small class="text-muted">Se usará la firma oficial de YURLEI en el certificado.</small>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-brand-dark" data-bs-dismiss="modal">Cancelar</button>
@@ -330,46 +332,16 @@ window.verDetalle = idx => {
 
 // ============= PDF REPORTE =============
 let currentPdfRow = null;
-let supCanvas, supCtx;
-
-function setupSupSignature() {
-  supCanvas = document.getElementById('supSignaturePad');
-  supCtx = supCanvas.getContext('2d');
-  const ratio = window.devicePixelRatio || 1;
-  supCanvas.width = supCanvas.offsetWidth * ratio;
-  supCanvas.height = supCanvas.offsetHeight * ratio;
-  supCtx.scale(ratio, ratio);
-
-  let drawing = false, lastX = 0, lastY = 0;
-  function draw(x, y) {
-    supCtx.beginPath();
-    supCtx.moveTo(lastX, lastY);
-    supCtx.lineTo(x, y);
-    supCtx.strokeStyle = '#111';
-    supCtx.lineWidth = 2;
-    supCtx.lineCap = 'round';
-    supCtx.stroke();
-    lastX = x; lastY = y;
-  }
-  supCanvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; const t = e.touches[0]; lastX = t.clientX - supCanvas.getBoundingClientRect().left; lastY = t.clientY - supCanvas.getBoundingClientRect().top; });
-  supCanvas.addEventListener('touchmove', e => { e.preventDefault(); if (!drawing) return; const t = e.touches[0]; draw(t.clientX - supCanvas.getBoundingClientRect().left, t.clientY - supCanvas.getBoundingClientRect().top); });
-  supCanvas.addEventListener('touchend', () => drawing = false);
-  supCanvas.addEventListener('mousedown', e => { drawing = true; lastX = e.offsetX; lastY = e.offsetY; });
-  supCanvas.addEventListener('mousemove', e => { if (!drawing) return; draw(e.offsetX, e.offsetY); });
-  supCanvas.addEventListener('mouseup', () => drawing = false);
-  supCanvas.addEventListener('mouseleave', () => drawing = false);
-
-  document.getElementById('clearSupSignature').addEventListener('click', () => {
-    supCtx.clearRect(0, 0, supCanvas.width, supCanvas.height);
-  });
-}
+const FIXED_SUPERVISOR = {
+  name: 'YURLEI LAZO',
+  cargo: 'SEGURIDAD Y MONITOREO (AUX OPERACIONES)',
+  firma: 'https://www.incargo.co/img/firma.png'
+};
 
 window.abrirPdf = idx => {
   currentPdfRow = allData[idx];
-  document.getElementById('supervisorName').value = '';
-  document.getElementById('supervisorCargo').value = '';
-  if (supCtx) supCtx.clearRect(0, 0, supCanvas.width, supCanvas.height);
-  if (!supCanvas) setupSupSignature();
+  document.getElementById('supervisorName').value = FIXED_SUPERVISOR.name;
+  document.getElementById('supervisorCargo').value = FIXED_SUPERVISOR.cargo;
   new bootstrap.Modal(document.getElementById('supervisorModal')).show();
 };
 
@@ -378,8 +350,7 @@ document.getElementById('generarPdfBtn').addEventListener('click', () => {
   const supName = document.getElementById('supervisorName').value.trim();
   const supCargo = document.getElementById('supervisorCargo').value.trim();
   if (!supName) { alert('Por favor ingresa el nombre del supervisor'); return; }
-  const supFirma = supCanvas.toDataURL('image/png');
-  if (supFirma.length < 5000) { if (!confirm('No se detectó firma del supervisor. ¿Continuar?')) return; }
+  const supFirma = FIXED_SUPERVISOR.firma;
 
   bootstrap.Modal.getInstance(document.getElementById('supervisorModal')).hide();
   setTimeout(() => generarReportePDF(currentPdfRow, { name: supName, cargo: supCargo, firma: supFirma }), 300);
