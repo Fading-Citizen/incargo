@@ -331,11 +331,20 @@ window.verDetalle = idx => {
 };
 
 function renderEvidenceImages(raw) {
-  const fotos = (raw || '').split('|').filter(Boolean);
-  if (!fotos.length) return '';
+  const fotos = getValidEvidenceImages(raw);
+  const total = (raw || '').split('|').filter(Boolean).length;
+  if (!fotos.length) {
+    return total ? '<div class="alert alert-warning mt-3 mb-0">Las evidencias de esta inspección están incompletas y deben cargarse nuevamente.</div>' : '';
+  }
   return `<h6 class="mt-3">Evidencia fotográfica</h6><div class="row g-2">${fotos.map((foto, index) =>
     `<div class="col-6"><img src="${foto}" alt="Evidencia ${index + 1}" class="img-fluid rounded" style="border:1px solid #ddd;" /></div>`
   ).join('')}</div>`;
+}
+
+function getValidEvidenceImages(raw) {
+  return (raw || '').split('|').filter(foto =>
+    foto.startsWith('data:image/') && !foto.includes('[TRUNC]')
+  );
 }
 
 // ============= PDF REPORTE =============
@@ -366,7 +375,8 @@ document.getElementById('generarPdfBtn').addEventListener('click', () => {
 
 function generarReportePDF(row, supervisor) {
   const items = parseItems(row.items);
-  const fotos = (row.fotos || '').split('|').filter(Boolean);
+  const fotos = getValidEvidenceImages(row.fotos);
+  const invalidPhotoCount = (row.fotos || '').split('|').filter(Boolean).length - fotos.length;
 
   const brandLogoUrl = 'https://www.incargo.co/img/Logo.png';
 
@@ -394,7 +404,7 @@ function generarReportePDF(row, supervisor) {
        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
          ${fotos.slice(0,9).map(f => `<img src="${f}" style="width:100%;border-radius:6px;border:1px solid #ddd;" />`).join('')}
        </div>`
-    : '';
+    : (invalidPhotoCount > 0 ? '<p style="color:#856404;background:#fff3cd;padding:10px;border-left:4px solid #f9d52e;">Las evidencias fotográficas están incompletas y deben cargarse nuevamente.</p>' : '');
 
   w.document.write(`
     <!DOCTYPE html>
