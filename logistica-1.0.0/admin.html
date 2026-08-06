@@ -652,7 +652,41 @@ document.getElementById('exportCsvBtn').addEventListener('click', () => {
   a.click();
 });
 
-document.getElementById('exportPdfBtn').addEventListener('click', () => window.print());
+document.getElementById('exportPdfBtn').addEventListener('click', () => {
+  if (typeof html2pdf !== 'function') {
+    alert('No se pudo cargar el generador PDF. Revisa tu conexión e inténtalo de nuevo.');
+    return;
+  }
+  const report = document.createElement('div');
+  report.style.cssText = 'background:#fff;color:#060315;padding:24px;font-family:Arial,sans-serif;';
+  report.innerHTML = `
+    <h1 style="border-bottom:3px solid #f9d52e;padding-bottom:10px;">Reporte de inspecciones · Incargo</h1>
+    <p>Generado el ${new Date().toLocaleDateString('es-CO')}</p>
+    <table style="width:100%;border-collapse:collapse;font-size:11px;">
+      <thead><tr style="background:#060315;color:#fff;">
+        <th style="padding:7px;text-align:left;">Fecha</th><th style="padding:7px;text-align:left;">Placa</th>
+        <th style="padding:7px;text-align:left;">Conductor</th><th style="padding:7px;text-align:left;">Vehículo</th>
+        <th style="padding:7px;text-align:left;">Ciudad</th><th style="padding:7px;text-align:left;">Estado</th>
+      </tr></thead>
+      <tbody>${allData.map(row => {
+        const hasMalo = parseItems(row.items).some(item => item.value === 'MALO');
+        return `<tr><td style="padding:7px;border-bottom:1px solid #ddd;">${formatDateValue(row.fecha)}</td>
+          <td style="padding:7px;border-bottom:1px solid #ddd;">${row.placa || '-'}</td>
+          <td style="padding:7px;border-bottom:1px solid #ddd;">${row.conductor || '-'}</td>
+          <td style="padding:7px;border-bottom:1px solid #ddd;">${row.claseVehiculo || '-'}</td>
+          <td style="padding:7px;border-bottom:1px solid #ddd;">${row.ciudad || '-'}</td>
+          <td style="padding:7px;border-bottom:1px solid #ddd;">${hasMalo ? 'Requiere atención' : 'OK'}</td></tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  document.body.appendChild(report);
+  html2pdf().set({
+    margin: 8,
+    filename: `Reporte_inspecciones_${new Date().toISOString().split('T')[0]}.pdf`,
+    image: { type: 'jpeg', quality: 0.95 },
+    html2canvas: { scale: 2, backgroundColor: '#ffffff' },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+  }).from(report).save().then(() => report.remove());
+});
 
 // DEMO
 function generarDemo() {
@@ -661,6 +695,7 @@ function generarDemo() {
   ];
 }
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
