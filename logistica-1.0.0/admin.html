@@ -324,11 +324,19 @@ window.verDetalle = idx => {
     ${maloHtml ? `<h6 class="text-danger"><i class="fa-solid fa-triangle-exclamation"></i> Items MALO</h6><ul>${maloHtml}</ul>` : ''}
     <h6 class="text-success"><i class="fa-solid fa-check-circle"></i> Items OK</h6>
     <details><summary>Ver todos (${items.length})</summary><ul>${okHtml}</ul></details>
-    ${r.fotoPlaca ? `<h6 class="mt-3">Foto placa</h6><img src="${r.fotoPlaca}" class="img-fluid rounded" />` : ''}
+    ${renderEvidenceImages(r.fotos)}
     ${r.firma ? `<h6 class="mt-3">Firma</h6><img src="${r.firma}" class="img-fluid rounded" style="max-height:140px;border:1px solid #ddd;" />` : ''}
   `;
   new bootstrap.Modal(document.getElementById('detailModal')).show();
 };
+
+function renderEvidenceImages(raw) {
+  const fotos = (raw || '').split('|').filter(Boolean);
+  if (!fotos.length) return '';
+  return `<h6 class="mt-3">Evidencia fotográfica</h6><div class="row g-2">${fotos.map((foto, index) =>
+    `<div class="col-6"><img src="${foto}" alt="Evidencia ${index + 1}" class="img-fluid rounded" style="border:1px solid #ddd;" /></div>`
+  ).join('')}</div>`;
+}
 
 // ============= PDF REPORTE =============
 let currentPdfRow = null;

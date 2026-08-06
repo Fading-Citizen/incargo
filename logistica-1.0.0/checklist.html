@@ -430,14 +430,14 @@ document.getElementById('fotoInput').addEventListener('change', async e => {
       fr.onload = ev => r(ev.target.result);
       fr.readAsDataURL(f);
     });
-    const compressed = await compressImage(dataUrl, 1200);
+    const compressed = await compressImage(dataUrl, 900, 14000);
     fotosBase64.push(compressed);
   }
   renderPhotos();
   e.target.value = '';
 });
 
-function compressImage(dataUrl, maxDim) {
+function compressImage(dataUrl, maxDim, maxLength) {
   return new Promise(resolve => {
     const img = new Image();
     img.onload = () => {
@@ -448,8 +448,22 @@ function compressImage(dataUrl, maxDim) {
       }
       const c = document.createElement('canvas');
       c.width = w; c.height = h;
-      c.getContext('2d').drawImage(img, 0, 0, w, h);
-      resolve(c.toDataURL('image/jpeg', 0.78));
+      const context = c.getContext('2d');
+      context.drawImage(img, 0, 0, w, h);
+      let quality = 0.7;
+      let result = c.toDataURL('image/jpeg', quality);
+      while (result.length > maxLength && quality > 0.35) {
+        quality -= 0.08;
+        result = c.toDataURL('image/jpeg', quality);
+      }
+      if (result.length > maxLength) {
+        const scale = Math.sqrt(maxLength / result.length);
+        c.width = Math.max(320, Math.floor(w * scale));
+        c.height = Math.max(240, Math.floor(h * scale));
+        context.drawImage(img, 0, 0, c.width, c.height);
+        result = c.toDataURL('image/jpeg', 0.45);
+      }
+      resolve(result);
     };
     img.src = dataUrl;
   });

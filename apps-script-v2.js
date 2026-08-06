@@ -47,8 +47,8 @@ function doPost(e) {
     };
 
     const fotosJoined = Array.isArray(data.fotos)
-      ? data.fotos.map(f => truncateB64(f)).join('|')
-      : truncateB64(data.fotoPlaca);
+      ? data.fotos.join('|')
+      : (data.fotoPlaca || '');
 
     const tipoTransporte = Array.isArray(data.tipoTransporte)
       ? data.tipoTransporte.join(', ')
