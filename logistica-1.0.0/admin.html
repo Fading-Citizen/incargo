@@ -390,7 +390,7 @@ function generarReportePDF(row, supervisor) {
 
   w.document.write(`
     <!DOCTYPE html>
-    <html><head><title>Inspección ${row.placa} - ${row.fecha}</title>
+    <html><head><title>Inspección ${row.placa} - ${formatDateValue(row.fecha)}</title>
     <style>
       body { font-family: Arial, sans-serif; padding: 30px; color: #060315; background: #fff; }
       .header { display:flex; align-items:center; justify-content:space-between; border-bottom: 4px solid #f9d52e; padding-bottom: 14px; margin-bottom: 20px; }
@@ -422,7 +422,6 @@ function generarReportePDF(row, supervisor) {
       </div>
       <div style="text-align:right;font-size:12px;color:#6c757d;">
         <div><strong>Fecha de emisión:</strong> ${new Date().toLocaleDateString('es-CO')}</div>
-        <div><strong>Hora:</strong> ${new Date().toLocaleTimeString('es-CO')}</div>
       </div>
     </div>
 
@@ -477,7 +476,7 @@ function generarReportePDF(row, supervisor) {
     </div>
 
     <div class="footer">
-      Documento generado el ${new Date().toLocaleString('es-CO')} · Incargo · Sistema de Inspección Preoperacional v2
+      Documento generado el ${new Date().toLocaleDateString('es-CO')} · Incargo · Sistema de Inspección Preoperacional v2
     </div>
 
     <div class="no-print" style="text-align:center;margin-top:30px;">
