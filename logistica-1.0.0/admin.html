@@ -7,20 +7,37 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
 <style>
-  body { background:#f4f6f9; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
-  .navbar-dark { background: linear-gradient(135deg,#0d6efd,#0a58ca); }
-  .stat-card { border-radius:12px; padding:18px; color:#fff; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+  :root { --brand-yellow:#f9d52e; --brand-cyan:#51CFED; --brand-light:#F8F2F0; --brand-ink:#060315; --brand-orange:#f7931e; --brand-green:#198754; }
+  body { background:var(--brand-light); color:var(--brand-ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  .navbar-dark { background:var(--brand-ink); border-bottom:4px solid var(--brand-yellow); }
+  .brand-nav-logo { width:132px; height:42px; object-fit:contain; }
+  .brand-lock-logo { display:block; width:220px; max-width:100%; height:auto; margin:0 auto 18px; }
+  .stat-card { border-radius:10px; padding:18px; color:var(--brand-ink); box-shadow:0 2px 8px rgba(6,3,21,.12); }
+  .stat-total { background:var(--brand-ink); color:#fff; }
+  .stat-today { background:var(--brand-cyan); }
+  .stat-alert { background:var(--brand-yellow); }
+  .stat-vehicles { background:#fff; border:2px solid var(--brand-cyan); }
   .stat-card .num { font-size:2.1rem; font-weight:700; }
-  .table-card { background:#fff; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
-  .filter-bar { background:#fff; border-radius:12px; padding:14px; margin-bottom:14px; }
+  .table-card { background:#fff; border-radius:10px; box-shadow:0 1px 3px rgba(6,3,21,.1); }
+  .filter-bar { background:#fff; border-radius:10px; padding:14px; margin-bottom:14px; box-shadow:0 1px 3px rgba(6,3,21,.06); }
+  .form-control:focus, .form-select:focus { border-color:var(--brand-cyan); box-shadow:0 0 0 .2rem rgba(81,207,237,.25); }
+  .btn-brand { background:var(--brand-yellow); border-color:var(--brand-yellow); color:var(--brand-ink); font-weight:700; }
+  .btn-brand:hover { background:#e8c72a; border-color:#e8c72a; color:var(--brand-ink); }
+  .btn-brand-dark { background:var(--brand-ink); border-color:var(--brand-ink); color:#fff; font-weight:700; }
+  .btn-brand-dark:hover { background:#1a1730; border-color:#1a1730; color:#fff; }
+  .btn-outline-brand { color:var(--brand-ink); border-color:var(--brand-cyan); }
+  .btn-outline-brand:hover { background:var(--brand-cyan); color:var(--brand-ink); }
   .badge-malo { background:#dc3545; }
-  .badge-bueno { background:#198754; }
+  .badge-bueno { background:var(--brand-green); }
   .badge-na { background:#6c757d; }
-  .lock-screen { min-height:100vh; display:flex; align-items:center; justify-content:center; background:#0d6efd; }
-  .lock-card { background:#fff; border-radius:14px; padding:30px; max-width:360px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,.2); }
-  details summary { cursor:pointer; padding:6px 8px; background:#f8f9fa; border-radius:6px; margin-bottom:4px; }
+  .lock-screen { min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--brand-ink); }
+  .lock-card { background:#fff; border-top:6px solid var(--brand-yellow); border-radius:10px; padding:30px; max-width:360px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,.24); }
+  .modal-header { background:var(--brand-ink); color:#fff; border-bottom:4px solid var(--brand-yellow); }
+  .modal-header .btn-close { filter:invert(1); }
+  details summary { cursor:pointer; padding:6px 8px; background:var(--brand-light); border-radius:6px; margin-bottom:4px; }
   pre { font-size:.78rem; max-height:200px; overflow:auto; background:#f1f3f6; padding:8px; border-radius:6px; }
-  th { font-size:.8rem; text-transform:uppercase; color:#6c757d; }
+  th { font-size:.8rem; text-transform:uppercase; color:var(--brand-ink); }
+  .table thead { border-bottom:2px solid var(--brand-yellow); }
 </style>
 </head>
 <body>
@@ -29,7 +46,7 @@
 <div id="lockScreen" class="lock-screen">
   <div class="lock-card">
     <div class="text-center mb-3">
-      <i class="fa-solid fa-shield-halved fa-3x text-primary"></i>
+      <img class="brand-lock-logo" src="img/Logo.png" alt="Incargo - Logística y Transporte">
       <h4 class="mt-2 mb-0">Incargo Admin</h4>
       <small class="text-muted">Panel de control de inspecciones</small>
     </div>
@@ -45,7 +62,7 @@
 <!-- APP -->
 <div id="app" style="display:none;">
   <nav class="navbar navbar-dark px-3">
-    <span class="navbar-brand"><i class="fa-solid fa-clipboard-check me-2"></i>Inspecciones · Incargo</span>
+    <span class="navbar-brand d-flex align-items-center gap-2"><img class="brand-nav-logo" src="img/Logo.png" alt="Incargo"><span>Inspecciones</span></span>
     <button class="btn btn-sm btn-outline-light" id="logoutBtn"><i class="fa-solid fa-right-from-bracket me-1"></i>Salir</button>
   </nav>
 
@@ -53,10 +70,10 @@
 
     <!-- KPIs -->
     <div class="row g-3 mb-3">
-      <div class="col-md-3"><div class="stat-card bg-primary"><div class="num" id="kpiTotal">0</div><small>Total inspecciones</small></div></div>
-      <div class="col-md-3"><div class="stat-card bg-success"><div class="num" id="kpiHoy">0</div><small>Hoy</small></div></div>
-      <div class="col-md-3"><div class="stat-card bg-warning text-dark"><div class="num" id="kpiAlertas">0</div><small>Con items MALO</small></div></div>
-      <div class="col-md-3"><div class="stat-card bg-info text-dark"><div class="num" id="kpiVehiculos">0</div><small>Vehículos únicos</small></div></div>
+      <div class="col-md-3"><div class="stat-card stat-total"><div class="num" id="kpiTotal">0</div><small>Total inspecciones</small></div></div>
+      <div class="col-md-3"><div class="stat-card stat-today"><div class="num" id="kpiHoy">0</div><small>Hoy</small></div></div>
+      <div class="col-md-3"><div class="stat-card stat-alert"><div class="num" id="kpiAlertas">0</div><small>Con items MALO</small></div></div>
+      <div class="col-md-3"><div class="stat-card stat-vehicles"><div class="num" id="kpiVehiculos">0</div><small>Vehículos únicos</small></div></div>
     </div>
 
     <!-- Filtros -->
@@ -72,8 +89,8 @@
           </select>
         </div>
         <div class="col-md-2 d-flex gap-1">
-          <button class="btn btn-success flex-fill" id="exportCsvBtn"><i class="fa-solid fa-file-csv"></i></button>
-          <button class="btn btn-danger flex-fill" id="exportPdfBtn"><i class="fa-solid fa-file-pdf"></i></button>
+          <button class="btn btn-brand-dark flex-fill" id="exportCsvBtn"><i class="fa-solid fa-file-csv"></i></button>
+          <button class="btn btn-brand flex-fill" id="exportPdfBtn"><i class="fa-solid fa-file-pdf"></i></button>
         </div>
       </div>
     </div>
@@ -82,7 +99,7 @@
     <div class="table-card p-3">
       <div class="d-flex justify-content-between align-items-center mb-2">
         <h6 class="mb-0">Inspecciones registradas</h6>
-        <button class="btn btn-sm btn-outline-primary" id="refreshBtn"><i class="fa-solid fa-rotate"></i> Actualizar</button>
+        <button class="btn btn-sm btn-outline-brand" id="refreshBtn"><i class="fa-solid fa-rotate"></i> Actualizar</button>
       </div>
       <div class="table-responsive">
         <table class="table table-hover align-middle">
@@ -225,7 +242,7 @@ function render() {
 
   const filtered = allData.filter(r => {
     const matchQ = !q || (r.placa + ' ' + r.conductor + ' ' + r.ciudad).toLowerCase().includes(q);
-    const matchF = !f || r.fecha === f;
+    const matchF = !f || dateKey(r.fecha) === f;
     const itemsArr = parseItems(r.items);
     const hasMalo = itemsArr.some(it => it.value === 'MALO');
     const matchEst = !est || (est === 'MALO' && hasMalo) || (est === 'OK' && !hasMalo);
@@ -248,7 +265,7 @@ function render() {
     const hasMalo = items.some(it => it.value === 'MALO');
     return `<tr>
       <td>${filtered.length - i}</td>
-      <td>${r.fecha || '-'}<br><small class="text-muted">${(r.ts || '').split('T')[1]?.slice(0,5) || ''}</small></td>
+      <td>${formatDateValue(r.fecha)}<br><small class="text-muted">${(r.ts || '').split('T')[1]?.slice(0,5) || ''}</small></td>
       <td><strong class="text-uppercase">${r.placa || '-'}</strong></td>
       <td>${r.conductor || '-'}</td>
       <td>${r.claseVehiculo || '-'}<br><small class="text-muted">${r.modelo || ''}</small></td>
@@ -264,6 +281,27 @@ function parseItems(raw) {
   try { return JSON.parse(raw || '[]'); } catch { return []; }
 }
 
+function dateKey(value) {
+  if (!value) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return String(value);
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(date).reduce((result, part) => {
+    result[part.type] = part.value;
+    return result;
+  }, {});
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function formatDateValue(value) {
+  const key = dateKey(value);
+  if (!key) return value || '-';
+  const [year, month, day] = key.split('-');
+  return `${day}/${month}/${year}`;
+}
+
 window.verDetalle = idx => {
   const r = allData[idx];
   const items = parseItems(r.items);
@@ -272,7 +310,7 @@ window.verDetalle = idx => {
 
   document.getElementById('detailBody').innerHTML = `
     <div class="row g-2 mb-3">
-      <div class="col-6"><strong>Fecha:</strong> ${r.fecha}</div>
+      <div class="col-6"><strong>Fecha:</strong> ${formatDateValue(r.fecha)}</div>
       <div class="col-6"><strong>Conductor:</strong> ${r.conductor}</div>
       <div class="col-6"><strong>Placa:</strong> <span class="text-uppercase">${r.placa}</span></div>
       <div class="col-6"><strong>Licencia:</strong> ${r.licencia}</div>
@@ -351,14 +389,7 @@ function generarReportePDF(row, supervisor) {
   const items = parseItems(row.items);
   const fotos = (row.fotos || '').split('|').filter(Boolean);
 
-  // Logo Incargo
-  const logoUrl = 'img/incargo-logo.png'; // fallback
-  const logoSvg = `data:image/svg+xml;utf8,${encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60">
-      <rect width="200" height="60" fill="#0d6efd" rx="6"/>
-      <text x="100" y="38" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#fff" text-anchor="middle">INCARGO</text>
-    </svg>
-  `)}`;
+  const brandLogoUrl = 'https://www.incargo.co/img/Logo.png';
 
   const w = window.open('', '_blank');
   if (!w) { alert('Permite ventanas emergentes para generar el PDF'); return; }
@@ -390,30 +421,31 @@ function generarReportePDF(row, supervisor) {
     <!DOCTYPE html>
     <html><head><title>Inspección ${row.placa} - ${row.fecha}</title>
     <style>
-      body { font-family: Arial, sans-serif; padding: 30px; color: #212529; }
-      .header { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid #0d6efd; padding-bottom: 14px; margin-bottom: 20px; }
-      .header img { height: 60px; }
-      .header h1 { margin: 0; color: #0d6efd; font-size: 22px; }
+      body { font-family: Arial, sans-serif; padding: 30px; color: #060315; background: #fff; }
+      .header { display:flex; align-items:center; justify-content:space-between; border-bottom: 4px solid #f9d52e; padding-bottom: 14px; margin-bottom: 20px; }
+      .header img { width: 210px; height: auto; max-height: 70px; object-fit: contain; }
+      .header h1 { margin: 0; color: #060315; font-size: 22px; }
       .header small { color: #6c757d; }
       .info-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; margin-bottom: 20px; }
       .info-grid div { padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
-      .info-grid strong { display:inline-block; min-width: 130px; color:#495057; }
+      .info-grid strong { display:inline-block; min-width: 130px; color:#060315; }
       table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
-      th { background: #0d6efd; color: #fff; padding: 8px; text-align: left; }
+      th { background: #060315; color: #fff; padding: 8px; text-align: left; border-bottom: 3px solid #51CFED; }
+      td { border-color: #e8e3e1 !important; }
       .firmas { display:grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 60px; }
       .firma-block { text-align:center; }
       .firma-block img { max-height: 100px; max-width: 220px; }
       .firma-line { border-top: 1px solid #212529; margin-top: 4px; padding-top: 6px; font-size: 12px; }
-      .footer { margin-top: 40px; padding-top: 14px; border-top: 1px solid #ddd; text-align:center; font-size: 11px; color: #6c757d; }
-      .estado-banner { text-align:center; padding: 14px; border-radius: 6px; margin: 14px 0; font-size: 16px; }
+      .footer { margin-top: 40px; padding-top: 14px; border-top: 2px solid #f9d52e; text-align:center; font-size: 11px; color: #6c757d; }
+      .estado-banner { text-align:center; padding: 14px; border-radius: 6px; margin: 14px 0; font-size: 16px; border-left: 6px solid #51CFED; }
       @media print { body { padding: 10mm; } .no-print { display:none; } }
     </style></head><body>
 
     <div class="header">
       <div style="display:flex;align-items:center;gap:14px;">
-        <img src="${logoSvg}" alt="Incargo">
+        <img src="${brandLogoUrl}" alt="Incargo - Logística y Transporte">
         <div>
-          <h1>CERTIFICADO DE INSPECCIÓN PREOPERACIONAL</h1>
+          <h1>CERTIFICADO DE INSPECCIÓN<br>PREOPERACIONAL</h1>
           <small>Código: SV-INSPP-01 · Versión 002</small>
         </div>
       </div>
@@ -427,26 +459,26 @@ function generarReportePDF(row, supervisor) {
       Resultado: ${estado}
     </div>
 
-    <h2 style="color:#0d6efd;border-bottom:2px solid #0d6efd;padding-bottom:6px;">Datos Generales</h2>
+    <h2 style="color:#060315;border-bottom:3px solid #51CFED;padding-bottom:6px;">Datos Generales</h2>
     <div class="info-grid">
-      <div><strong>Fecha:</strong> ${row.fecha || '-'}</div>
+      <div><strong>Fecha:</strong> ${formatDateValue(row.fecha)}</div>
       <div><strong>Ciudad:</strong> ${row.ciudad || '-'}</div>
       <div><strong>Empresa:</strong> ${row.empresa || '-'}</div>
       <div><strong>Conductor:</strong> ${row.conductor || '-'}</div>
       <div><strong>N° Licencia:</strong> ${row.licencia || '-'}</div>
       <div><strong>Placa:</strong> <strong>${(row.placa||'').toUpperCase()}</strong></div>
       <div><strong>Placa Semirremolque:</strong> ${row.placasemirremolque || 'N/A'}</div>
-      <div><strong>Clase de Vehículo:</strong> ${row.clasevehiculo || '-'}</div>
-      <div><strong>Tipo Carrocería:</strong> ${row.tipocarroceria || '-'}</div>
+      <div><strong>Clase de Vehículo:</strong> ${row.claseVehiculo || '-'}</div>
+      <div><strong>Tipo Carrocería:</strong> ${row.tipoCarroceria || '-'}</div>
       <div><strong>Modelo:</strong> ${row.modelo || '-'}</div>
       <div><strong>GPS:</strong> ${row.gps || '-'}</div>
       <div><strong>Tarjeta Propiedad:</strong> ${row.tarjetaprop || '-'}</div>
-      <div><strong>Fecha SOAT:</strong> ${row.fechasoat || '-'}</div>
-      <div><strong>Fecha Tecnomecánica:</strong> ${row.fechatecno || '-'}</div>
-      <div><strong>Tipo de Transporte:</strong> ${row.tipotransporte || 'N/A'}</div>
+      <div><strong>Fecha SOAT:</strong> ${formatDateValue(row.fechaSoat)}</div>
+      <div><strong>Fecha Tecnomecánica:</strong> ${formatDateValue(row.fechaTecno)}</div>
+      <div><strong>Tipo de Transporte:</strong> ${row.tipoTransporte || 'N/A'}</div>
     </div>
 
-    <h2 style="color:#0d6efd;border-bottom:2px solid #0d6efd;padding-bottom:6px;">Resultado del Checklist</h2>
+    <h2 style="color:#060315;border-bottom:3px solid #51CFED;padding-bottom:6px;">Resultado del Checklist</h2>
     <table>
       <thead><tr><th style="width:50%;">Ítem</th><th style="width:15%;">Estado</th><th>Observación</th></tr></thead>
       <tbody>${itemsRows}</tbody>
@@ -478,7 +510,7 @@ function generarReportePDF(row, supervisor) {
     </div>
 
     <div class="no-print" style="text-align:center;margin-top:30px;">
-      <button onclick="window.print()" style="background:#0d6efd;color:#fff;border:none;padding:12px 30px;border-radius:6px;font-size:14px;cursor:pointer;">
+      <button onclick="window.print()" style="background:#f9d52e;color:#060315;border:none;padding:12px 30px;border-radius:6px;font-size:14px;font-weight:bold;cursor:pointer;">
         🖨️ Imprimir / Guardar como PDF
       </button>
     </div>
