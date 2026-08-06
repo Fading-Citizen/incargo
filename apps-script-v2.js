@@ -91,18 +91,18 @@ function doGet(e) {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet()
       .getSheetByName(SHEET_NAME);
-    const rows = sheet.getDataRange().getValues();
-    const headers = rows.shift() || [];
+    const values = sheet ? sheet.getDataRange().getValues() : [];
+    if (!values.length) {
+      return ContentService.createTextOutput('[]')
+        .setMimeType(ContentService.MimeType.JSON);
+    }
 
-    const data = rows.map(row => {
-      const obj = { ts: row[0] ? new Date(row[0]).toISOString() : '' };
-      headers.forEach((h, i) => {
-        if (i === 0) return;
-        const key = headerToKey(String(h), i);
-        if (key) obj[key] = row[i];
-      });
-      return obj;
-    });
+    const hasHeaders = values[0].some(value => isHeader(String(value)));
+    const headers = hasHeaders ? values[0] : HEADERS;
+    const rows = hasHeaders ? values.slice(1) : values;
+    const data = rows.map(row => hasHeaders
+      ? rowToObject(row, headers)
+      : rowWithoutHeadersToObject(row));
 
     return ContentService.createTextOutput(JSON.stringify(data))
       .setMimeType(ContentService.MimeType.JSON);
@@ -111,6 +111,61 @@ function doGet(e) {
       JSON.stringify({ ok: false, error: err.message })
     ).setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+function isHeader(value) {
+  const norm = value.toLowerCase().replace(/\s|_/g, '');
+  return ['timestamp', 'fecha', 'ciudad', 'placa', 'conductor',
+    'licencia', 'empresa', 'clasevehiculo', 'itemsjson'].includes(norm);
+}
+
+function rowToObject(row, headers) {
+  const obj = { ts: toIso(row[0]) };
+  headers.forEach((h, i) => {
+    if (i === 0) return;
+    const key = headerToKey(String(h), i);
+    if (key) obj[key] = row[i];
+  });
+  return obj;
+}
+
+function rowWithoutHeadersToObject(row) {
+  const itemsIndex = row.findIndex(value =>
+    typeof value === 'string' && value.trim().startsWith('['));
+  const isLegacy = itemsIndex >= 0 && itemsIndex <= 12;
+  const indexes = isLegacy
+    ? { items: 12, firma: 13, fotos: 14, claseVehiculo: 7, modelo: 8,
+      gps: 9, fechaSoat: 10, fechaTecno: 11 }
+    : { items: 15, firma: 16, fotos: 17, claseVehiculo: 7,
+      tipoCarroceria: 8, placasemirremolque: 9, modelo: 10, gps: 11,
+      fechaSoat: 12, fechaTecno: 13, tipoTransporte: 14 };
+
+  return {
+    ts: toIso(row[0]),
+    fecha: row[1] || '',
+    ciudad: row[2] || '',
+    placa: row[3] || '',
+    conductor: row[4] || '',
+    licencia: row[5] || '',
+    empresa: row[6] || '',
+    claseVehiculo: row[indexes.claseVehiculo] || '',
+    tipoCarroceria: row[indexes.tipoCarroceria] || '',
+    placasemirremolque: row[indexes.placasemirremolque] || '',
+    modelo: row[indexes.modelo] || '',
+    gps: row[indexes.gps] || '',
+    fechaSoat: row[indexes.fechaSoat] || '',
+    fechaTecno: row[indexes.fechaTecno] || '',
+    tipoTransporte: row[indexes.tipoTransporte] || '',
+    items: row[indexes.items] || '[]',
+    firma: row[indexes.firma] || '',
+    fotos: row[indexes.fotos] || ''
+  };
+}
+
+function toIso(value) {
+  if (!value) return '';
+  const date = value instanceof Date ? value : new Date(value);
+  return isNaN(date.getTime()) ? '' : date.toISOString();
 }
 
 function headerToKey(h, idx) {
