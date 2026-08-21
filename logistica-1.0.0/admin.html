@@ -82,6 +82,26 @@
       <div class="col-md-3"><div class="stat-card stat-vehicles"><div class="num" id="kpiVehiculos">0</div><small>Vehículos únicos</small></div></div>
     </div>
 
+    <div class="row g-3 mb-3">
+      <div class="col-md-4"><div class="stat-card" style="background:#fff;border:2px solid var(--brand-yellow);"><div class="num" id="kpiVinculaciones">0</div><small>Solicitudes de vinculación</small></div></div>
+      <div class="col-md-4"><div class="stat-card" style="background:#fff;border:2px solid var(--brand-green);"><div class="num" id="kpiVinculacionesHoy">0</div><small>Vinculaciones recibidas hoy</small></div></div>
+      <div class="col-md-4 d-flex align-items-stretch"><button class="btn btn-brand-dark w-100" id="showVinculacionesBtn"><i class="fa-solid fa-file-signature me-2"></i>Ver vinculaciones</button></div>
+    </div>
+
+    <div id="vinculacionesPanel" class="table-card p-3 mb-3" style="display:none;">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="mb-0">Solicitudes de vinculación temporal</h6>
+        <button class="btn btn-sm btn-outline-brand" id="refreshVinculacionesBtn"><i class="fa-solid fa-rotate"></i> Actualizar</button>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead><tr><th>Fecha</th><th>Nombre</th><th>Identificación</th><th>Tipo</th><th>Correo</th><th>Aceptación</th></tr></thead>
+          <tbody id="vinculacionesTbody"></tbody>
+        </table>
+      </div>
+      <div id="vinculacionesEmpty" class="text-center py-3 text-muted" style="display:none;">No hay solicitudes de vinculación registradas.</div>
+    </div>
+
     <!-- Filtros -->
     <div class="filter-bar">
       <div class="row g-2">
@@ -233,6 +253,7 @@ const ADMIN_PASSWORD = 'incargo2024';
 // ==========================================
 
 let allData = [];
+let vinculacionesData = [];
 
 // AUTH
 document.getElementById('loginBtn').addEventListener('click', () => {
@@ -272,6 +293,7 @@ async function cargar() {
     document.getElementById('loadError').style.display = 'none';
     allData = data;
     render();
+    cargarVinculaciones();
   } catch (err) {
     console.error('Error cargando:', err);
     allData = [];
@@ -281,6 +303,46 @@ async function cargar() {
     loadError.style.display = 'block';
   }
 }
+
+async function cargarVinculaciones() {
+  try {
+    const response = await fetch(ENDPOINT_URL + '?action=vinculaciones');
+    const data = await response.json();
+    vinculacionesData = Array.isArray(data) ? data : [];
+    renderVinculaciones();
+  } catch (error) {
+    vinculacionesData = [];
+    renderVinculaciones();
+    console.error('Error cargando vinculaciones:', error);
+  }
+}
+
+function renderVinculaciones() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('kpiVinculaciones').textContent = vinculacionesData.length;
+  document.getElementById('kpiVinculacionesHoy').textContent = vinculacionesData.filter(item => item.ts && item.ts.startsWith(today)).length;
+  const body = document.getElementById('vinculacionesTbody');
+  const rows = [...vinculacionesData].reverse();
+  document.getElementById('vinculacionesEmpty').style.display = rows.length ? 'none' : 'block';
+  body.innerHTML = rows.map(item => `<tr>
+    <td>${formatDateValue(item.ts)}<br><small class="text-muted">${(item.ts || '').split('T')[1]?.slice(0,5) || ''}</small></td>
+    <td><strong>${escapeHtml(item.nombreCompleto || '-')}</strong><br><small>${escapeHtml(item.correoRegistro || '')}</small></td>
+    <td>${escapeHtml(item.tipoIdentificacion || '-')} ${escapeHtml(item.numeroIdentificacion || '')}</td>
+    <td>${escapeHtml(item.tipoVinculacion || '-')}<br><small>${escapeHtml(item.tipoVinculacionOtro || '')}</small></td>
+    <td>${escapeHtml(item.correoElectronico || '-')}</td>
+    <td><span class="badge badge-bueno">${item.aceptaContrato === 'SI' ? 'ACEPTADO' : 'PENDIENTE'}</span></td>
+  </tr>`).join('');
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>'"]/g, character => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[character]));
+}
+
+document.getElementById('showVinculacionesBtn').addEventListener('click', () => {
+  const panel = document.getElementById('vinculacionesPanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+});
+document.getElementById('refreshVinculacionesBtn').addEventListener('click', cargarVinculaciones);
 
 document.getElementById('refreshBtn').addEventListener('click', cargar);
 document.getElementById('searchInput').addEventListener('input', render);

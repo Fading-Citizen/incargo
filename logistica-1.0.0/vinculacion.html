@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#060315">
+  <title>Vinculación temporal · Incargo</title>
+  <link rel="icon" href="img/favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Condensed:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --ink:#060315; --yellow:#f9d52e; --cyan:#51cfed; --paper:#f8f2f0; --muted:#6d6875; --line:#ded8d5; --danger:#c93636; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font-family:Inter,Arial,sans-serif; line-height:1.55; }
+    .topbar { background:var(--ink); border-bottom:4px solid var(--yellow); color:#fff; padding:18px 20px; }
+    .topbar-inner { max-width:920px; margin:auto; display:flex; align-items:center; justify-content:space-between; gap:20px; }
+    .brand { display:flex; align-items:center; gap:14px; font-weight:700; letter-spacing:.02em; }
+    .brand img { width:128px; height:38px; object-fit:contain; }
+    .brand span { border-left:1px solid #514d5e; padding-left:14px; }
+    .topbar a { color:#fff; text-decoration:none; font-size:.85rem; }
+    main { max-width:920px; margin:0 auto; padding:48px 20px 72px; }
+    .intro { max-width:720px; margin-bottom:28px; }
+    .eyebrow { color:#766600; font-size:.75rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase; }
+    h1,h2,h3 { font-family:"Roboto Condensed",Arial,sans-serif; line-height:1.05; }
+    h1 { font-size:clamp(2.5rem,7vw,5rem); letter-spacing:-.04em; margin:10px 0 16px; }
+    .intro p { color:#4b4653; font-size:1.05rem; max-width:650px; }
+    .step { display:flex; align-items:center; gap:10px; color:var(--muted); font-size:.82rem; font-weight:600; margin:24px 0 10px; }
+    .step b { background:var(--yellow); color:var(--ink); width:26px; height:26px; display:grid; place-items:center; border-radius:50%; }
+    .card { background:#fff; border:1px solid var(--line); border-radius:10px; padding:26px; margin-bottom:18px; box-shadow:0 5px 18px rgba(6,3,21,.05); }
+    .card h2 { font-size:1.55rem; margin:0 0 18px; }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+    .full { grid-column:1/-1; }
+    label { display:block; color:#302c38; font-size:.8rem; font-weight:700; margin-bottom:6px; }
+    .required { color:var(--danger); }
+    input, select { width:100%; border:1px solid #cfc8c5; border-radius:6px; padding:12px 13px; color:var(--ink); background:#fff; font:inherit; font-size:.94rem; }
+    input:focus, select:focus { outline:3px solid rgba(81,207,237,.28); border-color:#239ab7; }
+    .hint { color:var(--muted); font-size:.78rem; margin:5px 0 0; }
+    .check-list { display:grid; gap:11px; }
+    .check-row { display:flex; align-items:flex-start; gap:10px; padding:12px 13px; border:1px solid var(--line); border-radius:7px; cursor:pointer; transition:.15s ease; }
+    .check-row:hover, .check-row:has(input:checked) { border-color:var(--cyan); background:#f4fcfe; }
+    .check-row input { width:20px; height:20px; flex:0 0 auto; margin-top:1px; accent-color:var(--ink); }
+    .check-row label { margin:0; font-size:.92rem; font-weight:500; cursor:pointer; }
+    .other-input { margin-top:8px; margin-left:30px; width:calc(100% - 30px); }
+    .contract { background:#fbfaf9; border:1px solid var(--line); border-left:4px solid var(--cyan); border-radius:6px; padding:18px; max-height:510px; overflow:auto; }
+    .contract h3 { font-size:1.05rem; margin:18px 0 5px; text-transform:uppercase; letter-spacing:.02em; }
+    .contract h3:first-child { margin-top:0; }
+    .contract p { margin:0 0 10px; color:#3e3944; font-size:.82rem; text-align:justify; }
+    .contract-title { text-align:center; font-weight:700; letter-spacing:.06em; margin-bottom:18px !important; color:var(--ink) !important; }
+    .accept { display:flex; gap:12px; align-items:flex-start; background:#fffbea; border:1px solid #e3ca54; border-radius:7px; padding:16px; margin-top:16px; }
+    .accept input { width:22px; height:22px; flex:0 0 auto; accent-color:#198754; }
+    .accept label { font-size:.9rem; margin:0; cursor:pointer; }
+    .legal-note { color:var(--muted); font-size:.75rem; margin-top:12px; }
+    button { width:100%; border:0; border-radius:6px; padding:15px 20px; background:var(--yellow); color:var(--ink); font:700 1rem Inter,Arial,sans-serif; cursor:pointer; transition:.15s ease; }
+    button:hover { background:#e8c72a; transform:translateY(-1px); }
+    button:disabled { opacity:.65; cursor:wait; transform:none; }
+    .success, .error { display:none; border-radius:7px; padding:16px; margin-top:16px; font-weight:600; }
+    .success { background:#dff4e8; color:#146c3a; border:1px solid #9bd8b5; }
+    .error { background:#fde5e5; color:#8b2525; border:1px solid #ebb0b0; }
+    footer { background:var(--ink); color:#d8d5dd; padding:22px 20px; font-size:.78rem; text-align:center; }
+    @media (max-width:640px) { .topbar-inner { align-items:flex-start; flex-direction:column; gap:10px; } .brand span { display:none; } main { padding:32px 14px 52px; } .card { padding:19px 16px; } .grid { grid-template-columns:1fr; gap:14px; } .full { grid-column:auto; } h1 { font-size:3.2rem; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><img src="img/Logo.png" alt="Incargo"><span>Vinculación temporal</span></div>
+      <a href="index.html">Volver a incargo.co</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro">
+      <div class="eyebrow">Registro de terceros · Transporte de carga</div>
+      <h1>Contrato de vinculación temporal</h1>
+      <p>Completa tus datos, revisa el contrato mercantil de encargo a terceros y registra tu aceptación para iniciar el proceso de vinculación con Incargo.</p>
+    </section>
+
+    <form id="vinculacionForm" novalidate>
+      <div class="step"><b>1</b> Identificación del vinculado</div>
+      <section class="card">
+        <h2>Datos personales</h2>
+        <div class="grid">
+          <div class="full">
+            <label for="correoRegistro">Correo electrónico <span class="required">*</span></label>
+            <input type="email" id="correoRegistro" name="correoRegistro" autocomplete="email" required>
+            <p class="hint">Usaremos este correo para identificar y enviar una copia del registro. No es necesario iniciar sesión en Google.</p>
+          </div>
+          <div class="full">
+            <label>Tipo de vinculación <span class="required">*</span></label>
+            <div class="check-list" id="tipoVinculacionList">
+              <label class="check-row"><input type="checkbox" name="tipoVinculacion" value="PROPIETARIO"><span>PROPIETARIO</span></label>
+              <label class="check-row"><input type="checkbox" name="tipoVinculacion" value="CONDUCTOR"><span>CONDUCTOR</span></label>
+              <label class="check-row"><input type="checkbox" name="tipoVinculacion" value="TENEDOR"><span>TENEDOR</span></label>
+              <label class="check-row"><input type="checkbox" name="tipoVinculacion" value="OTRO"><span>OTRO</span></label>
+            </div>
+            <input class="other-input" type="text" name="tipoVinculacionOtro" placeholder="Especifica otro tipo de vinculación (opcional)">
+          </div>
+          <div>
+            <label for="nombreCompleto">Nombre completo <span class="required">*</span></label>
+            <input type="text" id="nombreCompleto" name="nombreCompleto" autocomplete="name" required>
+          </div>
+          <div>
+            <label for="tipoIdentificacion">Tipo de identificación <span class="required">*</span></label>
+            <select id="tipoIdentificacion" name="tipoIdentificacion" required>
+              <option value="">Elige</option>
+              <option value="CC">Cédula de ciudadanía</option>
+              <option value="CE">Cédula de extranjería</option>
+              <option value="NIT">NIT</option>
+              <option value="PASAPORTE">Pasaporte</option>
+            </select>
+          </div>
+          <div>
+            <label for="numeroIdentificacion">Número de identificación <span class="required">*</span></label>
+            <input type="text" id="numeroIdentificacion" name="numeroIdentificacion" inputmode="numeric" required>
+          </div>
+          <div>
+            <label for="correoElectronico">Correo electrónico de contacto <span class="required">*</span></label>
+            <input type="email" id="correoElectronico" name="correoElectronico" autocomplete="email" required>
+          </div>
+        </div>
+      </section>
+
+      <div class="step"><b>2</b> Lectura del contrato</div>
+      <section class="card">
+        <h2>Contrato mercantil</h2>
+        <div class="contract" aria-label="Texto del contrato de vinculación temporal">
+          <p class="contract-title">CONTRATO DE VINCULACION TEMPORAL</p>
+          <p>Entre los suscritos a saber: RECORD LOGISTICO EN TRANSPORTE SAS “RELOTRANS SAS”, identificada con NIT. 900.973.275-8, sociedad comercial, con domicilio principal en Itagüí, que para efectos del presente contrato se denominará LA EMPRESA; y, por otro lado, el propietario, poseedor o tenedor o conductor del vehículo identificados al anverso de este documento, que en adelante se denominarán EL VINCULADO, se ha celebrado Contrato Mercantil de Encargo a Terceros, de conformidad con lo dispuesto en los artículos 984, 991 y concordantes del Código de Comercio, en armonía con lo reglamentado en el parágrafo del artículo 2.2.1.7.4.3 del Decreto 1079 de 2015, y/o las normas que lo modifiquen o sustituyan.</p>
+          <h3>Primera. Objeto</h3>
+          <p>LA EMPRESA encargará al VINCULADO la ejecución material del contrato de transporte celebrado con un generador de carga para cumplir un servicio público de transporte terrestre automotor de carga, bajo las condiciones estipuladas en el presente contrato y la información detallada en el RNDC (Registro Nacional de Despacho de Carga).</p>
+          <p><strong>Parágrafo.</strong> Ante la ausencia o imposibilidad del propietario, tenedor y/o poseedor del vehículo para suscribir el presente contrato, en su representación lo hace el conductor, quien actúa en este contrato como mandatario aparente, según información registrada en el RUNT, además, de la tenencia y posesión pacífica del vehículo aceptada por el propietario.</p>
+          <h3>Segunda. Autonomía contractual</h3>
+          <p>LA EMPRESA goza de plena autonomía y libertad de contratación, dentro de los límites del bien común, del equipo automotor en el cual se ejecutará el transporte, según procedimientos internos de selección para la flota tercerizada.</p>
+          <h3>Tercera. Relaciones económicas</h3>
+          <p>Según lo establecido por el Decreto 1079 de 2015 Capítulo VII, Sección 6 en materia de relaciones económicas, LAS PARTES acuerdan desarrollar esquemas operativos encaminados a una alta eficiencia operacional, menores tiempos de espera en las actividades de cargues y descargues con implementación de citas previas o ventanas de espera, el estudio de la naturaleza y tipología de la mercancía, etc., dirigidos a un alto rendimiento logístico, equidad y rentabilidad para las partes, bajo el concepto de planeación de recursos, lo que implica menores costos de operación del vehículo vinculado, bajo la premisa que el valor a pagar pactado entre las partes supera los costos de operación del vehículo vinculado. En todo caso, EL VINCULADO libera a la empresa de cualquier responsabilidad generada por pagos inferiores a los establecidos en el SICE-TAC, o en las normas que lo modifiquen. Además, renuncia a pretensiones económicas diferentes a las contempladas y pactadas.</p>
+          <h3>Cuarta. Gestión integral del riesgo</h3>
+          <p>EL VINCULADO, consciente de los riesgos que se derivan de la ejecución del contrato de transporte a cuyo encargo se compromete, y considerando que el artículo 991 del Código de Comercio los hace solidariamente responsables por las obligaciones derivadas del contrato, desde ya autoriza a la empresa para compensar del valor a pagar y/o del anticipo, en virtud de los términos establecidos en el artículo 1714 del Código Civil Colombiano, los valores asociados a la administración de todos los riesgos generados de la operación de transporte. Se aclara que esta compensación no tiene relación con los valores acordados de los fletes y que se debe exclusivamente a un acuerdo privado entre las partes, regulado por las normas del derecho privado. Cualquier indemnización se asumirá proporcionalmente al valor de lo pagado en los fletes a cada parte. EL VINCULADO acepta de antemano el pago del valor del deducible aplicable en cada indemnización.</p>
+          <h3>Quinta. Cumplimiento de instrucciones</h3>
+          <p>EL VINCULADO acepta expresamente, dentro de un contexto netamente comercial del encargo a terceros, la sujeción a los reglamentos operativos de LA EMPRESA en materia de la prestación del servicio público de transporte que se le notifique y se obliga a dar cumplimiento a cada una de las recomendaciones establecidas en el vale de instrucciones que hace parte del manifiesto de carga. En caso de incumplimiento, LA EMPRESA podrá imponer las multas estipuladas en el vale de instrucciones y compensar del valor a pagar los conceptos aquí descritos, una vez establecido objetivamente el hecho.</p>
+          <h3>Sexta. Autorización de consultas</h3>
+          <p>EL VINCULADO acepta la política de tratamiento de datos que tiene implementada LA EMPRESA y autoriza a esta última para reportar, consultar, verificar, actualizar, reformar, manejar, compartir, utilizar y/o introducir nueva información en las bases de datos o sistemas de información, SIRIEST - SIPLAFT de RISKS INTERNATIONAL, DEFENCARGA como encargado, o ante cualquier central de riesgo, por cualquier irregularidad con la ejecución del presente contrato o prestación del servicio de transporte de carga.</p>
+          <h3>Séptima. Independencia de EL VINCULADO</h3>
+          <p>EL VINCULADO, conforme con la naturaleza mercantil de este contrato, acepta su responsabilidad única, exclusiva y excluyente derivada de la relación laboral que tenga con sus conductores, auxiliares u operarios, siendo el único empleador frente a los mismos y obligado a pagar salarios, prestaciones sociales y obligaciones laborales, parafiscales, fiscales y de seguridad social. LA EMPRESA se limita, mediante un contrato mercantil, a vincular de manera transitoria un equipo de transporte de propiedad de EL VINCULADO.</p>
+          <h3>Octava. Contratos a largo plazo</h3>
+          <p>EL VINCULADO y LA EMPRESA podrán celebrar contratos integrales a largo plazo con pagos periódicos en el tiempo. En estos casos el valor del manifiesto de carga será cero y deberá consignarse que se trata de contratación integral con pago periódico, indicando expresamente la periodicidad de los pagos.</p>
+          <h3>Novena. SIPLAFT</h3>
+          <p>EL VINCULADO declara bajo gravedad de juramento que los recursos, fondos, dineros, activos o cualquier bien relacionado con el presente contrato son de procedencia lícita y no están vinculados con el lavado de activos, financiación del terrorismo, financiación de la proliferación de armas de destrucción masiva ni con ninguno de sus delitos fuente. Se compromete a cumplir los requisitos del SIPLAFT implementado por LA EMPRESA y la faculta expresamente para reportarlo ante la UIAF y autoridades competentes ante la evidencia de operaciones sospechosas.</p>
+          <h3>Décima. Tratamiento de datos personales</h3>
+          <p>Los datos personales que EL VINCULADO proporcione a LA EMPRESA, en el marco de la prestación de los servicios objeto de la relación comercial, serán tratados de acuerdo con la Ley 1581 de 2012, el Decreto 1377 de 2013 y las normas que regulan la materia, así como con la Política de Protección de Datos Personales de LA EMPRESA. Podrá ejercer sus derechos contactando a LA EMPRESA en la Carrera 42 # 66 – 11 Autopista Sur, Itagüí, teléfono (034) 4449818 y correo protecciondedatos@ditransa.com.co.</p>
+          <h3>Décima primera. Obligaciones de LA EMPRESA</h3>
+          <p>a) Suministrar las cosas, mercancía o carga; b) entregar la documentación exigida por la ley; c) cancelar los valores convenidos; d) prestar el apoyo necesario para la ejecución adecuada; e) atender el salvamento en caso de siniestro; y f) prestar acompañamiento y asesoría ante autoridades de policía o aduaneras.</p>
+          <h3>Décima segunda. Responsabilidad, obligaciones y prohibiciones de EL VINCULADO</h3>
+          <p>EL VINCULADO debe elegir un conductor adecuado, entregar la carga en el lugar y tiempo convenidos, aportar los soportes laborales y de seguridad social exigibles, devolver la documentación necesaria dentro de las setenta y dos (72) horas, viajar en los horarios indicados, no transportar pasajeros salvo autorización, informar inmediatamente cualquier novedad o siniestro, cubrir la ruta ordenada, cumplir las normas de tránsito y transporte, verificar la carga y mantener el vehículo en condiciones normales de funcionamiento.</p>
+          <p>También deberá vigilar permanentemente el cargamento, no dejarlo solo, pernoctar en lugares autorizados, colaborar en transbordos cuando haya desperfectos, mantener los seguros y servicios de asistencia acordados, asumir las responsabilidades que correspondan por siniestros, formular las denuncias respectivas cuando sea necesario, responder por multas, sanciones, infracciones, daños a terceros y obligaciones relacionadas con el vehículo, y aportar los soportes de capacitación y seguridad solicitados por LA EMPRESA.</p>
+          <p><strong>Parágrafo. Prohibiciones especiales.</strong> No transportar contrabando, drogas, armas o mercancías de tránsito controlado sin autorización; no conducir en estado de alicoramiento, drogadicción o incapacidad; no incumplir normas aduaneras; no transitar por horarios, zonas o carreteras no autorizados; y cumplir las condiciones legales y de seguridad para el cargue y descargue.</p>
+          <h3>Décima tercera. Stand by</h3>
+          <p>EL VINCULADO acepta modificar las condiciones para el cobro del stand by, ampliando las horas libres tanto para cargue como para descargue de 12 a 18 horas. La contraprestación será negociada entre las partes y se renuncia a los valores indicados por la norma correspondiente.</p>
+          <h3>Décima cuarta. Transporte de mercancías peligrosas</h3>
+          <p>EL VINCULADO se obliga a recibir, conducir y entregar las mercancías peligrosas en el mismo estado en que las reciba, cumpliendo los horarios, itinerarios, reglamentos oficiales y requisitos del Decreto 1609 de 2002 compilado en el Decreto 1079 de 2015. Deberá entregar los soportes de entrenamiento en seguridad, prevención de accidentes, manejo de emergencias y contingencias.</p>
+          <h3>Décima quinta. Transporte de mercancía refrigerada</h3>
+          <p>Para cargas refrigeradas, EL VINCULADO deberá presentar certificado vigente de inspección del equipo de frío, registros de temperatura, mantener la unidad de refrigeración encendida y verificar el sello de seguridad antes de iniciar la ruta. Cualquier problema del vehículo o unidad de refrigeración deberá informarse inmediatamente a LA EMPRESA.</p>
+          <p>El presente contrato rige a partir de la fecha de su firma hasta tanto LA EMPRESA lo revoque unilateralmente y/o culmine el servicio. Para constancia, se lee, aprueba y firma por las partes en señal de aceptación y compromiso.</p>
+        </div>
+        <div class="accept">
+          <input type="checkbox" id="aceptaContrato" name="aceptaContrato" value="SI" required>
+          <label for="aceptaContrato">ACEPTO EL CONTRATO DE VINCULACIÓN TEMPORAL y confirmo que la información suministrada es verdadera. <span class="required">*</span></label>
+        </div>
+        <p class="legal-note">La aceptación quedará registrada con fecha y hora. Antes de poner este formulario en producción, valida el texto contractual y el mecanismo de firma electrónica con tu asesor jurídico.</p>
+      </section>
+
+      <button type="submit" id="submitBtn">Enviar solicitud de vinculación</button>
+      <div class="success" id="successMessage" role="status">Solicitud enviada correctamente. El equipo de Incargo revisará la información registrada.</div>
+      <div class="error" id="errorMessage" role="alert"></div>
+    </form>
+  </main>
+  <footer>Incargo · Registro de vinculación temporal · La información será tratada según la política de protección de datos aplicable.</footer>
+
+  <script>
+    const ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbwTBTO-wMKFs9ogYH3qELSk8rx14WnWWy6mM6qIKu_dr0wsgWq-heR_Q1V9LvCKKoNp/exec';
+    const form = document.getElementById('vinculacionForm');
+    const submitButton = document.getElementById('submitBtn');
+    const successMessage = document.getElementById('successMessage');
+    const errorMessage = document.getElementById('errorMessage');
+
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      successMessage.style.display = 'none';
+      errorMessage.style.display = 'none';
+
+      const roles = Array.from(document.querySelectorAll('input[name="tipoVinculacion"]:checked')).map(input => input.value);
+      if (!roles.length) {
+        showError('Selecciona al menos un tipo de vinculación.');
+        return;
+      }
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      const data = Object.fromEntries(new FormData(form).entries());
+      data.action = 'vinculacion';
+      data.tipoVinculacion = roles;
+      data.aceptadoEn = new Date().toISOString();
+
+      submitButton.disabled = true;
+      submitButton.textContent = 'Enviando solicitud…';
+      try {
+        await fetch(ENDPOINT_URL, {
+          method: 'POST', mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(data)
+        });
+        form.reset();
+        successMessage.style.display = 'block';
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      } catch (error) {
+        showError('No fue posible enviar la solicitud. Revisa tu conexión e inténtalo nuevamente.');
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Enviar solicitud de vinculación';
+      }
+    });
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+    }
+  </script>
+</body>
+</html>

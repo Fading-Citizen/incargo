@@ -1,6 +1,7 @@
 // filepath: Google Apps Script (Code.gs) - Incargo Inspecciones v2
 
 const SHEET_NAME = 'INSPECCIONES';
+const VINCULACIONES_SHEET_NAME = 'VINCULACIONES';
 
 const HEADERS = [
   'TIMESTAMP',
@@ -24,6 +25,20 @@ const HEADERS = [
   'FOTOS_B64'
 ];
 
+const VINCULACIONES_HEADERS = [
+  'TIMESTAMP',
+  'CORREO_REGISTRO',
+  'TIPO_VINCULACION',
+  'TIPO_VINCULACION_OTRO',
+  'NOMBRE_COMPLETO',
+  'TIPO_IDENTIFICACION',
+  'NUMERO_IDENTIFICACION',
+  'CORREO_ELECTRONICO',
+  'ACEPTA_CONTRATO',
+  'ACEPTADO_EN',
+  'VERSION_CONTRATO'
+];
+
 function doPost(e) {
   try {
     const lock = LockService.getScriptLock();
@@ -43,6 +58,11 @@ function doPost(e) {
     }
 
     const data = JSON.parse(e.postData.contents);
+    if (data.action === 'vinculacion') {
+      const response = guardarVinculacion(ss, data);
+      lock.releaseLock();
+      return response;
+    }
     if (data.action === 'update') {
       const response = actualizarInspeccion(sheet, data);
       lock.releaseLock();
@@ -98,6 +118,9 @@ function doPost(e) {
 
 function doGet(e) {
   try {
+    if (e && e.parameter && e.parameter.action === 'vinculaciones') {
+      return listarVinculaciones();
+    }
     const sheet = SpreadsheetApp.getActiveSpreadsheet()
       .getSheetByName(SHEET_NAME);
     const values = sheet ? sheet.getDataRange().getValues() : [];
@@ -120,6 +143,63 @@ function doGet(e) {
       JSON.stringify({ ok: false, error: err.message })
     ).setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+function guardarVinculacion(ss, data) {
+  let sheet = ss.getSheetByName(VINCULACIONES_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(VINCULACIONES_SHEET_NAME);
+    sheet.getRange(1, 1, 1, VINCULACIONES_HEADERS.length).setValues([VINCULACIONES_HEADERS]);
+    sheet.getRange(1, 1, 1, VINCULACIONES_HEADERS.length)
+      .setFontWeight('bold').setBackground('#060315').setFontColor('#ffffff');
+    sheet.setFrozenRows(1);
+  }
+
+  sheet.appendRow([
+    new Date(),
+    data.correoRegistro || '',
+    Array.isArray(data.tipoVinculacion) ? data.tipoVinculacion.join(', ') : (data.tipoVinculacion || ''),
+    data.tipoVinculacionOtro || '',
+    data.nombreCompleto || '',
+    data.tipoIdentificacion || '',
+    data.numeroIdentificacion || '',
+    data.correoElectronico || '',
+    data.aceptaContrato === 'SI' ? 'SI' : 'NO',
+    data.aceptadoEn || '',
+    '001'
+  ]);
+
+  return ContentService.createTextOutput(
+    JSON.stringify({ ok: true, row: sheet.getLastRow(), sheet: VINCULACIONES_SHEET_NAME })
+  ).setMimeType(ContentService.MimeType.JSON);
+}
+
+function listarVinculaciones() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VINCULACIONES_SHEET_NAME);
+  if (!sheet) {
+    return ContentService.createTextOutput('[]')
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) {
+    return ContentService.createTextOutput('[]')
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const headers = values[0];
+  const data = values.slice(1).map((row, index) => {
+    const item = { _rowNumber: index + 2, ts: toIso(row[0]) };
+    headers.forEach((header, column) => {
+      const key = String(header).toLowerCase().replace(/[^a-z0-9]+(.)?/g, (match, character) =>
+        character ? character.toUpperCase() : '');
+      if (key && column !== 0) item[key] = row[column];
+    });
+    return item;
+  });
+
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 function isHeader(value) {
