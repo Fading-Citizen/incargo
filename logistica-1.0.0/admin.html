@@ -95,7 +95,7 @@
       </div>
       <div class="table-responsive">
         <table class="table table-hover align-middle">
-          <thead><tr><th>Fecha</th><th>Nombre</th><th>Identificación</th><th>Tipo</th><th>Correo</th><th>Aceptación</th></tr></thead>
+          <thead><tr><th>Fecha</th><th>Nombre</th><th>Identificación</th><th>Tipo</th><th>Correo</th><th>Aceptación</th><th>Contrato</th></tr></thead>
           <tbody id="vinculacionesTbody"></tbody>
         </table>
       </div>
@@ -331,7 +331,50 @@ function renderVinculaciones() {
     <td>${escapeHtml(item.tipoVinculacion || '-')}<br><small>${escapeHtml(item.tipoVinculacionOtro || '')}</small></td>
     <td>${escapeHtml(item.correoElectronico || '-')}</td>
     <td><span class="badge badge-bueno">${item.aceptaContrato === 'SI' ? 'ACEPTADO' : 'PENDIENTE'}</span></td>
+    <td><button class="btn btn-sm btn-brand" onclick="descargarContratoVinculacion(${vinculacionesData.indexOf(item)})" title="Descargar contrato"><i class="fa-solid fa-file-pdf"></i></button></td>
   </tr>`).join('');
+}
+
+window.descargarContratoVinculacion = idx => {
+  const item = vinculacionesData[idx];
+  if (!item || typeof html2pdf !== 'function') {
+    alert('No se pudo cargar el generador PDF. Revisa tu conexión e inténtalo de nuevo.');
+    return;
+  }
+  const report = document.createElement('div');
+  report.style.cssText = 'background:#fff;color:#111;padding:28px;font-family:Arial,sans-serif;line-height:1.5;';
+  report.innerHTML = `<h1 style="text-align:center;font-size:20px;">CONTRATO DE VINCULACIÓN TEMPORAL</h1>
+    <p style="font-size:12px;"><strong>Vinculado:</strong> ${escapeHtml(item.nombreCompleto || '-')}<br>
+    <strong>Identificación:</strong> ${escapeHtml(item.tipoIdentificacion || '')} ${escapeHtml(item.numeroIdentificacion || '')}<br>
+    <strong>Tipo de vinculación:</strong> ${escapeHtml(item.tipoVinculacion || '-')}<br>
+    <strong>Correo:</strong> ${escapeHtml(item.correoElectronico || item.correoRegistro || '-')}<br>
+    <strong>Aceptación registrada:</strong> ${escapeHtml(formatDateValue(item.ts))} ${escapeHtml((item.ts || '').split('T')[1]?.slice(0,5) || '')}</p>
+    <hr><div style="font-size:12px;">${getContractTextHtml()}</div>
+    <p style="font-size:12px;margin-top:24px;"><strong>ACEPTACIÓN:</strong> ${item.aceptaContrato === 'SI' ? 'ACEPTO EL CONTRATO DE VINCULACIÓN TEMPORAL.' : 'PENDIENTE'}</p>`;
+  document.body.appendChild(report);
+  html2pdf().set({
+    margin: 10,
+    filename: `contrato-vinculacion-${sanitizeFilename(item.nombreCompleto || 'registro')}.pdf`,
+    image: { type: 'jpeg', quality: 0.95 },
+    html2canvas: { scale: 2, backgroundColor: '#ffffff' },
+    pagebreak: { mode: ['css', 'legacy'], avoid: ['h3', 'p'] },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  }).from(report).save().then(() => report.remove());
+};
+
+function sanitizeFilename(value) {
+  return String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'registro';
+}
+
+function getContractTextHtml() {
+  return `<p><strong>CONTRATO DE VINCULACION TEMPORAL</strong></p>
+    <p>Entre RECORD LOGISTICO EN TRANSPORTE SAS “RELOTRANS SAS”, identificada con NIT. 900.973.275-8, en adelante LA EMPRESA, y el propietario, poseedor, tenedor o conductor del vehículo, en adelante EL VINCULADO, se celebra Contrato Mercantil de Encargo a Terceros conforme al Código de Comercio, el Decreto 1079 de 2015 y las normas aplicables.</p>
+    <h3>Primera. Objeto</h3><p>LA EMPRESA encargará al VINCULADO la ejecución material del contrato de transporte celebrado con un generador de carga para cumplir un servicio público de transporte terrestre automotor de carga, bajo las condiciones del contrato y la información detallada en el RNDC.</p>
+    <h3>Segunda a quinta. Operación y riesgos</h3><p>EL VINCULADO acepta la autonomía contractual, las relaciones económicas pactadas, la gestión integral del riesgo y el cumplimiento de los reglamentos operativos, instrucciones y condiciones del manifiesto de carga.</p>
+    <h3>Sexta a novena. Consultas, independencia y SIPLAFT</h3><p>EL VINCULADO autoriza las consultas y reportes previstos, reconoce su independencia mercantil y declara la procedencia lícita de los recursos, comprometiéndose con los requisitos del SIPLAFT.</p>
+    <h3>Décima. Tratamiento de datos personales</h3><p>Los datos serán tratados conforme a la Ley 1581 de 2012, el Decreto 1377 de 2013 y la Política de Protección de Datos Personales de LA EMPRESA. Los derechos pueden ejercerse ante la Carrera 42 # 66 – 11 Autopista Sur, Itagüí, teléfono (034) 4449818 o protecciondedatos@ditransa.com.co.</p>
+    <h3>Décima primera a décima quinta. Obligaciones y modalidades</h3><p>Las partes acuerdan las obligaciones de la empresa y del vinculado, prohibiciones especiales, condiciones de stand by y requisitos para transporte de mercancías peligrosas o refrigeradas, incluyendo el cumplimiento de las normas de seguridad y la entrega de soportes requeridos.</p>
+    <p>El contrato rige desde su aceptación hasta que LA EMPRESA lo revoque unilateralmente y/o culmine el servicio.</p>`;
 }
 
 function escapeHtml(value) {

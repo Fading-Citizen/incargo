@@ -49,6 +49,10 @@
     .accept input { width:22px; height:22px; flex:0 0 auto; accent-color:#198754; }
     .accept label { font-size:.9rem; margin:0; cursor:pointer; }
     .legal-note { color:var(--muted); font-size:.75rem; margin-top:12px; }
+    .contract-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
+    .contract-actions button { width:auto; flex:1 1 220px; }
+    .button-secondary { background:#fff; border:1px solid var(--ink); }
+    .button-secondary:hover { background:#f1eef0; }
     button { width:100%; border:0; border-radius:6px; padding:15px 20px; background:var(--yellow); color:var(--ink); font:700 1rem Inter,Arial,sans-serif; cursor:pointer; transition:.15s ease; }
     button:hover { background:#e8c72a; transform:translateY(-1px); }
     button:disabled { opacity:.65; cursor:wait; transform:none; }
@@ -160,6 +164,10 @@
           <p>Para cargas refrigeradas, EL VINCULADO deberá presentar certificado vigente de inspección del equipo de frío, registros de temperatura, mantener la unidad de refrigeración encendida y verificar el sello de seguridad antes de iniciar la ruta. Cualquier problema del vehículo o unidad de refrigeración deberá informarse inmediatamente a LA EMPRESA.</p>
           <p>El presente contrato rige a partir de la fecha de su firma hasta tanto LA EMPRESA lo revoque unilateralmente y/o culmine el servicio. Para constancia, se lee, aprueba y firma por las partes en señal de aceptación y compromiso.</p>
         </div>
+        <div class="contract-actions">
+          <button type="button" class="button-secondary" id="downloadContractBtn">Descargar contrato</button>
+          <button type="button" class="button-secondary" id="printContractBtn">Imprimir contrato</button>
+        </div>
         <div class="accept">
           <input type="checkbox" id="aceptaContrato" name="aceptaContrato" value="SI" required>
           <label for="aceptaContrato">ACEPTO EL CONTRATO DE VINCULACIÓN TEMPORAL y confirmo que la información suministrada es verdadera. <span class="required">*</span></label>
@@ -180,6 +188,38 @@
     const submitButton = document.getElementById('submitBtn');
     const successMessage = document.getElementById('successMessage');
     const errorMessage = document.getElementById('errorMessage');
+    const contract = document.querySelector('.contract');
+
+    document.getElementById('downloadContractBtn').addEventListener('click', () => {
+      if (typeof html2pdf !== 'function') {
+        showError('No se pudo cargar el generador PDF. Revisa tu conexión e inténtalo de nuevo.');
+        return;
+      }
+      const report = document.createElement('div');
+      report.style.cssText = 'background:#fff;color:#111;padding:28px;font-family:Arial,sans-serif;line-height:1.5;';
+      report.innerHTML = `<h1 style="text-align:center;font-size:20px;">CONTRATO DE VINCULACIÓN TEMPORAL</h1><div style="font-size:12px;">${contract.innerHTML}</div>`;
+      document.body.appendChild(report);
+      html2pdf().set({
+        margin: 10,
+        filename: 'contrato-vinculacion-temporal-incargo.pdf',
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, backgroundColor: '#ffffff' },
+        pagebreak: { mode: ['css', 'legacy'], avoid: ['h3', 'p'] },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      }).from(report).save().then(() => report.remove());
+    });
+
+    document.getElementById('printContractBtn').addEventListener('click', () => {
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        showError('Permite las ventanas emergentes para imprimir el contrato.');
+        return;
+      }
+      printWindow.document.write(`<!doctype html><html lang="es"><head><meta charset="UTF-8"><title>Contrato de vinculación temporal</title><style>body{font-family:Arial,sans-serif;color:#111;line-height:1.5;padding:28px;max-width:900px;margin:auto}h1{text-align:center;font-size:20px}h3{text-transform:uppercase;font-size:14px;margin-top:20px}p{font-size:12px;text-align:justify}.contract-title{text-align:center;font-weight:bold}</style></head><body><h1>CONTRATO DE VINCULACIÓN TEMPORAL</h1>${contract.innerHTML}</body></html>`);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    });
 
     form.addEventListener('submit', async event => {
       event.preventDefault();
@@ -225,5 +265,6 @@
       errorMessage.style.display = 'block';
     }
   </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </body>
 </html>
