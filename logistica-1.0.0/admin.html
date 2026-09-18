@@ -368,11 +368,11 @@ function sanitizeFilename(value) {
 
 function getContractTextHtml() {
   return `<p><strong>CONTRATO DE VINCULACION TEMPORAL</strong></p>
-    <p>Entre RECORD LOGISTICO EN TRANSPORTE SAS “RELOTRANS SAS”, identificada con NIT. 900.973.275-8, en adelante LA EMPRESA, y el propietario, poseedor, tenedor o conductor del vehículo, en adelante EL VINCULADO, se celebra Contrato Mercantil de Encargo a Terceros conforme al Código de Comercio, el Decreto 1079 de 2015 y las normas aplicables.</p>
+    <p>Entre EDEMAT GROUP SAS, identificada con NIT 901472205, con domicilio en CL 15 71 54, barrio Belén Las Playas, teléfono 321 886 4232 y correo facturacion@incargo.co, en adelante LA EMPRESA, y el propietario, poseedor, tenedor o conductor del vehículo, en adelante EL VINCULADO, se celebra Contrato Mercantil de Encargo a Terceros conforme al Código de Comercio, el Decreto 1079 de 2015 y las normas aplicables.</p>
     <h3>Primera. Objeto</h3><p>LA EMPRESA encargará al VINCULADO la ejecución material del contrato de transporte celebrado con un generador de carga para cumplir un servicio público de transporte terrestre automotor de carga, bajo las condiciones del contrato y la información detallada en el RNDC.</p>
     <h3>Segunda a quinta. Operación y riesgos</h3><p>EL VINCULADO acepta la autonomía contractual, las relaciones económicas pactadas, la gestión integral del riesgo y el cumplimiento de los reglamentos operativos, instrucciones y condiciones del manifiesto de carga.</p>
     <h3>Sexta a novena. Consultas, independencia y SIPLAFT</h3><p>EL VINCULADO autoriza las consultas y reportes previstos, reconoce su independencia mercantil y declara la procedencia lícita de los recursos, comprometiéndose con los requisitos del SIPLAFT.</p>
-    <h3>Décima. Tratamiento de datos personales</h3><p>Los datos serán tratados conforme a la Ley 1581 de 2012, el Decreto 1377 de 2013 y la Política de Protección de Datos Personales de LA EMPRESA. Los derechos pueden ejercerse ante la Carrera 42 # 66 – 11 Autopista Sur, Itagüí, teléfono (034) 4449818 o protecciondedatos@ditransa.com.co.</p>
+    <h3>Décima. Tratamiento de datos personales</h3><p>Los datos serán tratados conforme a la Ley 1581 de 2012, el Decreto 1377 de 2013 y la Política de Protección de Datos Personales de LA EMPRESA. Los derechos pueden ejercerse en CL 15 71 54, barrio Belén Las Playas, teléfono 321 886 4232 o facturacion@incargo.co.</p>
     <h3>Décima primera a décima quinta. Obligaciones y modalidades</h3><p>Las partes acuerdan las obligaciones de la empresa y del vinculado, prohibiciones especiales, condiciones de stand by y requisitos para transporte de mercancías peligrosas o refrigeradas, incluyendo el cumplimiento de las normas de seguridad y la entrega de soportes requeridos.</p>
     <p>El contrato rige desde su aceptación hasta que LA EMPRESA lo revoque unilateralmente y/o culmine el servicio.</p>`;
 }
@@ -708,7 +708,15 @@ function generarReportePDF(row, supervisor) {
   const fotos = getValidEvidenceImages(row.fotos);
   const invalidPhotoCount = (row.fotos || '').split('|').filter(Boolean).length - fotos.length;
 
-  const brandLogoUrl = 'https://www.incargo.co/img/Logo.png';
+  const company = {
+    name: 'EDEMAT GROUP SAS',
+    nit: '901472205',
+    address: 'CL 15 71 54 · Brr. Belén Las Playas',
+    phone: '321 886 4232',
+    email: 'facturacion@incargo.co'
+  };
+  const brandLogoUrl = new URL('img/edemat.png', window.location.href).href;
+  const safe = value => escapeHtml(value || '-');
 
   const w = window.open('', '_blank');
   if (!w) { alert('Permite ventanas emergentes para generar el PDF'); return; }
@@ -742,16 +750,19 @@ function generarReportePDF(row, supervisor) {
     <!DOCTYPE html>
     <html><head><title>Inspección ${row.placa} - ${formatDateValue(row.fecha)}</title>
     <style>
-      body { font-family: Arial, sans-serif; padding: 30px; color: #060315; background: #fff; }
-      .header { display:flex; align-items:center; justify-content:space-between; border-bottom: 4px solid #f9d52e; padding-bottom: 14px; margin-bottom: 20px; }
+      :root { --navy:#14243a; --gold:#d4a72c; --ink:#26364a; --muted:#667085; --line:#dfe5ec; }
+      body { font-family: Arial, sans-serif; padding: 30px; color:var(--ink); background: #fff; }
+      .header { display:flex; align-items:center; justify-content:space-between; gap:24px; border-bottom: 5px solid var(--gold); padding-bottom: 18px; margin-bottom: 22px; }
       .header img { width: 210px; height: auto; max-height: 70px; object-fit: contain; }
-      .header h1 { margin: 0; color: #060315; font-size: 22px; }
+      .header h1 { margin: 0; color: var(--navy); font-size: 22px; letter-spacing:.4px; }
+      .company-data { color:var(--muted); font-size:10px; line-height:1.55; text-align:right; }
+      .company-data strong { color:var(--navy); font-size:11px; }
       .header small { color: #6c757d; }
       .info-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; margin-bottom: 20px; }
-      .info-grid div { padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
-      .info-grid strong { display:inline-block; min-width: 130px; color:#060315; }
+      .info-grid div { padding: 9px 10px; border:1px solid var(--line); border-radius:5px; background:#f8fafc; font-size:12px; }
+      .info-grid strong { display:block; margin-bottom:3px; color:var(--muted); font-size:9px; text-transform:uppercase; letter-spacing:.5px; }
       table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
-      th { background: #060315; color: #fff; padding: 8px; text-align: left; border-bottom: 3px solid #51CFED; }
+      th { background: var(--navy); color: #fff; padding: 9px 8px; text-align: left; border-bottom: 3px solid var(--gold); }
       td { border-color: #e8e3e1 !important; }
       thead { display: table-header-group; }
       tr, img, .pdf-keep { break-inside: avoid; page-break-inside: avoid; }
@@ -766,7 +777,7 @@ function generarReportePDF(row, supervisor) {
       .firma-block { text-align:center; }
       .firma-block img { max-height: 100px; max-width: 220px; }
       .firma-line { border-top: 1px solid #212529; margin-top: 4px; padding-top: 6px; font-size: 12px; }
-      .footer { margin-top: 40px; padding-top: 14px; border-top: 2px solid #f9d52e; text-align:center; font-size: 11px; color: #6c757d; }
+      .footer { margin-top: 40px; padding-top: 14px; border-top: 2px solid var(--gold); text-align:center; font-size: 10px; color: var(--muted); }
       .estado-banner { text-align:center; padding: 14px; border-radius: 6px; margin: 14px 0; font-size: 16px; border-left: 6px solid #51CFED; }
       body { padding: 10mm; }
       .no-print { display:none; }
@@ -774,13 +785,14 @@ function generarReportePDF(row, supervisor) {
 
     <div class="header">
       <div style="display:flex;align-items:center;gap:14px;">
-        <img src="${brandLogoUrl}" alt="Incargo - Logística y Transporte">
+        <img src="${brandLogoUrl}" alt="EDEMAT GROUP SAS">
         <div>
           <h1>CERTIFICADO DE INSPECCIÓN<br>PREOPERACIONAL</h1>
           <small>Código: SV-INSPP-01 · Versión 002</small>
         </div>
       </div>
       <div style="text-align:right;font-size:12px;color:#6c757d;">
+          <div class="company-data"><strong>${company.name}</strong><br>NIT ${company.nit}<br>${company.address}<br>${company.phone} · ${company.email}</div>
         <div><strong>Fecha de emisión:</strong> ${new Date().toLocaleDateString('es-CO')}</div>
       </div>
     </div>
@@ -792,20 +804,20 @@ function generarReportePDF(row, supervisor) {
     <h2 style="color:#060315;border-bottom:3px solid #51CFED;padding-bottom:6px;">Datos Generales</h2>
     <div class="info-grid">
       <div><strong>Fecha:</strong> ${formatDateValue(row.fecha)}</div>
-      <div><strong>Ciudad:</strong> ${row.ciudad || '-'}</div>
-      <div><strong>Empresa:</strong> ${row.empresa || '-'}</div>
-      <div><strong>Conductor:</strong> ${row.conductor || '-'}</div>
-      <div><strong>N° Licencia:</strong> ${row.licencia || '-'}</div>
-      <div><strong>Placa:</strong> <strong>${(row.placa||'').toUpperCase()}</strong></div>
-      <div><strong>Placa Semirremolque:</strong> ${row.placasemirremolque || 'N/A'}</div>
-      <div><strong>Clase de Vehículo:</strong> ${row.claseVehiculo || '-'}</div>
-      <div><strong>Tipo Carrocería:</strong> ${row.tipoCarroceria || '-'}</div>
-      <div><strong>Modelo:</strong> ${row.modelo || '-'}</div>
-      <div><strong>GPS:</strong> ${row.gps || '-'}</div>
-      <div><strong>Tarjeta Propiedad:</strong> ${row.tarjetaProp || '-'}</div>
-      <div><strong>Fecha SOAT:</strong> ${formatDateValue(row.fechaSoat)}</div>
-      <div><strong>Fecha Tecnomecánica:</strong> ${formatDateValue(row.fechaTecno)}</div>
-      <div><strong>Tipo de Transporte:</strong> ${row.tipoTransporte || 'N/A'}</div>
+      <div><strong>Ciudad</strong>${safe(row.ciudad)}</div>
+      <div><strong>Empresa / contrato</strong>${company.name}</div>
+      <div><strong>Conductor</strong>${safe(row.conductor)}</div>
+      <div><strong>N° licencia</strong>${safe(row.licencia)}</div>
+      <div><strong>Placa</strong><b>${safe((row.placa||'').toUpperCase())}</b></div>
+      <div><strong>Placa semirremolque</strong>${safe(row.placasemirremolque || 'N/A')}</div>
+      <div><strong>Clase de vehículo</strong>${safe(row.claseVehiculo)}</div>
+      <div><strong>Tipo carrocería</strong>${safe(row.tipoCarroceria)}</div>
+      <div><strong>Modelo</strong>${safe(row.modelo)}</div>
+      <div><strong>GPS</strong>${safe(row.gps)}</div>
+      <div><strong>Tarjeta propiedad</strong>${safe(row.tarjetaProp)}</div>
+      <div><strong>Fecha SOAT</strong>${safe(formatDateValue(row.fechaSoat))}</div>
+      <div><strong>Fecha tecnomecánica</strong>${safe(formatDateValue(row.fechaTecno))}</div>
+      <div><strong>Tipo de transporte</strong>${safe(row.tipoTransporte || 'N/A')}</div>
     </div>
 
     <h2 style="color:#060315;border-bottom:3px solid #51CFED;padding-bottom:6px;">Resultado del Checklist</h2>
@@ -831,13 +843,13 @@ function generarReportePDF(row, supervisor) {
         <div class="firma-line">
           <strong>${supervisor.name}</strong><br>
           <small>${supervisor.cargo || 'Supervisor'}</small><br>
-          <small>Incargo</small>
+            <small>${company.name}</small>
         </div>
       </div>
     </div>
 
     <div class="footer">
-      Documento generado el ${new Date().toLocaleDateString('es-CO')} · Incargo · Sistema de Inspección Preoperacional v2
+        Documento generado el ${new Date().toLocaleDateString('es-CO')} · ${company.name} · NIT ${company.nit}<br>${company.address} · ${company.phone} · ${company.email}
     </div>
     </div>
 
