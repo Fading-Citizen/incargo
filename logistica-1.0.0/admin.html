@@ -337,31 +337,69 @@ function renderVinculaciones() {
 
 window.descargarContratoVinculacion = idx => {
   const item = vinculacionesData[idx];
-  if (!item || typeof html2pdf !== 'function') {
-    alert('No se pudo cargar el generador PDF. Revisa tu conexión e inténtalo de nuevo.');
+  if (!item || !window.jspdf) {
+    alert('No se pudo cargar el generador PDF de texto. Revisa tu conexión e inténtalo de nuevo.');
     return;
   }
-  const report = document.createElement('div');
-  report.style.cssText = 'background:#fff;color:#26364a;padding:34px;font-family:Arial,sans-serif;line-height:1.55;max-width:900px;';
-  report.innerHTML = `<header style="border-bottom:5px solid #d4a72c;padding-bottom:18px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:20px;"><img src="img/edemat.png" alt="EDEMAT GROUP SAS" style="width:220px;max-height:100px;object-fit:contain;"><div style="text-align:right;font-size:10px;color:#667085;line-height:1.55;"><strong style="color:#14243a;font-size:12px;">EDEMAT GROUP SAS</strong><br>NIT 901472205<br>CL 15 71 54 · Brr. Belén Las Playas<br>321 886 4232 · facturacion@incargo.co</div></header>
-    <h1 style="text-align:center;font-size:21px;color:#14243a;letter-spacing:.3px;">CONTRATO DE VINCULACIÓN TEMPORAL</h1>
-    <p style="font-size:12px;"><strong>Vinculado:</strong> ${escapeHtml(item.nombreCompleto || '-')}<br>
-    <strong>Identificación:</strong> ${escapeHtml(item.tipoIdentificacion || '')} ${escapeHtml(item.numeroIdentificacion || '')}<br>
-    <strong>Tipo de vinculación:</strong> ${escapeHtml(item.tipoVinculacion || '-')}<br>
-    <strong>Correo:</strong> ${escapeHtml(item.correoElectronico || item.correoRegistro || '-')}<br>
-    <strong>Aceptación registrada:</strong> ${escapeHtml(formatDateValue(item.ts))} ${escapeHtml((item.ts || '').split('T')[1]?.slice(0,5) || '')}</p>
-    <hr style="border:0;border-top:1px solid #dfe5ec;margin:22px 0;"><div style="font-size:12px;">${getContractTextHtml()}</div>
-    <p style="font-size:12px;margin-top:24px;padding:12px;background:#f8fafc;border-left:4px solid #d4a72c;"><strong>ACEPTACIÓN:</strong> ${item.aceptaContrato === 'SI' ? 'ACEPTO EL CONTRATO DE VINCULACIÓN TEMPORAL.' : 'PENDIENTE'}</p>
-    <footer style="border-top:2px solid #d4a72c;margin-top:32px;padding-top:12px;text-align:center;color:#667085;font-size:10px;">EDEMAT GROUP SAS · NIT 901472205 · 321 886 4232 · facturacion@incargo.co</footer>`;
-  document.body.appendChild(report);
-  html2pdf().set({
-    margin: 10,
-    filename: `contrato-vinculacion-${sanitizeFilename(item.nombreCompleto || 'registro')}.pdf`,
-    image: { type: 'jpeg', quality: 0.95 },
-    html2canvas: { scale: 2, backgroundColor: '#ffffff' },
-    pagebreak: { mode: ['css', 'legacy'], avoid: ['h3', 'p'] },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-  }).from(report).save().then(() => report.remove());
+  // Se genera con jsPDF directamente: el texto queda seleccionable y no se rasteriza
+  // como ocurría al convertir todo el HTML con html2canvas/html2pdf.
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+  const page = { width: 210, height: 297, margin: 18 };
+  let y = page.margin;
+  const lineHeight = 5;
+  const addPage = () => { doc.addPage(); y = page.margin; };
+  const ensure = height => { if (y + height > page.height - 18) addPage(); };
+  const write = (text, size = 10, options = {}) => {
+    doc.setFont('helvetica', options.bold ? 'bold' : 'normal');
+    doc.setFontSize(size);
+    doc.setTextColor(...(options.color || [38, 54, 74]));
+    const lines = doc.splitTextToSize(String(text || ''), page.width - page.margin * 2 - (options.indent || 0));
+    ensure(lines.length * lineHeight);
+    doc.text(lines, page.margin + (options.indent || 0), y);
+    y += lines.length * lineHeight;
+  };
+
+  doc.setFillColor(20, 36, 58); doc.rect(0, 0, page.width, 7, 'F');
+  const logo = new Image();
+  logo.onload = () => {
+    const ratio = logo.naturalWidth / logo.naturalHeight || 1;
+    const logoHeight = 25;
+    // El archivo oficial es cuadrado; conserva su proporción para evitar deformarlo.
+    const logoWidth = logoHeight * ratio;
+    doc.addImage(logo, 'PNG', page.margin, y, logoWidth, logoHeight, undefined, 'FAST');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(20, 36, 58);
+    doc.text('EDEMAT GROUP SAS', 195, y + 5, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(102, 112, 133);
+    doc.text(['NIT 901472205', 'CL 15 71 54 · Brr. Belén Las Playas', '321 886 4232 · facturacion@incargo.co'], 195, y + 10, { align: 'right' });
+    y += 34;
+    doc.setDrawColor(212, 167, 44); doc.setLineWidth(1.2); doc.line(page.margin, y, 192, y); y += 12;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(17); doc.setTextColor(20, 36, 58);
+    doc.text('CONTRATO DE VINCULACIÓN TEMPORAL', 105, y, { align: 'center' }); y += 10;
+    doc.setFillColor(248, 250, 252); doc.roundedRect(page.margin, y, 174, 36, 2, 2, 'F');
+    y += 8;
+    write(`Vinculado: ${item.nombreCompleto || '-'}`, 10, { bold: true, indent: 5 });
+    write(`Identificación: ${item.tipoIdentificacion || ''} ${item.numeroIdentificacion || ''}`, 9, { indent: 5 });
+    write(`Tipo de vinculación: ${item.tipoVinculacion || '-'}`, 9, { indent: 5 });
+    write(`Correo: ${item.correoElectronico || item.correoRegistro || '-'}`, 9, { indent: 5 });
+    write(`Aceptación registrada: ${formatDateValue(item.ts)} ${(item.ts || '').split('T')[1]?.slice(0, 5) || ''}`, 9, { indent: 5 });
+    y += 8;
+    const content = document.createElement('div'); content.innerHTML = getContractTextHtml();
+    [...content.children].forEach(element => {
+      const text = element.textContent.trim(); if (!text) return;
+      if (element.tagName === 'H3' || element.querySelector('strong')) { ensure(12); y += 4; write(text.toUpperCase(), 10, { bold: true, color: [20, 36, 58] }); y += 1; }
+      else { write(text, 9.5); y += 2; }
+    });
+    ensure(25); doc.setFillColor(255, 248, 225); doc.roundedRect(page.margin, y, 174, 18, 2, 2, 'F');
+    y += 7; write(`ACEPTACIÓN: ${item.aceptaContrato === 'SI' ? 'ACEPTO EL CONTRATO DE VINCULACIÓN TEMPORAL.' : 'PENDIENTE'}`, 9, { bold: true, indent: 5 }); y += 10;
+    doc.setDrawColor(212, 167, 44); doc.setLineWidth(.5); doc.line(page.margin, y, 192, y); y += 6;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(102, 112, 133);
+    doc.text('EDEMAT GROUP SAS · NIT 901472205 · 321 886 4232 · facturacion@incargo.co', 105, y, { align: 'center' });
+    for (let p = 1; p <= doc.getNumberOfPages(); p++) { doc.setPage(p); doc.setFontSize(8); doc.setTextColor(150, 156, 166); doc.text(`Página ${p} de ${doc.getNumberOfPages()}`, 195, 288, { align: 'right' }); }
+    doc.save(`contrato-vinculacion-${sanitizeFilename(item.nombreCompleto || 'registro')}.pdf`);
+  };
+  logo.onerror = () => alert('No se pudo cargar el logo de EDEMAT.');
+  logo.src = new URL('img/edemat.png', window.location.href).href;
 };
 
 function sanitizeFilename(value) {
@@ -942,6 +980,7 @@ function generarDemo() {
   ];
 }
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
