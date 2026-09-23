@@ -335,10 +335,23 @@ function renderVinculaciones() {
   </tr>`).join('');
 }
 
-window.descargarContratoVinculacion = idx => {
+window.descargarContratoVinculacion = async idx => {
   const item = vinculacionesData[idx];
   if (!item || !window.jspdf) {
     alert('No se pudo cargar el generador PDF de texto. Revisa tu conexión e inténtalo de nuevo.');
+    return;
+  }
+  let contractHtml = '';
+  try {
+    const response = await fetch('vinculacion.html', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`No se pudo cargar el contrato (${response.status}).`);
+    const source = await response.text();
+    const parsed = new DOMParser().parseFromString(source, 'text/html');
+    const contract = parsed.querySelector('.contract');
+    if (!contract) throw new Error('No se encontró el texto completo del contrato.');
+    contractHtml = contract.innerHTML;
+  } catch (error) {
+    alert(`No se pudo preparar el contrato completo: ${error.message}`);
     return;
   }
   // Se genera con jsPDF directamente: el texto queda seleccionable y no se rasteriza
@@ -350,14 +363,18 @@ window.descargarContratoVinculacion = idx => {
   const lineHeight = 5;
   const addPage = () => { doc.addPage(); y = page.margin; };
   const ensure = height => { if (y + height > page.height - 18) addPage(); };
-  const write = (text, size = 10, options = {}) => {
+    const write = (text, size = 10, options = {}) => {
     doc.setFont('helvetica', options.bold ? 'bold' : 'normal');
     doc.setFontSize(size);
     doc.setTextColor(...(options.color || [38, 54, 74]));
     const lines = doc.splitTextToSize(String(text || ''), page.width - page.margin * 2 - (options.indent || 0));
-    ensure(lines.length * lineHeight);
-    doc.text(lines, page.margin + (options.indent || 0), y);
-    y += lines.length * lineHeight;
+      const availableLines = Math.max(1, Math.floor((page.height - 18 - y) / lineHeight));
+      for (let index = 0; index < lines.length; index += availableLines) {
+        const chunk = lines.slice(index, index + availableLines);
+        doc.text(chunk, page.margin + (options.indent || 0), y);
+        y += chunk.length * lineHeight;
+        if (index + availableLines < lines.length) addPage();
+      }
   };
 
   doc.setFillColor(20, 36, 58); doc.rect(0, 0, page.width, 7, 'F');
@@ -384,7 +401,7 @@ window.descargarContratoVinculacion = idx => {
     write(`Correo: ${item.correoElectronico || item.correoRegistro || '-'}`, 9, { indent: 5 });
     write(`Aceptación registrada: ${formatDateValue(item.ts)} ${(item.ts || '').split('T')[1]?.slice(0, 5) || ''}`, 9, { indent: 5 });
     y += 8;
-    const content = document.createElement('div'); content.innerHTML = getContractTextHtml();
+    const content = document.createElement('div'); content.innerHTML = contractHtml;
     [...content.children].forEach(element => {
       const text = element.textContent.trim(); if (!text) return;
       if (element.tagName === 'H3' || element.querySelector('strong')) { ensure(12); y += 4; write(text.toUpperCase(), 10, { bold: true, color: [20, 36, 58] }); y += 1; }
@@ -404,17 +421,6 @@ window.descargarContratoVinculacion = idx => {
 
 function sanitizeFilename(value) {
   return String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'registro';
-}
-
-function getContractTextHtml() {
-  return `<p><strong>CONTRATO DE VINCULACION TEMPORAL</strong></p>
-    <p>Entre EDEMAT GROUP SAS, identificada con NIT 901472205, con domicilio en CL 15 71 54, barrio Belén Las Playas, teléfono 321 886 4232 y correo facturacion@incargo.co, en adelante LA EMPRESA, y el propietario, poseedor, tenedor o conductor del vehículo, en adelante EL VINCULADO, se celebra Contrato Mercantil de Encargo a Terceros conforme al Código de Comercio, el Decreto 1079 de 2015 y las normas aplicables.</p>
-    <h3>Primera. Objeto</h3><p>LA EMPRESA encargará al VINCULADO la ejecución material del contrato de transporte celebrado con un generador de carga para cumplir un servicio público de transporte terrestre automotor de carga, bajo las condiciones del contrato y la información detallada en el RNDC.</p>
-    <h3>Segunda a quinta. Operación y riesgos</h3><p>EL VINCULADO acepta la autonomía contractual, las relaciones económicas pactadas, la gestión integral del riesgo y el cumplimiento de los reglamentos operativos, instrucciones y condiciones del manifiesto de carga.</p>
-    <h3>Sexta a novena. Consultas, independencia y SIPLAFT</h3><p>EL VINCULADO autoriza las consultas y reportes previstos, reconoce su independencia mercantil y declara la procedencia lícita de los recursos, comprometiéndose con los requisitos del SIPLAFT.</p>
-    <h3>Décima. Tratamiento de datos personales</h3><p>Los datos serán tratados conforme a la Ley 1581 de 2012, el Decreto 1377 de 2013 y la Política de Protección de Datos Personales de LA EMPRESA. Los derechos pueden ejercerse en CL 15 71 54, barrio Belén Las Playas, teléfono 321 886 4232 o facturacion@incargo.co.</p>
-    <h3>Décima primera a décima quinta. Obligaciones y modalidades</h3><p>Las partes acuerdan las obligaciones de la empresa y del vinculado, prohibiciones especiales, condiciones de stand by y requisitos para transporte de mercancías peligrosas o refrigeradas, incluyendo el cumplimiento de las normas de seguridad y la entrega de soportes requeridos.</p>
-    <p>El contrato rige desde su aceptación hasta que LA EMPRESA lo revoque unilateralmente y/o culmine el servicio.</p>`;
 }
 
 function escapeHtml(value) {

@@ -196,15 +196,15 @@
         return;
       }
       const report = document.createElement('div');
-      report.style.cssText = 'background:#fff;color:#111;padding:28px;font-family:Arial,sans-serif;line-height:1.5;';
-      report.innerHTML = `<div style="border-bottom:4px solid #d4a72c;padding-bottom:14px;margin-bottom:18px;text-align:center;"><img src="img/edemat.png" alt="EDEMAT GROUP SAS" style="width:240px;max-height:90px;object-fit:contain;"><h1 style="font-size:20px;color:#14243a;margin:14px 0 4px;">CONTRATO DE VINCULACIÓN TEMPORAL</h1><div style="font-size:10px;color:#667085;">EDEMAT GROUP SAS · NIT 901472205 · CL 15 71 54 · Brr. Belén Las Playas<br>321 886 4232 · facturacion@incargo.co</div></div><div style="font-size:12px;">${contract.innerHTML}</div>`;
+      report.style.cssText = 'width:180mm;background:#fff;color:#111;padding:14mm;font-family:Arial,sans-serif;line-height:1.5;';
+      report.innerHTML = `<div style="border-bottom:4px solid #d4a72c;padding-bottom:14px;margin-bottom:18px;text-align:center;"><img src="img/edemat.png" alt="EDEMAT GROUP SAS" style="width:240px;max-height:90px;object-fit:contain;"><h1 style="font-size:20px;color:#14243a;margin:14px 0 4px;">CONTRATO DE VINCULACIÓN TEMPORAL</h1><div style="font-size:10px;color:#667085;">EDEMAT GROUP SAS · NIT 901472205 · CL 15 71 54 · Brr. Belén Las Playas<br>321 886 4232 · facturacion@incargo.co</div></div><div class="contract-pdf-content" style="font-size:12px;">${contract.innerHTML}</div>`;
       document.body.appendChild(report);
       html2pdf().set({
         margin: 10,
         filename: 'contrato-vinculacion-temporal-incargo.pdf',
         image: { type: 'jpeg', quality: 0.95 },
         html2canvas: { scale: 2, backgroundColor: '#ffffff' },
-        pagebreak: { mode: ['css', 'legacy'], avoid: ['h3', 'p'] },
+        pagebreak: { mode: ['css', 'legacy'], avoid: ['h3'] },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       }).from(report).save().then(() => report.remove());
     });
