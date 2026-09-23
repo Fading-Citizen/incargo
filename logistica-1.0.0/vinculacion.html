@@ -66,7 +66,7 @@
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <div class="brand"><img src="img/Logo.png" alt="Incargo"><span>Vinculación temporal</span></div>
+      <div class="brand"><img src="img/logoedemat.png" alt="EDEMAT GROUP SAS"><span>Vinculación temporal</span></div>
       <a href="index.html">Volver a incargo.co</a>
     </div>
   </header>
@@ -197,7 +197,7 @@
       }
       const report = document.createElement('div');
       report.style.cssText = 'width:180mm;background:#fff;color:#111;padding:14mm;font-family:Arial,sans-serif;line-height:1.5;';
-      report.innerHTML = `<div style="border-bottom:4px solid #d4a72c;padding-bottom:14px;margin-bottom:18px;text-align:center;"><img src="img/edemat.png" alt="EDEMAT GROUP SAS" style="width:240px;max-height:90px;object-fit:contain;"><h1 style="font-size:20px;color:#14243a;margin:14px 0 4px;">CONTRATO DE VINCULACIÓN TEMPORAL</h1><div style="font-size:10px;color:#667085;">EDEMAT GROUP SAS · NIT 901472205 · CL 15 71 54 · Brr. Belén Las Playas<br>321 886 4232 · facturacion@incargo.co</div></div><div class="contract-pdf-content" style="font-size:12px;">${contract.innerHTML}</div>`;
+      report.innerHTML = `<div style="border-bottom:4px solid #d4a72c;padding-bottom:14px;margin-bottom:18px;text-align:center;"><img src="img/logoedemat.png" alt="EDEMAT GROUP SAS" style="width:240px;max-height:90px;object-fit:contain;"><h1 style="font-size:20px;color:#14243a;margin:14px 0 4px;">CONTRATO DE VINCULACIÓN TEMPORAL</h1><div style="font-size:10px;color:#667085;">EDEMAT GROUP SAS · NIT 901472205 · CL 15 71 54 · Brr. Belén Las Playas<br>321 886 4232 · facturacion@incargo.co</div></div><div class="contract-pdf-content" style="font-size:12px;">${contract.innerHTML}</div>`;
       document.body.appendChild(report);
       html2pdf().set({
         margin: 10,
@@ -215,7 +215,7 @@
         showError('Permite las ventanas emergentes para imprimir el contrato.');
         return;
       }
-      printWindow.document.write(`<!doctype html><html lang="es"><head><meta charset="UTF-8"><title>Contrato de vinculación temporal</title><style>body{font-family:Arial,sans-serif;color:#111;line-height:1.5;padding:28px;max-width:900px;margin:auto}h1{text-align:center;font-size:20px}h3{text-transform:uppercase;font-size:14px;margin-top:20px}p{font-size:12px;text-align:justify}.contract-title{text-align:center;font-weight:bold}</style></head><body><h1>CONTRATO DE VINCULACIÓN TEMPORAL</h1>${contract.innerHTML}</body></html>`);
+      printWindow.document.write(`<!doctype html><html lang="es"><head><meta charset="UTF-8"><title>Contrato de vinculación temporal</title><style>body{font-family:Arial,sans-serif;color:#111;line-height:1.5;padding:28px;max-width:900px;margin:auto}header{text-align:center;border-bottom:4px solid #d4a72c;padding-bottom:14px;margin-bottom:18px}header img{width:240px;max-height:90px;object-fit:contain}h1{text-align:center;font-size:20px}h3{text-transform:uppercase;font-size:14px;margin-top:20px}p{font-size:12px;text-align:justify}.contract-title{text-align:center;font-weight:bold}</style></head><body><header><img src="img/logoedemat.png" alt="EDEMAT GROUP SAS"><h1>CONTRATO DE VINCULACIÓN TEMPORAL</h1><div>EDEMAT GROUP SAS · NIT 901472205 · CL 15 71 54 · Brr. Belén Las Playas<br>321 886 4232 · facturacion@incargo.co</div></header>${contract.innerHTML}</body></html>`);
       printWindow.document.close();
       printWindow.focus();
       printWindow.print();

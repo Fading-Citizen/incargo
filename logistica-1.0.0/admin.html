@@ -416,7 +416,7 @@ window.descargarContratoVinculacion = async idx => {
     doc.save(`contrato-vinculacion-${sanitizeFilename(item.nombreCompleto || 'registro')}.pdf`);
   };
   logo.onerror = () => alert('No se pudo cargar el logo de EDEMAT.');
-  logo.src = new URL('img/edemat.png', window.location.href).href;
+  logo.src = new URL('img/logoedemat.png', window.location.href).href;
 };
 
 function sanitizeFilename(value) {
