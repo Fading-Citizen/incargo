@@ -95,7 +95,7 @@
       </div>
       <div class="table-responsive">
         <table class="table table-hover align-middle">
-          <thead><tr><th>Fecha</th><th>Nombre</th><th>Identificación</th><th>Tipo</th><th>Correo</th><th>Aceptación</th><th>Contrato</th></tr></thead>
+          <thead><tr><th>Fecha</th><th>Nombre</th><th>Identificación</th><th>Tipo</th><th>Correo</th><th>Aceptación</th><th>Firma</th><th>Contrato</th></tr></thead>
           <tbody id="vinculacionesTbody"></tbody>
         </table>
       </div>
@@ -331,6 +331,7 @@ function renderVinculaciones() {
     <td>${escapeHtml(item.tipoVinculacion || '-')}<br><small>${escapeHtml(item.tipoVinculacionOtro || '')}</small></td>
     <td>${escapeHtml(item.correoElectronico || '-')}</td>
     <td><span class="badge badge-bueno">${item.aceptaContrato === 'SI' ? 'ACEPTADO' : 'PENDIENTE'}</span></td>
+    <td>${item.firmaB64 && !String(item.firmaB64).includes('[TRUNC]') ? '<span class="badge badge-bueno">REGISTRADA</span>' : '<span class="badge bg-secondary">NO</span>'}</td>
     <td><button class="btn btn-sm btn-brand" onclick="descargarContratoVinculacion(${vinculacionesData.indexOf(item)})" title="Descargar contrato"><i class="fa-solid fa-file-pdf"></i></button></td>
   </tr>`).join('');
 }
@@ -407,6 +408,26 @@ window.descargarContratoVinculacion = async idx => {
       if (element.tagName === 'H3' || element.querySelector('strong')) { ensure(12); y += 4; write(text.toUpperCase(), 10, { bold: true, color: [20, 36, 58] }); y += 1; }
       else { write(text, 9.5); y += 2; }
     });
+    if (item.firmaB64 && !String(item.firmaB64).includes('[TRUNC]')) {
+      ensure(35);
+      y += 5;
+      write('FIRMA DEL VINCULADO', 10, { bold: true, color: [20, 36, 58] });
+      const signature = new Image();
+      signature.onload = () => {
+        const ratio = signature.naturalWidth / signature.naturalHeight || 1;
+        const signatureHeight = 22;
+        const signatureWidth = Math.min(70, signatureHeight * ratio);
+        if (y + signatureHeight > page.height - 18) addPage();
+        doc.addImage(signature, 'PNG', page.margin, y, signatureWidth, signatureHeight, undefined, 'FAST');
+        y += signatureHeight + 5;
+        finishContractPdf();
+      };
+      signature.onerror = () => finishContractPdf();
+      signature.src = item.firmaB64;
+    } else {
+      finishContractPdf();
+    }
+    function finishContractPdf() {
     ensure(25); doc.setFillColor(255, 248, 225); doc.roundedRect(page.margin, y, 174, 18, 2, 2, 'F');
     y += 7; write(`ACEPTACIÓN: ${item.aceptaContrato === 'SI' ? 'ACEPTO EL CONTRATO DE VINCULACIÓN TEMPORAL.' : 'PENDIENTE'}`, 9, { bold: true, indent: 5 }); y += 10;
     doc.setDrawColor(212, 167, 44); doc.setLineWidth(.5); doc.line(page.margin, y, 192, y); y += 6;
@@ -414,6 +435,7 @@ window.descargarContratoVinculacion = async idx => {
     doc.text('EDEMAT GROUP SAS · NIT 901472205 · 321 886 4232 · facturacion@incargo.co', 105, y, { align: 'center' });
     for (let p = 1; p <= doc.getNumberOfPages(); p++) { doc.setPage(p); doc.setFontSize(8); doc.setTextColor(150, 156, 166); doc.text(`Página ${p} de ${doc.getNumberOfPages()}`, 195, 288, { align: 'right' }); }
     doc.save(`contrato-vinculacion-${sanitizeFilename(item.nombreCompleto || 'registro')}.pdf`);
+    }
   };
   logo.onerror = () => alert('No se pudo cargar el logo de EDEMAT.');
   logo.src = new URL('img/logoedemat.png', window.location.href).href;

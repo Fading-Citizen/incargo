@@ -48,6 +48,9 @@
     .accept { display:flex; gap:12px; align-items:flex-start; background:#fffbea; border:1px solid #e3ca54; border-radius:7px; padding:16px; margin-top:16px; }
     .accept input { width:22px; height:22px; flex:0 0 auto; accent-color:#198754; }
     .accept label { font-size:.9rem; margin:0; cursor:pointer; }
+    .signature-pad { display:block; width:100%; height:180px; background:#fff; border:2px dashed #9aa3ad; border-radius:7px; touch-action:none; cursor:crosshair; }
+    .signature-actions { display:flex; justify-content:flex-end; margin-top:8px; }
+    .signature-actions button { width:auto; padding:8px 12px; font-size:.8rem; background:#fff; border:1px solid #9aa3ad; }
     .legal-note { color:var(--muted); font-size:.75rem; margin-top:12px; }
     .contract-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
     .contract-actions button { width:auto; flex:1 1 220px; }
@@ -172,6 +175,12 @@
           <input type="checkbox" id="aceptaContrato" name="aceptaContrato" value="SI" required>
           <label for="aceptaContrato">ACEPTO EL CONTRATO DE VINCULACIÓN TEMPORAL y confirmo que la información suministrada es verdadera. <span class="required">*</span></label>
         </div>
+        <div style="margin-top:18px;">
+          <label for="firmaCanvas">Firma del vinculado <span class="required">*</span></label>
+          <canvas id="firmaCanvas" class="signature-pad" aria-label="Área para dibujar la firma"></canvas>
+          <div class="signature-actions"><button type="button" id="clearSignatureBtn">Borrar firma</button></div>
+          <p class="hint">Firma con el dedo o el mouse. La firma quedará asociada a tus datos y a la fecha de aceptación.</p>
+        </div>
         <p class="legal-note">La aceptación quedará registrada con fecha y hora. Antes de poner este formulario en producción, valida el texto contractual y el mecanismo de firma electrónica con tu asesor jurídico.</p>
       </section>
 
@@ -189,6 +198,52 @@
     const successMessage = document.getElementById('successMessage');
     const errorMessage = document.getElementById('errorMessage');
     const contract = document.querySelector('.contract');
+    const signatureCanvas = document.getElementById('firmaCanvas');
+    const signatureContext = signatureCanvas.getContext('2d');
+    let signatureHasInk = false;
+
+    function resizeSignatureCanvas() {
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      const rect = signatureCanvas.getBoundingClientRect();
+      signatureCanvas.width = Math.round(rect.width * ratio);
+      signatureCanvas.height = Math.round(rect.height * ratio);
+      signatureContext.setTransform(ratio, 0, 0, ratio, 0, 0);
+      signatureContext.lineWidth = 2.2;
+      signatureContext.lineCap = 'round';
+      signatureContext.strokeStyle = '#111827';
+    }
+    resizeSignatureCanvas();
+    window.addEventListener('resize', resizeSignatureCanvas);
+
+    function signaturePoint(event) {
+      const rect = signatureCanvas.getBoundingClientRect();
+      const source = event.touches ? event.touches[0] : event;
+      return { x: source.clientX - rect.left, y: source.clientY - rect.top };
+    }
+    let drawingSignature = false;
+    signatureCanvas.addEventListener('pointerdown', event => {
+      event.preventDefault();
+      drawingSignature = true;
+      signatureCanvas.setPointerCapture(event.pointerId);
+      const point = signaturePoint(event);
+      signatureContext.beginPath();
+      signatureContext.moveTo(point.x, point.y);
+    });
+    signatureCanvas.addEventListener('pointermove', event => {
+      if (!drawingSignature) return;
+      event.preventDefault();
+      const point = signaturePoint(event);
+      signatureContext.lineTo(point.x, point.y);
+      signatureContext.stroke();
+      signatureHasInk = true;
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(type => {
+      signatureCanvas.addEventListener(type, () => { drawingSignature = false; });
+    });
+    document.getElementById('clearSignatureBtn').addEventListener('click', () => {
+      signatureContext.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
+      signatureHasInk = false;
+    });
 
     document.getElementById('downloadContractBtn').addEventListener('click', () => {
       if (typeof html2pdf !== 'function') {
@@ -235,11 +290,17 @@
         form.reportValidity();
         return;
       }
+      if (!signatureHasInk) {
+        showError('Dibuja tu firma antes de enviar el contrato.');
+        signatureCanvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
 
       const data = Object.fromEntries(new FormData(form).entries());
       data.action = 'vinculacion';
       data.tipoVinculacion = roles;
       data.aceptadoEn = new Date().toISOString();
+      data.firmaB64 = signatureCanvas.toDataURL('image/png');
 
       submitButton.disabled = true;
       submitButton.textContent = 'Enviando solicitud…';

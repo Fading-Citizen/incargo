@@ -36,7 +36,8 @@ const VINCULACIONES_HEADERS = [
   'CORREO_ELECTRONICO',
   'ACEPTA_CONTRATO',
   'ACEPTADO_EN',
-  'VERSION_CONTRATO'
+  'VERSION_CONTRATO',
+  'FIRMA_B64'
 ];
 
 function doPost(e) {
@@ -153,6 +154,8 @@ function guardarVinculacion(ss, data) {
     sheet.getRange(1, 1, 1, VINCULACIONES_HEADERS.length)
       .setFontWeight('bold').setBackground('#060315').setFontColor('#ffffff');
     sheet.setFrozenRows(1);
+  } else {
+    ensureVinculacionHeaders(sheet);
   }
 
   sheet.appendRow([
@@ -166,12 +169,28 @@ function guardarVinculacion(ss, data) {
     data.correoElectronico || '',
     data.aceptaContrato === 'SI' ? 'SI' : 'NO',
     data.aceptadoEn || '',
-    '001'
+    '001',
+    truncateVinculacionB64(data.firmaB64)
   ]);
 
   return ContentService.createTextOutput(
     JSON.stringify({ ok: true, row: sheet.getLastRow(), sheet: VINCULACIONES_SHEET_NAME })
   ).setMimeType(ContentService.MimeType.JSON);
+}
+
+function truncateVinculacionB64(value, maxLength) {
+  const text = String(value || '');
+  const limit = maxLength || 120000;
+  return text.length > limit ? `${text.substring(0, limit)}...[TRUNC]` : text;
+}
+
+function ensureVinculacionHeaders(sheet) {
+  const currentHeaders = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0]
+    .map(value => String(value).trim());
+  if (currentHeaders.includes('FIRMA_B64')) return;
+  const signatureColumn = VINCULACIONES_HEADERS.indexOf('FIRMA_B64') + 1;
+  sheet.getRange(1, signatureColumn).setValue('FIRMA_B64')
+    .setFontWeight('bold').setBackground('#060315').setFontColor('#ffffff');
 }
 
 function listarVinculaciones() {
