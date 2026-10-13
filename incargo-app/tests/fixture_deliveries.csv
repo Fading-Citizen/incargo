@@ -1,0 +1,5 @@
+source_id,trip_source_id,customer_name
+E-001,V-001,Cliente Ficticio A
+E-002,V-001,Cliente Ficticio B
+E-002,V-001,Cliente Ficticio B
+E-003,,Cliente Ficticio C

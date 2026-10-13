@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Incargo · maqueta de operaciones</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">◈</span><span>INCARGO<small>LOGÍSTICA Y TRANSPORTE</small></span></div>
+    <span class="demo-tag">MAQUETA LOCAL · DATOS FICTICIOS</span>
+  </header>
+  <div class="shell">
+    <nav class="nav" aria-label="Vistas de la maqueta">
+      <button data-view="operations" aria-current="page">Operaciones</button>
+      <button data-view="driver">Conductor</button>
+      <button data-view="client">Cliente</button>
+    </nav>
+    <main>
+      <p class="notice" role="note">Vista de demostración. Los cambios viven solo en esta pestaña; no se envían ni se guardan en un servidor.</p>
+      <p id="message" class="message" role="status" aria-live="polite"></p>
+
+      <section id="operations" class="view" aria-labelledby="operations-title">
+        <div class="heading"><div><p class="eyebrow">PANEL INCARGO</p><h1 id="operations-title">Viajes y entregas</h1><p>Planifica una ruta y asigna los recursos del viaje.</p></div><button id="reset" class="button button-quiet" type="button">Restablecer ejemplo</button></div>
+        <div class="columns">
+          <form id="trip-form" class="card" novalidate>
+            <h2>Crear viaje</h2>
+            <label>Ruta <input name="route" required placeholder="Medellín → Bogotá" maxlength="100"></label>
+            <label>Fecha <input name="date" required type="date"></label>
+            <label>Vehículo <input name="vehicle" required placeholder="ABC123" maxlength="12"></label>
+            <label>Conductor <input name="driver" required placeholder="Nombre del conductor" maxlength="100"></label>
+            <label>Entregas ficticias <select name="bundle"><option value="two">Dos entregas de ejemplo</option><option value="none">Sin entregas</option></select></label>
+            <button class="button" type="submit">Crear viaje local</button>
+          </form>
+          <div class="card"><div class="card-head"><h2>Viajes de ejemplo</h2><span id="trip-count" class="pill"></span></div><div id="trip-list"></div></div>
+        </div>
+      </section>
+
+      <section id="driver" class="view" aria-labelledby="driver-title" hidden>
+        <div class="heading"><div><p class="eyebrow">VISTA MÓVIL</p><h1 id="driver-title">Mi viaje</h1><p>Busca una entrega y registra su resultado.</p></div></div>
+        <div class="columns">
+          <div class="card"><label>Viaje asignado en esta maqueta <select id="driver-trip"></select></label><div id="driver-summary" class="summary"></div><label>Buscar cliente o factura <input id="delivery-search" type="search" placeholder="Escribe para filtrar"></label><div id="delivery-list"></div></div>
+          <form id="confirm-form" class="card" novalidate>
+            <h2>Confirmar entrega</h2><p id="selected-delivery">Selecciona una entrega de la lista.</p>
+            <label>Nombre de quien recibe <input name="receiver" required maxlength="100"></label>
+            <label>Foto de factura o remesa <input name="photo" type="file" accept="image/png,image/jpeg,image/webp" required></label>
+            <label>Observación <textarea name="observation" rows="3" maxlength="500" placeholder="Opcional"></textarea></label>
+            <button class="button" type="submit">Confirmar en esta maqueta</button>
+            <button id="issue-button" class="button button-quiet" type="button">Registrar novedad local</button>
+            <p class="help">La foto permanece en la memoria de esta pestaña y desaparece al recargar.</p>
+          </form>
+        </div>
+      </section>
+
+      <section id="client" class="view" aria-labelledby="client-title" hidden>
+        <div class="heading"><div><p class="eyebrow">VISTA CLIENTE</p><h1 id="client-title">Seguimiento de tu entrega</h1><p>Previsualización de una sola entrega ficticia.</p></div></div>
+        <div class="client-frame"><div class="client-bar">◈ INCARGO</div><div id="client-content" class="card client-card"></div></div>
+        <p class="help">El acceso real requerirá un enlace limitado y validación en servidor. Esta vista no genera ni publica enlaces.</p>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

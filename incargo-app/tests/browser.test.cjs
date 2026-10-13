@@ -1,0 +1,71 @@
+const { chromium } = require('playwright');
+const path = require('path');
+const assert = require('node:assert/strict');
+const http = require('node:http');
+const fs = require('node:fs');
+
+(async () => {
+  const browser = await chromium.launch({headless: true, executablePath:'/usr/bin/chromium', args:['--no-sandbox']});
+  const root = path.resolve(__dirname,'..');
+  const server = http.createServer((request,response)=>{
+    const name = request.url === '/' ? 'index.html' : request.url.slice(1);
+    if (!['index.html','styles.css','app.js'].includes(name)) { response.writeHead(404).end(); return; }
+    response.setHeader('Content-Type', name.endsWith('.css')?'text/css':name.endsWith('.js')?'application/javascript':'text/html');
+    fs.createReadStream(path.join(root,name)).pipe(response);
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  try {
+    const page = await browser.newPage({viewport:{width:390,height:844}});
+    await page.goto('http://127.0.0.1:'+server.address().port+'/');
+    assert.equal(await page.getByRole('heading',{name:'Viajes y entregas'}).isVisible(),true);
+    await page.getByRole('button',{name:'Crear viaje local'}).click();
+    assert.equal(await page.locator('#trip-list .trip').count(),1);
+    await page.locator('[name=route]').fill('Ruta ficticia');
+    await page.locator('[name=date]').fill('2026-10-15');
+    await page.locator('[name=vehicle]').fill('xyz987');
+    await page.locator('[name=driver]').fill('Persona Ejemplo');
+    await page.getByRole('button',{name:'Crear viaje local'}).click();
+    assert.equal(await page.locator('#trip-list .trip').count(),2);
+    await page.getByRole('button',{name:'Conductor',exact:true}).click();
+    assert.equal(await page.locator('#delivery-list .item').count(),2);
+    await page.locator('#delivery-search').fill('sin coincidencia');
+    assert.equal(await page.getByText('No hay entregas que coincidan.').isVisible(),true);
+    await page.locator('#delivery-search').fill('Cliente Ficticio C');
+    await page.locator('#delivery-list .item').first().click();
+    await page.locator('#confirm-form [name=receiver]').fill('Receptor Ficticio');
+    await page.getByRole('button',{name:'Confirmar en esta maqueta'}).click();
+    assert.equal(await page.locator('#selected-delivery').textContent().then(x=>x.includes('Entregada')),false);
+    const png = await page.evaluate(() => { const c=document.createElement('canvas');c.width=320;c.height=120;const x=c.getContext('2d');x.fillStyle='#eaf1f4';x.fillRect(0,0,320,120);x.fillStyle='#163047';x.font='20px Arial';x.fillText('SOPORTE FICTICIO',25,65);return c.toDataURL('image/png').split(',')[1]; });
+    await page.locator('#confirm-form [name=photo]').setInputFiles({name:'soporte-demo.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});
+    await page.getByRole('button',{name:'Confirmar en esta maqueta'}).click();
+    assert.match(await page.locator('#message').textContent(),/No se envió al servidor/);
+    await page.getByRole('button',{name:'Confirmar en esta maqueta'}).click();
+    assert.match(await page.locator('#message').textContent(),/ya fue confirmada/);
+    await page.getByRole('button',{name:'Cliente',exact:true}).click();
+    assert.equal(await page.locator('#client-content h2').first().textContent(),'Cliente Ficticio C');
+    assert.equal(await page.locator('#client-content .support-preview').count(),1);
+    assert.equal(await page.locator('#client-content').textContent().then(x=>x.includes('Cliente Ficticio D')),false);
+    await page.screenshot({path:'/tmp/incargo-mobile-qa.png',fullPage:true});
+    await page.setViewportSize({width:1280,height:800});
+    await page.getByRole('button',{name:'Operaciones',exact:true}).click();
+    await page.screenshot({path:'/tmp/incargo-desktop-qa.png',fullPage:true});
+    await page.getByRole('button',{name:'Restablecer ejemplo'}).click();
+    assert.equal(await page.locator('#trip-list .trip').count(),1);
+    await page.locator('[name=route]').fill('Ruta sin paradas');
+    await page.locator('[name=date]').fill('2026-10-16');
+    await page.locator('[name=vehicle]').fill('SIN001');
+    await page.locator('[name=driver]').fill('Persona Ejemplo');
+    await page.locator('[name=bundle]').selectOption('none');
+    await page.getByRole('button',{name:'Crear viaje local'}).click();
+    await page.getByRole('button',{name:'Conductor',exact:true}).click();
+    assert.equal(await page.getByText('Este viaje aún no tiene entregas.').isVisible(),true);
+    await page.getByRole('button',{name:'Operaciones',exact:true}).click();
+    await page.getByRole('button',{name:'Restablecer ejemplo'}).click();
+    await page.getByRole('button',{name:'Conductor',exact:true}).click();
+    await page.locator('#delivery-list .item').first().click();
+    await page.locator('#confirm-form [name=observation]').fill('Demora ficticia');
+    await page.getByRole('button',{name:'Registrar novedad local'}).click();
+    assert.match(await page.locator('#selected-delivery').textContent(),/Novedad/);
+    console.log('Browser flow passed: navigation, validation, search, local confirmation, repeat, client scope, reset, empty trip, issue.');
+  } finally { await browser.close(); await new Promise(resolve=>server.close(resolve)); }
+})().catch(error=>{console.error(error);process.exitCode=1;});
