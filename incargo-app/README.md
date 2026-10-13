@@ -36,6 +36,8 @@ Decisiones necesarias: fuente canónica de viajes y entregas; significado y tran
 
 ## Integración autorizada, estado 13 octubre 2026
 
+La conciliación detallada de las pestañas heredadas está en `legacy-mapping.md`; matriz de permisos, evidencia de pruebas y primer operador en `validation-and-handoff.md`.
+
 El proyecto Supabase Incargo `gmjsqboyuvierfwruspv` contiene las migraciones `incargo_operations_v1`, `incargo_permissions_fix`, `incargo_hardening` e `incargo_anon_revoke`, en ese orden. Los SQL locales correspondientes son `migration.sql`, `migration_permissions_fix.sql`, `migration_hardening.sql` y `migration_anon_revoke.sql`. Hay cinco tablas públicas vacías con RLS, una tabla privada de enlaces y un bucket privado `incargo-proofs` limitado a PNG/JPEG/WebP de 10 MB. La función Edge `incargo-tracking` recibe un token aleatorio por POST, verifica vigencia y revocación, y entrega solo estado, eventos y un enlace de soporte de 60 segundos. El token no se coloca en la URL de solicitud al servidor; la página usa el fragmento `#token=`.
 
 La interfaz conectada usa inicio de sesión por contraseña de Supabase para cuentas existentes. No ofrece registro ni envía correos. **No hay usuarios Auth en el proyecto al momento de la comprobación**, por lo que todavía no se puede probar un flujo productivo autenticado ni operar la app. El alta de cuentas y asignación de roles requiere un procedimiento autorizado; nunca se inserta automáticamente una membresía de operaciones. Las pruebas de interfaz usan respuestas simuladas, no registros productivos.
