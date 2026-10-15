@@ -94,9 +94,17 @@
 
     <!-- Template Stylesheet -->
     <link href="css/style.css" rel="stylesheet">
+    <link href="css/incargo-redesign.css" rel="stylesheet">
+    <script>document.addEventListener("DOMContentLoaded", function () {
+      var spinner = document.getElementById("spinner"); if (spinner) spinner.classList.remove("show");
+      var toggle = document.querySelector(".navbar-toggler"), menu = document.getElementById("navbarCollapse");
+      if (toggle && menu) toggle.addEventListener("click", function () { if (window.bootstrap && window.bootstrap.Collapse) return; var open = menu.classList.toggle("show"); toggle.setAttribute("aria-expanded", String(open)); });
+      document.querySelectorAll(".navbar .dropdown-toggle").forEach(function (item) { item.addEventListener("click", function (event) { if (window.bootstrap && window.bootstrap.Dropdown) return; event.preventDefault(); var list = item.nextElementSibling; if (list) { var open = list.classList.toggle("show"); item.setAttribute("aria-expanded", String(open)); } }); });
+    });</script>
 </head>
 
 <body>
+    <a class="inc-skip" href="#main-content">Saltar al contenido</a>
     <!-- Spinner Start -->
     <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
         <div class="spinner-grow text-primary" style="width: 3rem; height: 3rem;" role="status">
@@ -112,7 +120,7 @@
             <img src="img/Logo.png" alt="INCARGO" style="height: 50px; filter: brightness(0);">
             <sup style="color: #000; font-size: 28px; margin-left: 0px; vertical-align: super; position: relative; top: -15px;">®</sup>
         </a>
-        <button type="button" class="navbar-toggler me-4" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+        <button type="button" class="navbar-toggler me-4" aria-label="Abrir menú" aria-controls="navbarCollapse" aria-expanded="false" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarCollapse">
@@ -123,7 +131,7 @@
                 <a href="gallery.html" class="nav-item nav-link">Galería</a>
                 <a href="coverage.html" class="nav-item nav-link">Cobertura</a>
                 <div class="nav-item dropdown">
-                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Más</a>
+                    <a href="#" class="nav-link dropdown-toggle" role="button" aria-expanded="false" data-bs-toggle="dropdown">Más</a>
                     <div class="dropdown-menu fade-up m-0">
                         <a href="quote.html" class="dropdown-item">Cotizaciones</a>
                         <a href="vinculacion.html" class="dropdown-item">Vinculación temporal</a>
@@ -140,239 +148,19 @@
         </div>
     </nav>
     <!-- Navbar End -->
+    <main id="main-content">
 
 
-    <!-- Carousel Start -->
-    <div class="container-fluid p-0 pb-5">
-        <div class="owl-carousel header-carousel position-relative mb-5">
-            <div class="owl-carousel-item position-relative">
-                <img class="img-fluid" src="img/pexels-kampus-7289733.jpg" alt="Centro logístico INCARGO - Soluciones de transporte y logística en Colombia">
-                <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center" style="background: rgba(6, 3, 21, .5);">
-                    <div class="container">
-                        <div class="row justify-content-start">
-                            <div class="col-10 col-lg-8">
-                                <h5 class="text-white text-uppercase mb-3 animated slideInDown">Soluciones de Logística y Transporte</h5>
-                                <h1 class="display-3 text-white animated slideInDown mb-4">Tu Socio Confiable en <span class="text-primary">Logística</span></h1>
-                                <p class="fs-5 fw-medium text-white mb-4 pb-2">Brindamos servicios estratégicos de logística y transporte de carga en todo el territorio nacional, con altos estándares de calidad y seguridad.</p>
-                                <a href="about.html" class="btn btn-primary py-md-3 px-md-5 me-3 animated slideInLeft">Conoce Más</a>
-                                <a href="quote.html" class="btn btn-secondary py-md-3 px-md-5 animated slideInRight">Cotiza Aquí</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="owl-carousel-item position-relative">
-                <img class="img-fluid" src="img/1.jpg" alt="Flota real de INCARGO - Camión de transporte de carga en operación">
-                <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center" style="background: rgba(6, 3, 21, .5);">
-                    <div class="container">
-                        <div class="row justify-content-start">
-                            <div class="col-10 col-lg-8">
-                                <h5 class="text-white text-uppercase mb-3 animated slideInDown">INCARGO - Transporte de Carga</h5>
-                                <h1 class="display-3 text-white animated slideInDown mb-4">Nuestra <span class="text-primary">Flota Real</span></h1>
-                                <p class="fs-5 fw-medium text-white mb-4 pb-2">Vehículos modernos y bien mantenidos listos para transportar tu carga de manera segura.</p>
-                                <a href="about.html" class="btn btn-primary py-md-3 px-md-5 me-3 animated slideInLeft">Conoce Más</a>
-                                <a href="quote.html" class="btn btn-secondary py-md-3 px-md-5 animated slideInRight">Cotiza Aquí</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="owl-carousel-item position-relative">
-                <img class="img-fluid" src="img/pexels-bemistermister-3434533.jpg" alt="Extensa flota de vehículos INCARGO - Más de 5000 unidades disponibles">
-                <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center" style="background: rgba(6, 3, 21, .5);">
-                    <div class="container">
-                        <div class="row justify-content-start">
-                            <div class="col-10 col-lg-8">
-                                <h5 class="text-white text-uppercase mb-3 animated slideInDown">Más de 5.000 Vehículos</h5>
-                                <h1 class="display-3 text-white animated slideInDown mb-4">Extensa <span class="text-primary">Flota</span> a tu Servicio</h1>
-                                <p class="fs-5 fw-medium text-white mb-4 pb-2">Contamos con una amplia variedad de configuraciones vehiculares para satisfacer todas tus necesidades de transporte.</p>
-                                <a href="service.html" class="btn btn-primary py-md-3 px-md-5 me-3 animated slideInLeft">Nuestros Servicios</a>
-                                <a href="quote.html" class="btn btn-secondary py-md-3 px-md-5 animated slideInRight">Solicita Cotización</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="owl-carousel-item position-relative">
-                <img class="img-fluid" src="img/2.jpg" alt="Operaciones logísticas INCARGO en acción - Entrega de mercancías">
-                <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center" style="background: rgba(6, 3, 21, .5);">
-                    <div class="container">
-                        <div class="row justify-content-start">
-                            <div class="col-10 col-lg-8">
-                                <h5 class="text-white text-uppercase mb-3 animated slideInDown">Operaciones Reales</h5>
-                                <h1 class="display-3 text-white animated slideInDown mb-4">En <span class="text-primary">Acción</span></h1>
-                                <p class="fs-5 fw-medium text-white mb-4 pb-2">Así trabajamos día a día para cumplir con tus entregas a tiempo.</p>
-                                <a href="service.html" class="btn btn-primary py-md-3 px-md-5 me-3 animated slideInLeft">Nuestros Servicios</a>
-                                <a href="quote.html" class="btn btn-secondary py-md-3 px-md-5 animated slideInRight">Solicita Cotización</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="owl-carousel-item position-relative">
-                <img class="img-fluid" src="img/pexels-artempodrez-5025496.jpg" alt="">
-                <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center" style="background: rgba(6, 3, 21, .5);">
-                    <div class="container">
-                        <div class="row justify-content-start">
-                            <div class="col-10 col-lg-8">
-                                <h5 class="text-white text-uppercase mb-3 animated slideInDown">Almacenamiento Seguro</h5>
-                                <h1 class="display-3 text-white animated slideInDown mb-4">Soluciones de <span class="text-primary">Bodegaje</span></h1>
-                                <p class="fs-5 fw-medium text-white mb-4 pb-2">Instalaciones modernas y seguras para el almacenamiento de tu mercancía con control total.</p>
-                                <a href="service.html" class="btn btn-primary py-md-3 px-md-5 me-3 animated slideInLeft">Ver Servicios</a>
-                                <a href="quote.html" class="btn btn-secondary py-md-3 px-md-5 animated slideInRight">Cotizar Ahora</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="owl-carousel-item position-relative">
-                <img class="img-fluid" src="img/3.jpg" alt="">
-                <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center" style="background: rgba(6, 3, 21, .5);">
-                    <div class="container">
-                        <div class="row justify-content-start">
-                            <div class="col-10 col-lg-8">
-                                <h5 class="text-white text-uppercase mb-3 animated slideInDown">Instalaciones INCARGO</h5>
-                                <h1 class="display-3 text-white animated slideInDown mb-4">Nuestras <span class="text-primary">Instalaciones</span></h1>
-                                <p class="fs-5 fw-medium text-white mb-4 pb-2">Espacios modernos y seguros para la gestión de tu mercancía.</p>
-                                <a href="service.html" class="btn btn-primary py-md-3 px-md-5 me-3 animated slideInLeft">Ver Servicios</a>
-                                <a href="quote.html" class="btn btn-secondary py-md-3 px-md-5 animated slideInRight">Cotizar Ahora</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="owl-carousel-item position-relative">
-                <img class="img-fluid" src="img/pexels-kindelmedia-6868452.jpg" alt="">
-                <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center" style="background: rgba(6, 3, 21, .5);">
-                    <div class="container">
-                        <div class="row justify-content-start">
-                            <div class="col-10 col-lg-8">
-                                <h5 class="text-white text-uppercase mb-3 animated slideInDown">Logística Integral</h5>
-                                <h1 class="display-3 text-white animated slideInDown mb-4">Gestión <span class="text-primary">Profesional</span></h1>
-                                <p class="fs-5 fw-medium text-white mb-4 pb-2">Equipos especializados y tecnología de punta para optimizar tus operaciones logísticas.</p>
-                                <a href="service.html" class="btn btn-primary py-md-3 px-md-5 me-3 animated slideInLeft">Explorar</a>
-                                <a href="contact.html" class="btn btn-secondary py-md-3 px-md-5 animated slideInRight">Contáctanos</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="owl-carousel-item position-relative">
-                <img class="img-fluid" src="img/4.jpg" alt="">
-                <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center" style="background: rgba(6, 3, 21, .5);">
-                    <div class="container">
-                        <div class="row justify-content-start">
-                            <div class="col-10 col-lg-8">
-                                <h5 class="text-white text-uppercase mb-3 animated slideInDown">Equipo Profesional</h5>
-                                <h1 class="display-3 text-white animated slideInDown mb-4">Expertos en <span class="text-primary">Logística</span></h1>
-                                <p class="fs-5 fw-medium text-white mb-4 pb-2">Personal capacitado y comprometido con la excelencia en cada operación.</p>
-                                <a href="service.html" class="btn btn-primary py-md-3 px-md-5 me-3 animated slideInLeft">Explorar</a>
-                                <a href="contact.html" class="btn btn-secondary py-md-3 px-md-5 animated slideInRight">Contáctanos</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="owl-carousel-item position-relative">
-                <img class="img-fluid" src="img/pexels-polina-tankilevitch-4440799.jpg" alt="">
-                <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center" style="background: rgba(6, 3, 21, .5);">
-                    <div class="container">
-                        <div class="row justify-content-start">
-                            <div class="col-10 col-lg-8">
-                                <h5 class="text-white text-uppercase mb-3 animated slideInDown">Entrega Garantizada</h5>
-                                <h1 class="display-3 text-white animated slideInDown mb-4">Puntualidad y <span class="text-primary">Seguridad</span></h1>
-                                <p class="fs-5 fw-medium text-white mb-4 pb-2">Rastreo en tiempo real y garantía de entrega para tu total tranquilidad.</p>
-                                <a href="coverage.html" class="btn btn-primary py-md-3 px-md-5 me-3 animated slideInLeft">Ver Cobertura</a>
-                                <a href="quote.html" class="btn btn-secondary py-md-3 px-md-5 animated slideInRight">Solicitar Cotización</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="owl-carousel-item position-relative">
-                <img class="img-fluid" src="img/5.jpg" alt="">
-                <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center" style="background: rgba(6, 3, 21, .5);">
-                    <div class="container">
-                        <div class="row justify-content-start">
-                            <div class="col-10 col-lg-8">
-                                <h5 class="text-white text-uppercase mb-3 animated slideInDown">Compromiso Real</h5>
-                                <h1 class="display-3 text-white animated slideInDown mb-4">Tu Carga, Nuestra <span class="text-primary">Prioridad</span></h1>
-                                <p class="fs-5 fw-medium text-white mb-4 pb-2">Garantizamos seguridad y puntualidad en cada entrega.</p>
-                                <a href="coverage.html" class="btn btn-primary py-md-3 px-md-5 me-3 animated slideInLeft">Ver Cobertura</a>
-                                <a href="quote.html" class="btn btn-secondary py-md-3 px-md-5 animated slideInRight">Solicitar Cotización</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="owl-carousel-item position-relative">
-                <img class="img-fluid" src="img/pexels-polina-tankilevitch-4440800.jpg" alt="">
-                <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center" style="background: rgba(6, 3, 21, .5);">
-                    <div class="container">
-                        <div class="row justify-content-start">
-                            <div class="col-10 col-lg-8">
-                                <h5 class="text-white text-uppercase mb-3 animated slideInDown">Experiencia Comprobada</h5>
-                                <h1 class="display-3 text-white animated slideInDown mb-4">Líderes en <span class="text-primary">Transporte</span></h1>
-                                <p class="fs-5 fw-medium text-white mb-4 pb-2">Años de experiencia respaldando empresas de todos los sectores con soluciones logísticas efectivas.</p>
-                                <a href="about.html" class="btn btn-primary py-md-3 px-md-5 me-3 animated slideInLeft">Nuestra Historia</a>
-                                <a href="testimonial.html" class="btn btn-secondary py-md-3 px-md-5 animated slideInRight">Testimonios</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="owl-carousel-item position-relative">
-                <img class="img-fluid" src="img/6.jpg" alt="">
-                <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center" style="background: rgba(6, 3, 21, .5);">
-                    <div class="container">
-                        <div class="row justify-content-start">
-                            <div class="col-10 col-lg-8">
-                                <h5 class="text-white text-uppercase mb-3 animated slideInDown">Cobertura Nacional</h5>
-                                <h1 class="display-3 text-white animated slideInDown mb-4">Donde <span class="text-primary">Estés</span>, Llegamos</h1>
-                                <p class="fs-5 fw-medium text-white mb-4 pb-2">Amplia red de distribución en todo el territorio nacional.</p>
-                                <a href="about.html" class="btn btn-primary py-md-3 px-md-5 me-3 animated slideInLeft">Nuestra Historia</a>
-                                <a href="testimonial.html" class="btn btn-secondary py-md-3 px-md-5 animated slideInRight">Testimonios</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="owl-carousel-item position-relative">
-                <img class="img-fluid" src="img/7.jpg" alt="">
-                <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center" style="background: rgba(6, 3, 21, .5);">
-                    <div class="container">
-                        <div class="row justify-content-start">
-                            <div class="col-10 col-lg-8">
-                                <h5 class="text-white text-uppercase mb-3 animated slideInDown">Tecnología Avanzada</h5>
-                                <h1 class="display-3 text-white animated slideInDown mb-4">Seguimiento en <span class="text-primary">Tiempo Real</span></h1>
-                                <p class="fs-5 fw-medium text-white mb-4 pb-2">Monitorea tu carga en cada momento del trayecto con nuestra plataforma digital.</p>
-                                <a href="service.html" class="btn btn-primary py-md-3 px-md-5 me-3 animated slideInLeft">Ver Más</a>
-                                <a href="quote.html" class="btn btn-secondary py-md-3 px-md-5 animated slideInRight">Cotizar</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="owl-carousel-item position-relative">
-                <img class="img-fluid" src="img/8.jpg" alt="">
-                <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center" style="background: rgba(6, 3, 21, .5);">
-                    <div class="container">
-                        <div class="row justify-content-start">
-                            <div class="col-10 col-lg-8">
-                                <h5 class="text-white text-uppercase mb-3 animated slideInDown">INCARGO</h5>
-                                <h1 class="display-3 text-white animated slideInDown mb-4">Tu Mejor <span class="text-primary">Aliado Logístico</span></h1>
-                                <p class="fs-5 fw-medium text-white mb-4 pb-2">Soluciones integrales respaldadas por años de experiencia y un equipo comprometido.</p>
-                                <a href="about.html" class="btn btn-primary py-md-3 px-md-5 me-3 animated slideInLeft">Conocer INCARGO</a>
-                                <a href="contact.html" class="btn btn-secondary py-md-3 px-md-5 animated slideInRight">Habla con Nosotros</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Carousel End -->
-
+    <header class="inc-hero">
+      <div class="inc-hero-photo" role="img" aria-label="Vehículo de carga de la flota INCARGO"></div>
+      <div class="container inc-hero-content">
+        <p class="inc-eyebrow">Logística y transporte · Colombia</p>
+        <h1>Tu carga en movimiento.<br><em>Tu operación en buenas manos.</em></h1>
+        <p>Soluciones de transporte, almacenamiento y distribución para conectar cada etapa de tu negocio.</p>
+        <div class="inc-actions"><a href="quote.html" class="btn btn-primary">Solicitar cotización <span aria-hidden="true">↗</span></a><a href="service.html" class="inc-text-link">Explorar servicios <span aria-hidden="true">→</span></a></div>
+      </div>
+      <div class="inc-hero-caption">INCARGO / Transporte y logística</div>
+    </header>
 
     <!-- About Start -->
     <div class="container-fluid overflow-hidden py-5 px-lg-0">
@@ -407,204 +195,19 @@
     <!-- About End -->
 
 
-    <!-- Fact Start -->
-    <div class="container-xxl py-5">
-        <div class="container py-5">
-            <div class="row g-5">
-                <div class="col-lg-6 wow fadeInUp" data-wow-delay="0.1s">
-                    <h6 class="text-secondary text-uppercase mb-3">Nuestros Logros</h6>
-                    <h1 class="mb-5">Experiencia y Confiabilidad en Cada Envío</h1>
-                    <p class="mb-5">En INCARGO nos enorgullece contar con una extensa flota de más de 5.000 vehículos afiliados que abarcan una amplia variedad de configuraciones vehiculares. Garantizamos la satisfacción de nuestros clientes mediante altos estándares de calidad.</p>
-                    <div class="d-flex align-items-center">
-                        <i class="fa fa-headphones fa-2x flex-shrink-0 bg-primary p-3 text-white"></i>
-                        <div class="ps-4">
-                            <h6>¡Llámanos!</h6>
-                            <h3 class="text-primary m-0">+57 310 380 96 12</h3>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-6">
-                    <div class="row g-4 align-items-center">
-                        <div class="col-sm-6">
-                            <div class="bg-primary p-4 mb-4 wow fadeIn" data-wow-delay="0.3s">
-                                <i class="fa fa-users fa-2x text-white mb-3"></i>
-                                <h2 class="text-white mb-2" data-toggle="counter-up">5000</h2>
-                                <p class="text-white mb-0">Vehículos Afiliados</p>
-                            </div>
-                            <div class="bg-secondary p-4 wow fadeIn" data-wow-delay="0.5s">
-                                <i class="fa fa-truck fa-2x text-white mb-3"></i>
-                                <h2 class="text-white mb-2" data-toggle="counter-up">12847</h2>
-                                <p class="text-white mb-0">Clientes Satisfechos</p>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="bg-success p-4 wow fadeIn" data-wow-delay="0.7s">
-                                <i class="fa fa-star fa-2x text-white mb-3"></i>
-                                <h2 class="text-white mb-2" data-toggle="counter-up">52</h2>
-                                <p class="text-white mb-0">Toneladas Máximas</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+
+    <section class="inc-section inc-services" aria-labelledby="services-title">
+      <div class="container">
+        <div class="inc-section-heading"><div><p class="inc-eyebrow">Lo que hacemos</p><h2 id="services-title">Una solución para cada trayecto</h2></div><a href="service.html" class="inc-text-link">Ver todos los servicios <span aria-hidden="true">→</span></a></div>
+        <div class="inc-service-grid">
+          <a href="service.html" class="inc-service-card"><img src="img/1.jpg" alt="Camión de carga INCARGO" loading="lazy"><div><span>01 / Transporte</span><h3>Transporte nacional</h3><p>Movilizamos mercancías a través del territorio colombiano.</p><b aria-hidden="true">↗</b></div></a>
+          <a href="service.html" class="inc-service-card"><img src="img/service-2.jpg" alt="Operación de transporte de carga" loading="lazy"><div><span>02 / Carga</span><h3>Carga masiva y consolidada</h3><p>Opciones para diferentes volúmenes y necesidades de distribución.</p><b aria-hidden="true">↗</b></div></a>
+          <a href="service.html" class="inc-service-card"><img src="img/service-3.jpg" alt="Espacio destinado a almacenamiento" loading="lazy"><div><span>03 / Almacenamiento</span><h3>Bodegaje</h3><p>Espacios y apoyo logístico para guardar tu mercancía.</p><b aria-hidden="true">↗</b></div></a>
         </div>
-    </div>
-    <!-- Fact End -->
+      </div>
+    </section>
 
-
-    <!-- Service Start -->
-    <div class="container-xxl py-5">
-        <div class="container py-5">
-            <div class="text-center wow fadeInUp" data-wow-delay="0.1s">
-                <h6 class="text-secondary text-uppercase">Nuestros Servicios</h6>
-                <h1 class="mb-5">Explora Nuestros Servicios</h1>
-            </div>
-            <div class="row g-4">
-                <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="0.1s">
-                    <div class="service-item p-4">
-                        <div class="overflow-hidden mb-4">
-                            <img class="img-fluid" src="img/service-1.jpg" alt="">
-                        </div>
-                        <h4 class="mb-3">Transporte Nacional</h4>
-                        <p>Ofrecemos respaldo completo para que sus mercancías lleguen de manera segura a su destino final en todo el territorio nacional.</p>
-                        <a class="btn-slide mt-2" href="service.html"><i class="fa fa-arrow-right"></i><span>Leer Más</span></a>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="0.2s">
-                    <div class="service-item p-4">
-                        <div class="overflow-hidden mb-4">
-                            <img class="img-fluid" src="img/service-2.jpg" alt="">
-                        </div>
-                        <h4 class="mb-3">Transporte de Carga Masiva</h4>
-                        <p>Movilización de volúmenes importantes de mercancías utilizando el espacio y peso total permitido del vehículo con tecnología de monitoreo y seguridad.</p>
-                        <a class="btn-slide mt-2" href="service.html"><i class="fa fa-arrow-right"></i><span>Leer Más</span></a>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="0.3s">
-                    <div class="service-item p-4">
-                        <div class="overflow-hidden mb-4">
-                            <img class="img-fluid" src="https://images.pexels.com/photos/4481259/pexels-photo-4481259.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop" alt="Bodegaje INCARGO">
-                        </div>
-                        <h4 class="mb-3">Bodegaje</h4>
-                        <p>Soluciones de almacenamiento flexibles y accesibles para sus productos, mercancías o equipos.</p>
-                        <a class="btn-slide mt-2" href="service.html"><i class="fa fa-arrow-right"></i><span>Leer Más</span></a>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="0.4s">
-                    <div class="service-item p-4">
-                        <div class="overflow-hidden mb-4">
-                            <img class="img-fluid" src="img/transportedevehiculos.jpeg" alt="Transporte de Vehículos INCARGO">
-                        </div>
-                        <h4 class="mb-3">Transporte de Vehículos</h4>
-                        <p>Movemos sus vehículos de manera segura y eficiente, cumpliendo con todos los requisitos legales.</p>
-                        <a class="btn-slide mt-2" href="service.html"><i class="fa fa-arrow-right"></i><span>Leer Más</span></a>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="0.5s">
-                    <div class="service-item p-4">
-                        <div class="overflow-hidden mb-4">
-                            <img class="img-fluid" src="img/service-5.jpg" alt="">
-                        </div>
-                        <h4 class="mb-3">Transporte Mercancía Peligrosa</h4>
-                        <p>Movimiento de mercancías peligrosas cumpliendo con el Decreto 1609 y todos los estándares de seguridad en el manejo de sustancias químicas.</p>
-                        <a class="btn-slide mt-2" href="service.html"><i class="fa fa-arrow-right"></i><span>Leer Más</span></a>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="0.6s">
-                    <div class="service-item p-4">
-                        <div class="overflow-hidden mb-4">
-                            <img class="img-fluid" src="img/service-6.jpg" alt="">
-                        </div>
-                        <h4 class="mb-3">Manejo de Contenedores</h4>
-                        <p>Experto manejo de contenedores desde y hacia los principales puertos del país con seguimiento completo de su operación.</p>
-                        <a class="btn-slide mt-2" href="service.html"><i class="fa fa-arrow-right"></i><span>Leer Más</span></a>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="0.7s">
-                    <div class="service-item p-4">
-                        <div class="overflow-hidden mb-4">
-                            <img class="img-fluid" src="https://images.pexels.com/photos/2226458/pexels-photo-2226458.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop" alt="Importaciones y Exportaciones INCARGO">
-                        </div>
-                        <h4 class="mb-3">Importaciones y Exportaciones</h4>
-                        <p>Transporte de mercancía desde los puertos hacia el interior y viceversa, con registro fotográfico y clasificación de mercancía.</p>
-                        <a class="btn-slide mt-2" href="service.html"><i class="fa fa-arrow-right"></i><span>Leer Más</span></a>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="0.8s">
-                    <div class="service-item p-4">
-                        <div class="overflow-hidden mb-4">
-                            <img class="img-fluid" src="https://images.pexels.com/photos/4246120/pexels-photo-4246120.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop" alt="Carga Consolidada INCARGO">
-                        </div>
-                        <h4 class="mb-3">Carga Consolidada</h4>
-                        <p>Transporte de carga semimasiva o consolidada agrupando cargas según destino, ideal para cupos no completos con menor costo.</p>
-                        <a class="btn-slide mt-2" href="service.html"><i class="fa fa-arrow-right"></i><span>Leer Más</span></a>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="0.9s">
-                    <div class="service-item p-4">
-                        <div class="overflow-hidden mb-4">
-                            <img class="img-fluid" src="https://images.pexels.com/photos/1236701/pexels-photo-1236701.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop" alt="Transporte Urbano INCARGO">
-                        </div>
-                        <h4 class="mb-3">Transporte Urbano</h4>
-                        <p>Servicio de transporte urbano en cualquier tipo de vehículo para entrega segura y oportuna, por día o demanda.</p>
-                        <a class="btn-slide mt-2" href="service.html"><i class="fa fa-arrow-right"></i><span>Leer Más</span></a>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="1.0s">
-                    <div class="service-item p-4">
-                        <div class="overflow-hidden mb-4">
-                            <img class="img-fluid" src="https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop" alt="Proyectos Logísticos INCARGO">
-                        </div>
-                        <h4 class="mb-3">Proyectos Logísticos</h4>
-                        <p>Equipo altamente capacitado para planificar y ejecutar proyectos logísticos de cualquier alcance.</p>
-                        <a class="btn-slide mt-2" href="service.html"><i class="fa fa-arrow-right"></i><span>Leer Más</span></a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Service End -->
-
-
-    <!-- Feature Start -->
-    <div class="container-fluid overflow-hidden py-5 px-lg-0">
-        <div class="container feature py-5 px-lg-0">
-            <div class="row g-5 mx-lg-0">
-                <div class="col-lg-6 feature-text wow fadeInUp" data-wow-delay="0.1s">
-                    <h6 class="text-secondary text-uppercase mb-3">Nuestras Características</h6>
-                    <h1 class="mb-5">Empresa de Logística de Confianza</h1>
-                    <div class="d-flex mb-5 wow fadeInUp" data-wow-delay="0.3s">
-                        <i class="fa fa-globe text-primary fa-3x flex-shrink-0"></i>
-                        <div class="ms-4">
-                            <h5>Cobertura Nacional</h5>
-                            <p class="mb-0">Servicio en todo el territorio colombiano con más de 5.000 vehículos afiliados de diversas configuraciones</p>
-                        </div>
-                    </div>
-                    <div class="d-flex mb-5 wow fadeIn" data-wow-delay="0.5s">
-                        <i class="fa fa-shipping-fast text-primary fa-3x flex-shrink-0"></i>
-                        <div class="ms-4">
-                            <h5>Entregas Puntuales</h5>
-                            <p class="mb-0">Garantizamos el cumplimiento de tiempos y la seguridad de tu carga hasta su destino final</p>
-                        </div>
-                    </div>
-                    <div class="d-flex mb-0 wow fadeInUp" data-wow-delay="0.7s">
-                        <i class="fa fa-headphones text-primary fa-3x flex-shrink-0"></i>
-                        <div class="ms-4">
-                            <h5>Soporte Constante</h5>
-                            <p class="mb-0">Atención personalizada y seguimiento en tiempo real de tus envíos</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-6 pe-lg-0 wow fadeInRight" data-wow-delay="0.1s" style="min-height: 400px;">
-                    <div class="position-relative h-100">
-                        <img class="position-absolute img-fluid w-100 h-100" src="img/pexels-kindelmedia-6868452.jpg" style="object-fit: cover;" alt="">
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Feature End -->
-
+    <section class="inc-band"><div class="container"><p class="inc-eyebrow">Hablemos de tu operación</p><h2>De la ruta al destino, trabajemos en la solución adecuada.</h2><a href="contact.html" class="btn btn-primary">Contactar al equipo <span aria-hidden="true">↗</span></a></div></section>
 
     <!-- Quote Start -->
     <div class="container-xxl py-5">
@@ -627,16 +230,20 @@
                         <form action="https://formspree.io/f/xanyarre" method="POST" id="quoteForm">
                             <div class="row g-3">
                                 <div class="col-12 col-sm-6">
-                                    <input type="text" name="nombre" class="form-control border-0" placeholder="Tu Nombre" style="height: 55px;" required>
+                                    <label class="inc-field-label" for="quote-nombre">Nombre</label>
+                                    <input type="text" id="quote-nombre" name="nombre" class="form-control border-0" placeholder="Tu Nombre" style="height: 55px;" required>
                                 </div>
                                 <div class="col-12 col-sm-6">
-                                    <input type="email" name="email" class="form-control border-0" placeholder="Tu Email" style="height: 55px;" required>
+                                    <label class="inc-field-label" for="quote-email">Correo electrónico</label>
+                                    <input type="email" id="quote-email" name="email" class="form-control border-0" placeholder="Tu Email" style="height: 55px;" required>
                                 </div>
                                 <div class="col-12 col-sm-6">
-                                    <input type="tel" name="telefono" class="form-control border-0" placeholder="Tu Teléfono" style="height: 55px;" required>
+                                    <label class="inc-field-label" for="quote-telefono">Teléfono</label>
+                                    <input type="tel" id="quote-telefono" name="telefono" class="form-control border-0" placeholder="Tu Teléfono" style="height: 55px;" required>
                                 </div>
                                 <div class="col-12 col-sm-6">
-                                    <select name="servicio" class="form-select border-0" style="height: 55px;" required>
+                                    <label class="inc-field-label" for="quote-servicio">Servicio</label>
+                                    <select id="quote-servicio" name="servicio" class="form-select border-0" style="height: 55px;" required>
                                         <option value="" selected disabled>Selecciona un Servicio</option>
                                         <option value="Transporte Nacional">Transporte Nacional</option>
                                         <option value="Carga de Mercancía">Carga de Mercancía</option>
@@ -646,7 +253,8 @@
                                     </select>
                                 </div>
                                 <div class="col-12">
-                                    <textarea name="mensaje" class="form-control border-0" placeholder="Mensaje o Notas Especiales" rows="3"></textarea>
+                                    <label class="inc-field-label" for="quote-mensaje">Mensaje o notas</label>
+                                    <textarea id="quote-mensaje" name="mensaje" class="form-control border-0" placeholder="Mensaje o Notas Especiales" rows="3"></textarea>
                                 </div>
                                 <div class="col-12">
                                     <button class="btn btn-primary w-100 py-3" type="submit">Enviar Solicitud</button>
@@ -664,6 +272,7 @@
     <!-- Quote End -->
 
 
+    </main>
     <!-- Footer Start -->
     <div class="container-fluid bg-dark text-light footer pt-5 wow fadeIn" data-wow-delay="0.1s" style="margin-top: 6rem;">
         <div class="container py-5">

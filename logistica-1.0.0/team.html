@@ -29,9 +29,17 @@
 
     <!-- Template Stylesheet -->
     <link href="css/style.css" rel="stylesheet">
+    <link href="css/incargo-redesign.css" rel="stylesheet">
+    <script>document.addEventListener("DOMContentLoaded", function () {
+      var spinner = document.getElementById("spinner"); if (spinner) spinner.classList.remove("show");
+      var toggle = document.querySelector(".navbar-toggler"), menu = document.getElementById("navbarCollapse");
+      if (toggle && menu) toggle.addEventListener("click", function () { if (window.bootstrap && window.bootstrap.Collapse) return; var open = menu.classList.toggle("show"); toggle.setAttribute("aria-expanded", String(open)); });
+      document.querySelectorAll(".navbar .dropdown-toggle").forEach(function (item) { item.addEventListener("click", function (event) { if (window.bootstrap && window.bootstrap.Dropdown) return; event.preventDefault(); var list = item.nextElementSibling; if (list) { var open = list.classList.toggle("show"); item.setAttribute("aria-expanded", String(open)); } }); });
+    });</script>
 </head>
 
 <body>
+    <a class="inc-skip" href="#main-content">Saltar al contenido</a>
     <!-- Spinner Start -->
     <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
         <div class="spinner-grow text-primary" style="width: 3rem; height: 3rem;" role="status">
@@ -47,7 +55,7 @@
             <img src="img/Logo.png" alt="INCARGO" style="height: 50px; filter: brightness(0);">
             <sup style="color: #000; font-size: 28px; margin-left: 0px; vertical-align: super; position: relative; top: -15px;">®</sup>
         </a>
-        <button type="button" class="navbar-toggler me-4" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+        <button type="button" class="navbar-toggler me-4" aria-label="Abrir menú" aria-controls="navbarCollapse" aria-expanded="false" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarCollapse">
@@ -58,7 +66,7 @@
                 <a href="gallery.html" class="nav-item nav-link">Galería</a>
                 <a href="coverage.html" class="nav-item nav-link">Cobertura</a>
                 <div class="nav-item dropdown">
-                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Más</a>
+                    <a href="#" class="nav-link dropdown-toggle" role="button" aria-expanded="false" data-bs-toggle="dropdown">Más</a>
                     <div class="dropdown-menu fade-up m-0">
                         <a href="quote.html" class="dropdown-item">Cotizaciones</a>
                         <a href="blog.html" class="dropdown-item">Noticias</a>
@@ -74,6 +82,7 @@
         </div>
     </nav>
     <!-- Navbar End -->
+    <main id="main-content">
 
 
     <!-- Page Header Start -->
@@ -261,6 +270,7 @@
     <!-- Team End -->
         
 
+    </main>
     <!-- Footer Start -->
     <div class="container-fluid bg-dark text-light footer pt-5 wow fadeIn" data-wow-delay="0.1s" style="margin-top: 6rem;">
         <div class="container py-5">
