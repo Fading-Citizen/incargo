@@ -7,7 +7,7 @@
       // Supabase may return an invite to the configured Site URL at the root.
       // Keep the credential in the URL fragment while moving to activation.
       const inviteFragment = new URLSearchParams(location.hash.slice(1));
-      if (inviteFragment.get('type') === 'invite' && (inviteFragment.has('access_token') || inviteFragment.has('token_hash') || inviteFragment.has('error'))) {
+      if (['invite', 'recovery'].includes(inviteFragment.get('type')) && (inviteFragment.has('access_token') || inviteFragment.has('token_hash') || inviteFragment.has('error') || inviteFragment.has('error_code'))) {
         location.replace('/activacion.html' + location.hash);
       }
     </script>
