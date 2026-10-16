@@ -39,7 +39,33 @@
     const selected=deliveries.find(d=>d.id===selectedId);$('selected').textContent=selected?`${selected.customer_name} · ${labels[selected.status]}`:'Selecciona una entrega.';
     $('issue-form').hidden=!selected||selected.status==='delivered';$('confirm-form').hidden=!selected||selected.status==='delivered';
   }
-  async function reload(){trips=await rest('incargo_trips','select=id,route_label,scheduled_date,vehicle_plate,driver_user_id&order=scheduled_date.desc');deliveries=await rest('incargo_deliveries','select=id,trip_id,customer_name,destination_text,invoice_reference,remittance_reference,status&order=created_at.desc');if(role==='operations'){drivers=await rest('incargo_memberships','select=user_id&role=eq.driver');const picker=$('driver-select');picker.replaceChildren();const empty=node('option','Sin asignar');empty.value='';picker.append(empty);drivers.forEach(d=>{const option=node('option',d.user_id);option.value=d.user_id;picker.append(option);});renderTrips();renderOpsDeliveries();}else renderDriver();}
+  async function loadClientAdmin(){
+    const accounts=await rpc('incargo_client_admin_accounts',{});
+    document.querySelectorAll('.client-account-select').forEach(select=>{select.replaceChildren();for(const account of accounts){const option=node('option',account.display_name);option.value=account.account_id;select.append(option);}});
+    document.querySelectorAll('.client-delivery-select,#client-delivery-select').forEach(select=>{select.replaceChildren();for(const delivery of deliveries){const option=node('option',`${delivery.customer_name} · ${delivery.remittance_reference||'Sin remesa'}`);option.value=delivery.id;select.append(option);}});
+    document.querySelectorAll('#ops form[id^="client-"] button').forEach(button=>button.disabled=false);
+    $('client-admin-retry').hidden=true;
+    adminStatus(accounts.length?'Cuentas disponibles para asignación.':'Aún no hay cuentas comerciales. Crea una cuenta tras verificar su identidad.');
+  }
+  async function refreshClientAdmin(){
+    try{await loadClientAdmin();}
+    catch(error){
+      document.querySelectorAll('#ops form[id^="client-"] button').forEach(button=>button.disabled=true);
+      $('client-admin-retry').hidden=false;
+      adminStatus('No pudimos cargar las cuentas. Reintenta antes de crear o asignar vínculos.',true);
+    }
+  }
+  $('client-admin-retry').onclick=refreshClientAdmin;
+  function adminStatus(message,error=false){const area=$('client-admin-status');area.textContent=message;area.className=error?'error':'success';}
+  async function submitClientAdmin(formId,rpcName,makeBody,refresh=false){
+    const form=$(formId);form.onsubmit=async event=>{event.preventDefault();if($('client-admin-title').closest('section').hidden)return;const button=form.querySelector('button');button.disabled=true;adminStatus('Guardando…');try{const result=await rpc(rpcName,makeBody(new FormData(form)));form.reset();adminStatus(rpcName==='incargo_client_create_account'?`Cuenta creada: ${result}. Guarda este identificador para revisión.`:'Vínculo actualizado.');if(refresh){try{await loadClientAdmin();}catch(error){adminStatus(`Cuenta creada: ${result}. No pudimos actualizar la lista; recarga antes de continuar.`,true);}}}catch(error){adminStatus(error.message||'No se pudo actualizar el vínculo.',true);}finally{button.disabled=false;}};
+  }
+  submitClientAdmin('client-account-form','incargo_client_create_account',data=>({p_display_name:String(data.get('name')).trim()}),true);
+  submitClientAdmin('client-user-form','incargo_client_link_user',data=>({p_account:data.get('account'),p_user:data.get('user')}));
+  submitClientAdmin('client-delivery-form','incargo_client_assign_delivery',data=>({p_account:data.get('account'),p_delivery:data.get('delivery')}));
+  submitClientAdmin('client-unlink-user-form','incargo_client_unlink_user',data=>({p_user:data.get('user')}));
+  submitClientAdmin('client-unassign-delivery-form','incargo_client_unassign_delivery',data=>({p_delivery:data.get('delivery')}));
+  async function reload(){trips=await rest('incargo_trips','select=id,route_label,scheduled_date,vehicle_plate,driver_user_id&order=scheduled_date.desc');deliveries=await rest('incargo_deliveries','select=id,trip_id,customer_name,destination_text,invoice_reference,remittance_reference,status&order=created_at.desc');if(role==='operations'){drivers=await rest('incargo_memberships','select=user_id&role=eq.driver');const picker=$('driver-select');picker.replaceChildren();const empty=node('option','Sin asignar');empty.value='';picker.append(empty);drivers.forEach(d=>{const option=node('option',d.user_id);option.value=d.user_id;picker.append(option);});renderTrips();renderOpsDeliveries();await refreshClientAdmin();}else renderDriver();}
   async function init(){
     const response=await fetch('/api/incargo-config',{cache:'no-store'});
     if(!response.ok)throw Error('La conexión no está configurada. Contacta a Incargo.');

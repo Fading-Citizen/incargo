@@ -8,20 +8,21 @@ const path=require('node:path');
   const root=path.resolve(__dirname,'../../logistica-1.0.0');
   const server=http.createServer((req,res)=>{
     if(req.url==='/api/incargo-config'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({url:'https://mock.supabase.co',publishableKey:'publishable-test-only'}));return;}
-    const filename=req.url.slice(1);if(!['operaciones.html','seguimiento.html','incargo-app.css','incargo-app.js','incargo-tracking.js'].includes(filename)){res.writeHead(404).end();return;}
+    const filename=req.url.slice(1);if(!['index.html','cliente.html','incargo-client.js','operaciones.html','seguimiento.html','incargo-app.css','incargo-app.js','incargo-tracking.js'].includes(filename)){res.writeHead(404).end();return;}
     res.setHeader('Content-Type',filename.endsWith('.css')?'text/css':filename.endsWith('.js')?'application/javascript':'text/html');fs.createReadStream(path.join(root,filename)).pipe(res);
   });
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/chromium',args:['--no-sandbox']});
   try{
     const page=await browser.newPage({viewport:{width:390,height:844}});
-    const trips=[],deliveries=[];
+    const trips=[],deliveries=[];let clientAdminUnavailable=true;
     await page.route('https://mock.supabase.co/**',async route=>{
       const url=new URL(route.request().url()),method=route.request().method();let result=[];
       if(url.pathname==='/auth/v1/token')result={access_token:'test-session',user:{id:route.request().postDataJSON().email.startsWith('ops')?'00000000-0000-4000-8000-000000000001':'00000000-0000-4000-8000-000000000002',email:route.request().postDataJSON().email.startsWith('ops')?route.request().postDataJSON().email:null}};
       else if(url.pathname.endsWith('incargo_memberships'))result=url.searchParams.get('select')==='role'?[{role:currentRole}]:[{user_id:'00000000-0000-4000-8000-000000000002'}];
       else if(url.pathname.endsWith('incargo_trips')){if(method==='POST')trips.push({id:'00000000-0000-4000-8000-000000000011',...route.request().postDataJSON()});result=trips;}
       else if(url.pathname.endsWith('incargo_deliveries')){if(method==='POST')deliveries.push({id:'00000000-0000-4000-8000-000000000021',status:'pending',...route.request().postDataJSON()});result=deliveries;}
+      else if(url.pathname.endsWith('incargo_client_admin_accounts')){if(clientAdminUnavailable)return route.fulfill({status:503,contentType:'application/json',body:'{}'});result=[];}
       else if(url.pathname.endsWith('incargo_list_tracking_links'))result=[];
       else if(url.pathname.endsWith('incargo_create_tracking_link'))result='a'.repeat(64);
       else if(url.pathname.endsWith('incargo_record_issue')){deliveries[0].status='exception';result=null;}
@@ -35,6 +36,12 @@ const path=require('node:path');
     assert.equal(await page.locator('#workspace').isHidden(),true);
     await page.locator('#login-form [name=email]').fill('ops@example.invalid');await page.locator('#login-form [name=password]').fill('fixture');await page.locator('#login-form button').click();
     await page.locator('#ops').waitFor({state:'visible'});
+    await page.getByText(/No pudimos cargar las cuentas/).waitFor({state:'visible'});
+    assert.equal(await page.locator('#client-account-form button').isDisabled(),true);
+    clientAdminUnavailable=false;await page.locator('#client-admin-retry').click();
+    await page.getByText(/Aún no hay cuentas comerciales/).waitFor({state:'visible'});
+    assert.equal(await page.locator('#client-account-form button').isEnabled(),true);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
     assert.equal(await page.locator('#profile').isHidden(),true);await page.locator('#profile-toggle').click();
     assert.equal(await page.locator('#profile-email').textContent(),'ops@example.invalid');assert.equal(await page.locator('#profile-role').textContent(),'Operaciones');
     assert.equal(await page.locator('#profile-toggle').getAttribute('aria-expanded'),'true');await page.locator('#profile-toggle').click();
@@ -58,6 +65,13 @@ const path=require('node:path');
     assert.equal(await page.locator('#profile-email').textContent(),'No disponible');
     currentRole='unassigned';await page.locator('#login-form [name=email]').fill('unassigned@example.invalid');await page.locator('#login-form [name=password]').fill('fixture');await page.locator('#login-form button').click();
     await page.getByText('Tu cuenta no tiene un rol de Incargo asignado.').waitFor({state:'visible'});assert.equal(await page.locator('#workspace').isHidden(),true);
+    const home=await browser.newPage({viewport:{width:390,height:844}});
+    await home.goto(base+'/index.html');
+    assert.equal(await home.getByRole('link',{name:/Mis envíos/}).getAttribute('href'),'cliente.html');
+    await home.getByRole('link',{name:/Mis envíos/}).click();
+    await home.getByRole('heading',{name:'Consulta tus envíos'}).waitFor({state:'visible'});
+    assert.equal(await home.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+    await home.close();
     const client=await browser.newPage({viewport:{width:390,height:844}});
     await client.route('https://gmjsqboyuvierfwruspv.supabase.co/functions/v1/incargo-tracking',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({customer_name:'Cliente Ficticio',invoice_reference:'FAC-DEMO',status:'delivered',events:[{type:'delivered',at:'2026-10-15T12:00:00Z'}],support_url:null})}));
     await client.goto(base+'/seguimiento.html#token='+'a'.repeat(64));await client.getByText('Cliente Ficticio').waitFor({state:'visible'});assert.match(await client.locator('#result').textContent(),/FAC-DEMO/);
