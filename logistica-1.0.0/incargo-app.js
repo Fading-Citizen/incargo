@@ -16,6 +16,13 @@
   }
   const rest=(table,query='')=>request(`/rest/v1/${table}?${query}`);
   const rpc=(name,body)=>request(`/rest/v1/rpc/${name}`,{method:'POST',body});
+  function renderProfile(){
+    const email=typeof session?.user?.email==='string'?session.user.email.trim():'';
+    $('profile-email').textContent=email||'No disponible';
+    $('profile-role').textContent=role==='operations'?'Operaciones':role==='driver'?'Conductor':'No disponible';
+  }
+  function closeProfile(){ $('profile').hidden=true;$('profile-toggle').setAttribute('aria-expanded','false'); }
+  $('profile-toggle').onclick=()=>{const open=$('profile').hidden;$('profile').hidden=!open;$('profile-toggle').setAttribute('aria-expanded',String(open));if(open)$('profile-title').focus();};
   function renderTrips(){
     const area=$('ops-trips');area.replaceChildren();
     if(!trips.length)area.append(node('p','Todavía no hay viajes.','muted'));
@@ -43,9 +50,9 @@
     if(!response.ok)throw Error('Credenciales inválidas o cuenta no habilitada.');session=await response.json();
     const membership=await rest('incargo_memberships',`select=role&user_id=eq.${session.user.id}`);role=membership?.[0]?.role;
     if(!['operations','driver'].includes(role)){session=null;throw Error('Tu cuenta no tiene un rol de Incargo asignado.');}
-    $('login').hidden=true;$('workspace').hidden=false;$('ops').hidden=role!=='operations';$('driver').hidden=role!=='driver';$('role-title').textContent=role==='operations'?'Operaciones':'Mis viajes';form.reset();await reload();notice('Sesión activa en esta pestaña.');
+    $('login').hidden=true;$('workspace').hidden=false;$('ops').hidden=role!=='operations';$('driver').hidden=role!=='driver';$('role-title').textContent=role==='operations'?'Operaciones':'Mis viajes';renderProfile();closeProfile();form.reset();await reload();notice('Sesión activa en esta pestaña.');
   }catch(error){fail(error);}finally{button.disabled=false;}};
-  $('logout').onclick=()=>{session=null;role=null;trips=[];deliveries=[];selectedId=null;$('workspace').hidden=true;$('login').hidden=false;notice('Sesión cerrada en esta pestaña.');};
+  $('logout').onclick=()=>{session=null;role=null;trips=[];deliveries=[];selectedId=null;closeProfile();$('profile-email').textContent='No disponible';$('profile-role').textContent='No disponible';$('workspace').hidden=true;$('login').hidden=false;notice('Sesión cerrada en esta pestaña.');};
   $('trip-form').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget;const button=form.querySelector('button');button.disabled=true;try{const data=new FormData(form);if(!String(data.get('route')).trim()||!String(data.get('vehicle')).trim())throw Error('Completa ruta y placa.');await request('/rest/v1/incargo_trips',{method:'POST',body:{route_label:String(data.get('route')).trim(),scheduled_date:data.get('date'),vehicle_plate:String(data.get('vehicle')).trim().toUpperCase(),driver_user_id:data.get('driver')||null}});form.reset();await reload();notice('Viaje creado.');}catch(error){fail(error);}finally{button.disabled=false;}};
   $('delivery-form').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget;const button=form.querySelector('button');button.disabled=true;try{const data=new FormData(form);if(!String(data.get('customer')).trim())throw Error('Escribe el cliente.');await request('/rest/v1/incargo_deliveries',{method:'POST',body:{trip_id:data.get('trip'),customer_name:String(data.get('customer')).trim(),destination_text:data.get('destination')||null,invoice_reference:data.get('invoice')||null,remittance_reference:data.get('remittance')||null}});form.reset();await reload();notice('Entrega agregada.');}catch(error){fail(error);}finally{button.disabled=false;}};
   $('search').oninput=renderDriver;
