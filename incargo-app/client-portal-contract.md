@@ -61,3 +61,9 @@ La propuesta añade `incargo_client_identity()` para distinguir una cuenta vincu
 ## Activación local pendiente de publicación
 
 La navegación pública enlaza a `cliente.html` como «Mis envíos». El panel «Accesos de cliente» se muestra tras iniciar sesión con rol `operations`; si falla la carga de cuentas, sus formularios quedan desactivados hasta reintentar. La ruta de cliente presenta mensajes separados para falta de vínculo, lista vacía, error de red, sesión vencida y revocación. El 16 de octubre se verificaron con fixtures aisladas la entrada desde la navegación móvil, el reintento del RPC de cuentas, el panel operativo, el acceso por roles, la paginación, las carreras de sesión y la ausencia de desbordamiento horizontal en móvil; las pruebas de UI y SQL locales pasaron. No se usaron cuentas ni entregas reales para este QA y no se publicó el frontend.
+
+## Acceso de clientes: mejora local posterior
+
+La pantalla de clientes reúne ingreso, registro por correo y contraseña, y solicitud de recuperación. Usa los endpoints existentes de Supabase Auth: `signup` y `recover`, con retorno a `activacion.html`; esa página admite ahora enlaces `signup` además de `invite` y `recovery`. Un registro no crea cuenta comercial, membresía ni vínculo de entrega. La vinculación sigue siendo una acción explícita de operaciones con el UUID verificado.
+
+**Configuración verificada en solo lectura el 16 de octubre:** Supabase Auth Incargo tiene el proveedor de correo habilitado, `disable_signup=false`, verificación de correo requerida (`mailer_autoconfirm=false`), Site URL y lista de redirecciones en `https://www.incargo.co/activacion.html`. La plantilla real de correo de registro aún debe conservar un enlace `signup` válido hacia esa URL; los enlaces de recuperación deben conservar `recovery`. No se cambió Auth ni se enviaron correos reales. La prueba de extremo a extremo con un correo real queda pendiente de un procedimiento autorizado.

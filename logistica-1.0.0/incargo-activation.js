@@ -4,7 +4,7 @@
   const form=document.getElementById('activation-form');
   const help=document.getElementById('activation-help');
   let config, accessToken=null, linkType=null;
-  const kind=()=>linkType==='recovery'?'recuperación':'invitación';
+  const kind=()=>linkType==='recovery'?'recuperación':linkType==='signup'?'verificación':'invitación';
   const showError=(message,linkProblem=false)=>{status.textContent=message;status.className='error';help.hidden=!linkProblem;form.hidden=true;accessToken=null;if(linkProblem)help.textContent=`El enlace de ${kind()} venció, ya se utilizó o no es válido. Solicita uno nuevo al equipo de Incargo.`;};
   const authHeaders=()=>({apikey:config.publishableKey,'Content-Type':'application/json'});
   async function readResponse(response){const body=await response.json().catch(()=>({}));if(!response.ok){const error=Error(body.msg||body.message||'No se pudo completar la solicitud.');error.status=response.status;error.code=body.error_code||body.code;throw error;}return body;}
@@ -19,7 +19,7 @@
     const linkError=fragment.get('error_code')||query.get('error_code')||fragment.get('error')||query.get('error');
     history.replaceState(null,'','/activacion.html');
     if(linkError){if(linkError==='otp_expired')showError(`El enlace de ${kind()} venció o no es válido.`,true);else showError(`No se pudo verificar el enlace de ${kind()}. Inténtalo de nuevo más tarde.`);return;}
-    if(!['invite','recovery'].includes(linkType)||(!token&&!tokenHash)){showError('Abre el enlace completo de invitación o recuperación desde tu correo.',true);return;}
+    if(!['invite','recovery','signup'].includes(linkType)||(!token&&!tokenHash)){showError('Abre el enlace completo de invitación, verificación o recuperación desde tu correo.',true);return;}
     try{
       const response=await fetch('/api/incargo-config',{cache:'no-store'});
       if(!response.ok)throw Error('El acceso no está configurado. Contacta a Incargo.');
@@ -31,6 +31,7 @@
       }else accessToken=token;
       if(!accessToken)throw Error('El enlace no produjo una sesión válida.');
       await readResponse(await fetch(config.url+'/auth/v1/user',{headers:{apikey:config.publishableKey,Authorization:`Bearer ${accessToken}`},cache:'no-store'}));
+      if(linkType==='signup'){accessToken=null;document.querySelector('main h1').textContent='Correo verificado';status.textContent='Ya puedes ingresar a Mis envíos. Incargo deberá vincular tu cuenta antes de que aparezcan entregas.';status.className='success';return;}
       status.textContent=`Enlace de ${kind()} verificado. Elige una contraseña de al menos 12 caracteres.`;status.className='success';form.hidden=false;
     }catch(error){if(error.message==='El acceso no está configurado. Contacta a Incargo.')showError(error.message);else authError(error);}
   }

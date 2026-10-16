@@ -69,7 +69,7 @@ const path=require('node:path');
     await home.goto(base+'/index.html');
     assert.equal(await home.getByRole('link',{name:/Mis envíos/}).getAttribute('href'),'cliente.html');
     await home.getByRole('link',{name:/Mis envíos/}).click();
-    await home.getByRole('heading',{name:'Consulta tus envíos'}).waitFor({state:'visible'});
+    await home.getByRole('heading',{name:'La información de tus envíos, en un solo lugar.'}).waitFor({state:'visible'});
     assert.equal(await home.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
     await home.close();
     const client=await browser.newPage({viewport:{width:390,height:844}});

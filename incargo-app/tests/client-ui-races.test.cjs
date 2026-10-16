@@ -31,7 +31,7 @@ const reply=(route,status,body)=>route.fulfill({status,contentType:'application/
    }
   });
   await page.goto('http://127.0.0.1:'+server.address().port+'/cliente.html');
-  async function login(as){email=as;await page.locator('[name=email]').fill(as);await page.locator('[name=password]').fill('fixture');await page.locator('#login-form button').click();await page.locator('#client-workspace').waitFor({state:'visible'});}
+  async function login(as){email=as;await page.locator('#login-form [name=email]').fill(as);await page.locator('#login-form [name=password]').fill('fixture');await page.locator('#login-form button[type=submit]').click();await page.locator('#client-workspace').waitFor({state:'visible'});}
   await login('a@example.invalid');await page.getByText('Reintentar').waitFor();assert.equal(await page.locator('#deliveries article').count(),0);
   await page.getByText('Reintentar').click();await page.getByText('A-1',{exact:true}).waitFor();assert.equal(await page.locator('#deliveries article').count(),50);
   await page.getByText('Cargar más').click();await page.getByText('A-51',{exact:true}).waitFor();assert.equal(await page.locator('#deliveries article').count(),51);assert.equal(requests.at(-1).body.p_before_id,uuid(50));
