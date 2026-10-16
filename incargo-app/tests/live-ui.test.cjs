@@ -8,7 +8,7 @@ const path=require('node:path');
   const root=path.resolve(__dirname,'../../logistica-1.0.0');
   const server=http.createServer((req,res)=>{
     if(req.url==='/api/incargo-config'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({url:'https://mock.supabase.co',publishableKey:'publishable-test-only'}));return;}
-    const filename=req.url.slice(1);if(!['index.html','cliente.html','incargo-client.js','operaciones.html','seguimiento.html','incargo-app.css','incargo-app.js','incargo-tracking.js'].includes(filename)){res.writeHead(404).end();return;}
+    const filename=req.url.slice(1);if(!['index.html','cliente.html','incargo-client.js','incargo-session.js','operaciones.html','seguimiento.html','incargo-app.css','incargo-app.js','incargo-tracking.js'].includes(filename)){res.writeHead(404).end();return;}
     res.setHeader('Content-Type',filename.endsWith('.css')?'text/css':filename.endsWith('.js')?'application/javascript':'text/html');fs.createReadStream(path.join(root,filename)).pipe(res);
   });
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -18,7 +18,8 @@ const path=require('node:path');
     const trips=[],deliveries=[];let clientAdminUnavailable=true;
     await page.route('https://mock.supabase.co/**',async route=>{
       const url=new URL(route.request().url()),method=route.request().method();let result=[];
-      if(url.pathname==='/auth/v1/token')result={access_token:'test-session',user:{id:route.request().postDataJSON().email.startsWith('ops')?'00000000-0000-4000-8000-000000000001':'00000000-0000-4000-8000-000000000002',email:route.request().postDataJSON().email.startsWith('ops')?route.request().postDataJSON().email:null}};
+      if(url.pathname==='/auth/v1/token')result={access_token:'test-session',expires_at:Math.floor(Date.now()/1000)+3600,user:{id:route.request().postDataJSON().email.startsWith('ops')?'00000000-0000-4000-8000-000000000001':'00000000-0000-4000-8000-000000000002',email:route.request().postDataJSON().email.startsWith('ops')?route.request().postDataJSON().email:null}};
+      else if(url.pathname==='/auth/v1/user')result={id:currentRole==='operations'?'00000000-0000-4000-8000-000000000001':'00000000-0000-4000-8000-000000000002',email:currentRole==='operations'?'ops@example.invalid':null};
       else if(url.pathname.endsWith('incargo_memberships'))result=url.searchParams.get('select')==='role'?[{role:currentRole}]:[{user_id:'00000000-0000-4000-8000-000000000002'}];
       else if(url.pathname.endsWith('incargo_trips')){if(method==='POST')trips.push({id:'00000000-0000-4000-8000-000000000011',...route.request().postDataJSON()});result=trips;}
       else if(url.pathname.endsWith('incargo_deliveries')){if(method==='POST')deliveries.push({id:'00000000-0000-4000-8000-000000000021',status:'pending',...route.request().postDataJSON()});result=deliveries;}
@@ -39,13 +40,13 @@ const path=require('node:path');
     await page.getByText(/No pudimos cargar las cuentas/).waitFor({state:'visible'});
     assert.equal(await page.locator('#client-account-form button').isDisabled(),true);
     clientAdminUnavailable=false;await page.locator('#client-admin-retry').click();
-    await page.getByText(/Aún no hay cuentas comerciales/).waitFor({state:'visible'});
+    await page.getByText(/A�n no hay cuentas comerciales/).waitFor({state:'visible'});
     assert.equal(await page.locator('#client-account-form button').isEnabled(),true);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
     assert.equal(await page.locator('#profile').isHidden(),true);await page.locator('#profile-toggle').click();
     assert.equal(await page.locator('#profile-email').textContent(),'ops@example.invalid');assert.equal(await page.locator('#profile-role').textContent(),'Operaciones');
     assert.equal(await page.locator('#profile-toggle').getAttribute('aria-expanded'),'true');await page.locator('#profile-toggle').click();
-    await page.getByText('Todavía no hay viajes.').waitFor({state:'visible'});
+    await page.getByText('Todav�a no hay viajes.').waitFor({state:'visible'});
     await page.locator('#trip-form [name=route]').fill('Ruta ficticia');await page.locator('#trip-form [name=date]').fill('2026-10-15');await page.locator('#trip-form [name=vehicle]').fill('DEM123');await page.locator('#trip-form button').click();await page.getByText('Viaje creado.').waitFor({state:'visible'});
     assert.equal(trips.length,1);
     await page.locator('#delivery-form [name=customer]').fill('Cliente Ficticio');await page.locator('#delivery-form button').click();await page.getByText('Entrega agregada.').waitFor({state:'visible'});assert.equal(deliveries.length,1);
@@ -67,9 +68,9 @@ const path=require('node:path');
     await page.getByText('Tu cuenta no tiene un rol de Incargo asignado.').waitFor({state:'visible'});assert.equal(await page.locator('#workspace').isHidden(),true);
     const home=await browser.newPage({viewport:{width:390,height:844}});
     await home.goto(base+'/index.html');
-    assert.equal(await home.getByRole('link',{name:/Mis envíos/}).getAttribute('href'),'cliente.html');
-    await home.getByRole('link',{name:/Mis envíos/}).click();
-    await home.getByRole('heading',{name:'La información de tus envíos, en un solo lugar.'}).waitFor({state:'visible'});
+    assert.equal(await home.getByRole('link',{name:/Mis env�os/}).getAttribute('href'),'cliente.html');
+    await home.getByRole('link',{name:/Mis env�os/}).click();
+    await home.getByRole('heading',{name:'La informaci�n de tus env�os, en un solo lugar.'}).waitFor({state:'visible'});
     assert.equal(await home.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
     await home.close();
     const client=await browser.newPage({viewport:{width:390,height:844}});
@@ -79,3 +80,4 @@ const path=require('node:path');
     console.log('Connected UI mock passed: role gate, empty state, trip, delivery, link, issue, proof confirmation, mobile and desktop.');
   }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(error=>{console.error(error);process.exitCode=1});
+
