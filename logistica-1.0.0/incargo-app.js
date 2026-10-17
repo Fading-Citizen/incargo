@@ -45,8 +45,20 @@
     $('profile-email').textContent=email||'No disponible';
     $('profile-role').textContent=role==='operations'?'Operaciones':role==='driver'?'Conductor':'No disponible';
   }
-  function closeProfile(){ $('profile').hidden=true;$('profile-toggle').setAttribute('aria-expanded','false'); }
-  $('profile-toggle').onclick=()=>{const open=$('profile').hidden;$('profile').hidden=!open;$('profile-toggle').setAttribute('aria-expanded',String(open));if(open)$('profile-title').focus();};
+  function closeProfile(restoreFocus=false){
+    $('profile').hidden=true;$('profile-toggle').setAttribute('aria-expanded','false');
+    if(restoreFocus)$('profile-toggle').focus();
+  }
+  $('profile-toggle').onclick=()=>{
+    if(!$('profile').hidden){closeProfile(true);return;}
+    $('profile').hidden=false;$('profile-toggle').setAttribute('aria-expanded','true');$('profile-title').focus();
+  };
+  // Keep Escape local to the disclosure; do not intercept keys in operations forms.
+  const profileKeydown=event=>{
+    if(event.key!=='Escape'||$('profile').hidden)return;
+    event.preventDefault();event.stopPropagation();closeProfile(true);
+  };
+  $('profile').onkeydown=profileKeydown;$('profile-toggle').onkeydown=profileKeydown;
   function renderTrips(){
     const area=$('ops-trips');area.replaceChildren();
     if(!trips.length)area.append(node('p','Todav�a no hay viajes.','muted'));

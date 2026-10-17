@@ -3,10 +3,10 @@ const root=path.join(__dirname,'../../logistica-1.0.0');
 const source=Object.fromEntries(['incargo-session.js','incargo-client.js','incargo-app.js'].map(f=>[f,fs.readFileSync(path.join(root,f),'utf8')]));
 const tick=()=>new Promise(r=>setImmediate(r));
 function harness(context,{storage=new Map(),clock={now:1800000000000},user='A'}={}){
- const nodes=new Map(),timers=new Map();let timerId=0;
- class Element{constructor(){this.children=[];this.hidden=false;this.disabled=false;this.textContent='';this.value='';this.style={};this.elements={email:{value:''}};}append(...v){this.children.push(...v);}replaceChildren(...v){this.children=v;}querySelector(){return this.button??=new Element();}reset(){}setAttribute(){}removeAttribute(){}focus(){}closest(){return this;}remove(){}}
+ const nodes=new Map(),timers=new Map();let timerId=0,focused=null;
+ class Element{constructor(){this.children=[];this.hidden=false;this.disabled=false;this.textContent='';this.value='';this.style={};this.elements={email:{value:''}};}append(...v){this.children.push(...v);}replaceChildren(...v){this.children=v;}querySelector(){return this.button??=new Element();}reset(){}setAttribute(name,value){(this.attributes??={})[name]=value;}removeAttribute(){}focus(){focused=this;}closest(){return this;}remove(){}}
  const get=id=>{if(!nodes.has(id))nodes.set(id,new Element());return nodes.get(id);};
- get('workspace').hidden=get('client-workspace').hidden=true;
+ get('workspace').hidden=get('client-workspace').hidden=get('profile').hidden=true;
  let identity=[{account_id:'account-A',display_name:'Company A'}],role='operations',hook=null,authUser=user;
  const calls=[],response=(value,status=200)=>({ok:status<400,status,json:async()=>value,text:async()=>JSON.stringify(value)});
  const sandbox={Date:class extends Date{constructor(...a){super(...(a.length?a:[clock.now]));}static now(){return clock.now;}},
@@ -25,7 +25,7 @@ function harness(context,{storage=new Map(),clock={now:1800000000000},user='A'}=
  }};
  vm.runInNewContext(source['incargo-session.js'],sandbox);vm.runInNewContext(source[context==='client'?'incargo-client.js':'incargo-app.js'],sandbox);
  const workspace=()=>get(context==='client'?'client-workspace':'workspace');
- return {get,storage,clock,calls,response,workspace,ready:tick,hook:v=>hook=v,identity:v=>identity=v,role:v=>role=v,user:v=>authUser=v,
+ return {get,storage,clock,calls,response,workspace,ready:tick,focused:()=>focused,hook:v=>hook=v,identity:v=>identity=v,role:v=>role=v,user:v=>authUser=v,
   login:async()=>{await tick();await get('login-form').onsubmit({preventDefault(){},currentTarget:get('login-form')});await tick();},
   logout:()=>get('logout').onclick(),refresh:()=>context==='client'?get('refresh').onclick():get('client-admin-retry').onclick(),
   expire:async()=>{clock.now=1800000060000;for(const [id,t] of timers)if(t.at<=clock.now){timers.delete(id);t.fn();}await tick();}};
@@ -66,4 +66,36 @@ for(const context of ['client','operations']){
 }
 test('navigation keeps client and operations storage independent',async()=>{
  const storage=new Map(),a=harness('client',{storage});await a.login();const b=harness('operations',{storage});await b.ready();assert.equal(b.workspace().hidden,true);await b.login();assert.equal(storage.size,2);a.logout();assert.equal(storage.size,1);const b2=harness('operations',{storage});await b2.ready();assert.equal(b2.workspace().hidden,false);
+});
+
+for(const role of ['operations','driver']) {
+ test(role+': Escape closes profile from heading and returns focus without requests',async()=>{
+  const h=harness('operations');h.role(role);await h.login();
+  h.get('profile-toggle').onclick();assert.equal(h.get('profile').hidden,false);
+  assert.equal(h.focused(),h.get('profile-title'));const requests=h.calls.length;
+  let prevented=0,stopped=0;
+  h.get('profile').onkeydown?.({key:'Escape',preventDefault(){prevented++;},stopPropagation(){stopped++;}});
+  assert.equal(h.get('profile').hidden,true);assert.equal(h.get('profile-toggle').attributes['aria-expanded'],'false');
+  assert.equal(h.focused(),h.get('profile-toggle'));assert.equal(prevented,1);assert.equal(stopped,1);assert.equal(h.calls.length,requests);
+ });
+ test(role+': toggle Escape and repeated open/close stay consistent; other keys do not close',async()=>{
+  const h=harness('operations');h.role(role);await h.login();
+  for(let i=0;i<2;i++){
+   h.get('profile-toggle').onclick();assert.equal(h.get('profile-toggle').attributes['aria-expanded'],'true');
+   h.get('profile').onkeydown?.({key:'Tab',preventDefault(){assert.fail('Tab intercepted');},stopPropagation(){assert.fail('Tab stopped');}});
+   assert.equal(h.get('profile').hidden,false);
+   h.get('profile-toggle').onkeydown?.({key:'Escape',preventDefault(){},stopPropagation(){}});
+   assert.equal(h.get('profile').hidden,true);assert.equal(h.focused(),h.get('profile-toggle'));
+  }
+ });
+}
+test('hidden profile ignores Escape; logout closes without focusing the hidden toggle',async()=>{
+ const h=harness('operations');await h.login();h.get('search').focus();
+ h.get('profile').onkeydown?.({key:'Escape',preventDefault(){assert.fail('Hidden profile consumed Escape');},stopPropagation(){assert.fail('Hidden profile stopped Escape');}});
+ assert.equal(h.focused(),h.get('search'));h.get('profile-toggle').onclick();h.get('logout').focus();h.logout();
+ assert.equal(h.get('profile').hidden,true);assert.equal(h.focused(),h.get('logout'));assert.equal(h.get('workspace').hidden,true);
+});
+test('toggle closure returns focus to its trigger',async()=>{
+ const h=harness('operations');await h.login();h.get('profile-toggle').onclick();h.get('profile-toggle').onclick();
+ assert.equal(h.get('profile').hidden,true);assert.equal(h.focused(),h.get('profile-toggle'));
 });
