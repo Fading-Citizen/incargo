@@ -99,3 +99,40 @@ test('toggle closure returns focus to its trigger',async()=>{
  const h=harness('operations');await h.login();h.get('profile-toggle').onclick();h.get('profile-toggle').onclick();
  assert.equal(h.get('profile').hidden,true);assert.equal(h.focused(),h.get('profile-toggle'));
 });
+
+const visibleText=element=>[element.textContent,...element.children.map(visibleText)].join(' ');
+const deliveryRows=[
+ {id:'delivery-A',trip_id:'trip-A',customer_name:'Empresa A',invoice_reference:'FACT-A',remittance_reference:'REM-A',destination_text:'Destino norte <img src=x>',status:'pending'},
+ {id:'delivery-B',trip_id:'trip-B',customer_name:'Empresa B',invoice_reference:null,remittance_reference:null,destination_text:null,status:'exception'}
+];
+function withDeliveries(h,rows=deliveryRows){h.hook(url=>{
+ if(url.includes('/incargo_trips?'))return h.response([{id:'trip-A',route_label:'Ruta norte',scheduled_date:'2026-10-17'}]);
+ if(url.includes('/incargo_deliveries?'))return h.response(rows);
+ return null;
+});}
+for(const role of ['operations','driver'])test(role+': authorized delivery cards show destination, remittance, trip and explicit missing fields',async()=>{
+ const h=harness('operations');h.role(role);withDeliveries(h);await h.login();
+ const area=h.get(role==='operations'?'ops-deliveries':'driver-deliveries');
+ assert.match(visibleText(area.children[0]),/Destino norte <img src=x>/);
+ assert.match(visibleText(area.children[0]),/REM-A/);assert.match(visibleText(area.children[0]),/Ruta norte/);
+ assert.match(visibleText(area.children[1]),/Sin destino registrado/);assert.match(visibleText(area.children[1]),/Sin remesa/);assert.match(visibleText(area.children[1]),/Viaje: No disponible/);
+ h.logout();assert.equal(area.children.length,0);
+ h.user('B');withDeliveries(h,[deliveryRows[1]]);await h.login();assert.doesNotMatch(visibleText(area),/Destino norte|REM-A/);
+});
+test('driver searches remittance/destination and repeated selection replaces details without mixing deliveries',async()=>{
+ const h=harness('operations');h.role('driver');withDeliveries(h);await h.login();
+ for(const query of ['rem-a','DESTINO NORTE']){h.get('search').value=query;h.get('search').oninput();assert.equal(h.get('driver-deliveries').children.length,1);assert.match(visibleText(h.get('driver-deliveries')),/Empresa A/);}
+ h.get('search').value='';h.get('search').oninput();
+ for(let i=0;i<2;i++)h.get('driver-deliveries').children[0].children.at(-1).onclick();
+ assert.equal(h.get('selected').children.length,2);assert.match(visibleText(h.get('selected')),/Destino norte/);
+ h.get('driver-deliveries').children[1].children.at(-1).onclick();assert.doesNotMatch(visibleText(h.get('selected')),/Destino norte|REM-A/);
+ assert.match(visibleText(h.get('selected')),/Empresa B/);
+ h.get('search').value='not-found';h.get('search').oninput();assert.match(visibleText(h.get('driver-deliveries')),/No hay coincidencias/);
+});
+test('driver restored session reloads authorized destinations; failed initial fetch does not invent data',async()=>{
+ const h=harness('operations');h.role('driver');withDeliveries(h);await h.login();
+ const restored=harness('operations',{storage:h.storage});restored.role('driver');withDeliveries(restored,[deliveryRows[1]]);await restored.ready();
+ assert.doesNotMatch(visibleText(restored.get('driver-deliveries')),/Destino norte/);assert.match(visibleText(restored.get('driver-deliveries')),/Empresa B/);
+ const failed=harness('operations');failed.role('driver');failed.hook(url=>url.includes('/incargo_deliveries?')?Promise.reject(Error('Fixture network failure')):null);await failed.login();
+ assert.equal(failed.get('driver-deliveries').children.length,0);assert.match(failed.get('notice').textContent,/Fixture network failure/);
+});
