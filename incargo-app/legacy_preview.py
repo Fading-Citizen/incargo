@@ -15,47 +15,28 @@ VINC_COLUMNS = ('TIMESTAMP','CORREO_REGISTRO','TIPO_VINCULACION',
 
 
 def inspect_rows(rows):
+    from legacy_transform import transform_inspections
     counts = Counter()
-    if not rows:
-        return dict(counts)
-    headered = rows[0][0].strip().upper() == 'TIMESTAMP'
-    if headered:
-        headers = [h.strip().upper() for h in rows[0]]
-        rows = rows[1:]
-        if 'ITEMS_JSON' not in headers:
-            raise ValueError('missing ITEMS_JSON header')
-        items_index = headers.index('ITEMS_JSON')
-    for row in rows:
-        if not any(cell.strip() for cell in row):
+    for record in transform_inspections(rows)['rows']:
+        if record['classification'] in ('blank', 'header'):
             continue
         counts['source_rows'] += 1
-        if headered:
-            index = items_index
+        layout = record['layout']
+        if layout and layout.startswith('headered_'):
             counts['headered'] += 1
+        elif layout:
+            counts[{'legacy_14': 'legacy_14_columns', 'legacy_18': 'legacy_18_columns',
+                    'current_19': 'current_19_columns'}[layout]] += 1
         else:
-            candidates = [i for i, cell in enumerate(row) if cell.lstrip().startswith('[')]
-            index = candidates[0] if candidates else -1
-            if index == 12:
-                counts['legacy_14_columns'] += 1
-            elif index == 15:
-                counts['legacy_18_columns'] += 1
-            elif index == 16:
-                counts['current_19_columns'] += 1
-            else:
-                counts['unknown_layout'] += 1
-                continue
-        try:
-            if not isinstance(json.loads(row[index]), list):
-                counts['invalid_items_json'] += 1
-        except (IndexError, json.JSONDecodeError):
+            counts['unknown_layout'] += 1
+        if 'invalid_items_json' in record['reasons']:
             counts['invalid_items_json'] += 1
-        signature = row[index+1] if len(row)>index+1 else ''
-        photos = row[index+2] if len(row)>index+2 else ''
-        if signature:
+        evidence = record['evidence']
+        if evidence and evidence[0]['raw']:
             counts['signature_present'] += 1
-        if photos:
+        if any(e['raw'] for e in evidence[1:]):
             counts['photos_present'] += 1
-        if '[TRUNC]' in signature or '[TRUNC]' in photos:
+        if 'truncated_evidence' in record['reasons']:
             counts['truncated_evidence'] += 1
     return dict(counts)
 
