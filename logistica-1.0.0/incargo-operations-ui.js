@@ -26,7 +26,7 @@
       card.hidden=!matches;if(matches)visible++;
     });
     $('ops-no-matches').hidden=!cards.length||visible>0;
-    $('ops-result-count').textContent=$('ops-deliveries').querySelector('.loading-state')?'Cargando entregas…':cards.length?`${visible} de ${cards.length} entregas`:'Sin entregas disponibles';
+    $('ops-result-count').textContent=$('ops-deliveries').querySelector('.load-error')?'Carga pendiente':$('ops-deliveries').querySelector('.loading-state')?'Cargando entregas…':cards.length?`${visible} de ${cards.length} entregas`:'Sin entregas disponibles';
   }
   $('ops-search').addEventListener('input',filterDeliveries);
   $('ops-status').addEventListener('change',filterDeliveries);

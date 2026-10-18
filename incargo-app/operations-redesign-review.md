@@ -19,3 +19,9 @@ Se corrigieron durante QA: error de carga anterior al inicio del controlador vis
 ## Límites
 
 No acredita E2E de escritura real: no se crearon viajes, entregas o cuentas, no se cambiaron asignaciones/estados, no se subieron pruebas ni se generaron enlaces reales. Reintentos de confirmación, respuestas perdidas y llamadas repetidas siguen cubiertos por las regresiones aisladas. No se comprobó una sesión cliente autenticada en este incremento. La referencia original sigue sin materializar; este diseño no afirma replicarla. Migración histórica sigue siendo preparación local separada.
+
+## Cierre posterior: composición de filtros sobre error
+
+En 0071c69 se verificó el inventario del navegador: solo había una pestaña de Incargo, Operaciones; no había pestaña de cliente propia. Se preservó Operaciones sin navegarla ni cerrar sesión. No se leyeron tokens, credenciales o enlaces privados. Por tanto siguen pendientes la sesión cliente real, su entrega de prueba/historial y la coherencia autenticada entre ambos contextos. No se presenta una pestaña nueva como recuperación de la sesión ausente.
+
+Prueba nueva aislada: error de carga seguido de búsqueda, cambio de estado, navegación entre paneles y limpieza de filtros. Reproducción visible y test rojo: el contador pasaba de Carga pendiente a Sin entregas disponibles aunque la carga había fallado. Corrección: el contador prioriza la marca de error al recalcular filtros. Lista vacía cargada sigue diferenciada; ninguna petición o permiso cambia. Dos regresiones nuevas; 86/86 Node aprobadas, sintaxis y diff check correctos. No se repiten Python ni escrituras de entrega: no hubo cambios en esos componentes. QA visual local del mensaje corregido, sin mutar datos remotos. Los resultados aislados no acreditan E2E cliente real.
