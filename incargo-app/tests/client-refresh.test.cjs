@@ -63,7 +63,7 @@ test('refresh network failure clears stale rows and retry recovers',async()=>{
 test('revoked or reassigned membership clears the view during refresh',async()=>{
  for(const identity of [[],[{account_id:'other-account'}]]){
   const h=harness();h.setRows([row(1)]);await h.login();h.setIdentity(identity);await h.refresh();
-  assert.equal(h.count(),0);assert.equal(h.get('client-workspace').hidden,true);assert.match(h.get('notice').textContent,/acceso de cliente cambi�/);
+  assert.equal(h.count(),0);assert.equal(h.get('client-workspace').hidden,true);assert.match(h.get('notice').textContent,/acceso de cliente cambió/);
  }
 });
 test('expired session and late response after logout cannot restore old rows',async()=>{
@@ -111,4 +111,27 @@ test('review: late identity result after logout cannot issue list query or resto
  const calls=h.calls(),pending=h.refresh();await tick();h.get('logout').onclick();
  release(h.response([{account_id:'test-account'}]));await pending;
  assert.equal(h.calls(),calls);assert.equal(h.count(),0);assert.equal(h.get('client-workspace').hidden,true);
+});
+
+test('client Spanish copy renders empty, failed list, recovery and validation states',async()=>{
+ const h=harness();await h.login();
+ assert.equal(h.get('list-status').textContent,'Aún no hay envíos vinculados a tu cuenta.');
+ h.setList(()=>h.response({},500));await h.refresh();
+ assert.equal(h.get('list-status').textContent,'No pudimos consultar tus envíos. Inténtalo más tarde.');
+ h.get('logout').onclick();assert.equal(h.get('notice').textContent,'Sesión cerrada en esta pestaña.');
+ h.get('forgot-link').onclick();assert.equal(h.get('auth-title').textContent,'Recupera tu contraseña');
+ assert.equal(h.get('auth-description').textContent,'Te enviaremos un enlace para establecer una contraseña nueva.');
+ await h.get('register-form').onsubmit({preventDefault(){},currentTarget:h.get('register-form')});
+ assert.equal(h.get('notice').textContent,'La contraseña debe tener al menos 12 caracteres y coincidir en ambos campos.');
+});
+
+test('client Spanish copy renders milestone and expired-session states',async()=>{
+ const h=harness();h.setRows([{...row(1),status:'in_transit',last_event_at:'2026-10-16T00:00:00Z'}]);await h.login();
+ assert.match(h.get('deliveries').children[0].children[2].textContent,/ · Último hito:/);
+ await h.detail();assert.equal(h.get('detail-status').textContent,'Todavía no hay hitos registrados.');
+ h.setDetail(()=>h.response([{event_type:'in_transit',occurred_at:'2026-10-16T00:00:00Z'}]));await h.detail();
+ assert.match(h.get('milestones').children[0].textContent,/^En ruta · /);
+ h.setDetail(()=>h.response({},403));await h.detail();
+ assert.equal(h.get('client-workspace').hidden,true);
+ assert.equal(h.get('notice').textContent,'Tu sesión terminó o ya no tienes acceso. Ingresa nuevamente.');
 });

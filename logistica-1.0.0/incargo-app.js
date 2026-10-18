@@ -2,13 +2,15 @@
   'use strict';
   const $=id=>document.getElementById(id);
   let retained,expiryTimer,generation=0;let config, session, role, trips=[], deliveries=[], drivers=[], selectedId=null;
+  let confirmationAttempt=null,confirmationBusy=false;
+  const departures=new Map();let departureInFlight=false;
   const labels={pending:'Pendiente',in_transit:'En ruta',exception:'Novedad',delivered:'Entregada'};
   const node=(tag,text,cls)=>{const e=document.createElement(tag);e.textContent=text;if(cls)e.className=cls;return e;};
   const notice=(message,error=false)=>{const n=$('notice');n.textContent=message;n.className=error?'error':'success';};
   const fail=error=>{if(error?.stale)return;notice(error?.message||'No se pudo completar la operación.',true);};
   const stale=()=>Object.assign(Error('Solicitud anterior descartada.'),{stale:true});
   function clear(){
-    generation++;retained?.clear();clearTimeout(expiryTimer);session=null;role=null;trips=[];deliveries=[];drivers=[];selectedId=null;
+    generation++;departures.clear();departureInFlight=false;confirmationAttempt=null;confirmationBusy=false;$('confirm-form').reset();$('issue-form').reset();confirmationControls();retained?.clear();clearTimeout(expiryTimer);session=null;role=null;trips=[];deliveries=[];drivers=[];selectedId=null;
     closeProfile();$('login-form').querySelector('button').disabled=false;$('profile-email').textContent='No disponible';$('profile-role').textContent='No disponible';
     for(const id of ['ops-trips','ops-deliveries','driver-trips','driver-deliveries','driver-select','delivery-trip'])$(id).replaceChildren();
     document.querySelectorAll('.client-account-select,.client-delivery-select,#client-delivery-select').forEach(e=>e.replaceChildren());
@@ -19,26 +21,26 @@
     if(!active||active.expires_at*1000<=Date.now()){clear();notice('Tu sesión terminó. Ingresa nuevamente.',true);throw stale();}
   }
   function retain(){return retained??=IncargoSession.create({context:'operations',config});}
-  async function request(path,{method='GET',body,storage=false}={}){
-    const active=session,attempt=generation;check(active,attempt);
+  async function request(path,{method='GET',body,storage=false,signal}={}){
+    const active=session,attempt=generation;const checkCurrent=()=>{check(active,attempt);if(signal?.aborted)throw Error('La solicitud agotó el tiempo de espera.');};checkCurrent();
     try{
     const headers={apikey:config.publishableKey,Authorization:`Bearer ${active.access_token}`};
     // Recheck the current server role before each operation; never use a stored role.
-    const membershipResponse=await fetch(config.url+'/rest/v1/incargo_memberships?select=role&user_id=eq.'+encodeURIComponent(active.user.id),{headers,cache:'no-store'});
-    check(active,attempt);
+    const membershipResponse=await fetch(config.url+'/rest/v1/incargo_memberships?select=role&user_id=eq.'+encodeURIComponent(active.user.id),{headers,cache:'no-store',signal});
+    checkCurrent();
     if(!membershipResponse.ok){if([401,403].includes(membershipResponse.status)){clear();notice('Tu acceso cambió. Ingresa nuevamente.',true);throw stale();}throw Error('No pudimos confirmar tu acceso. Reintenta.');}
-    const memberships=await membershipResponse.json();check(active,attempt);
+    const memberships=await membershipResponse.json();checkCurrent();
     if(!Array.isArray(memberships)||memberships.length!==1||memberships[0].role!==role){clear();notice('Tu acceso cambió. Ingresa nuevamente.',true);throw stale();}
     if(body&&!storage)headers['Content-Type']='application/json';
     if(storage)headers['Content-Type']=body.type;
-    const response=await fetch(config.url+path,{method,headers,body:body?(storage?body:JSON.stringify(body)):undefined,cache:'no-store'});
-    check(active,attempt);
+    const response=await fetch(config.url+path,{method,headers,body:body?(storage?body:JSON.stringify(body)):undefined,cache:'no-store',signal});
+    checkCurrent();
     if([401,403].includes(response.status)){clear();notice('Tu sesión terminó o tu acceso cambió. Ingresa nuevamente.',true);throw stale();}
-    if(!response.ok){const data=await response.json().catch(()=>({}));check(active,attempt);throw Error(data.message||data.error_description||data.error||`Error ${response.status}`);}
-    const text=await response.text();check(active,attempt);return text?JSON.parse(text):null;
-    }catch(error){check(active,attempt);throw error;}
+    if(!response.ok){const data=await response.json().catch(()=>({}));checkCurrent();throw Object.assign(Error(data.message||data.error_description||data.error||`Error ${response.status}`),{status:response.status,code:data.code});}
+    const text=await response.text();checkCurrent();return text?JSON.parse(text):null;
+    }catch(error){checkCurrent();throw error;}
   }
-  const rest=(table,query='')=>request(`/rest/v1/${table}?${query}`);
+  const rest=(table,query='',options={})=>request(`/rest/v1/${table}?${query}`,options);
   const rpc=(name,body)=>request(`/rest/v1/rpc/${name}`,{method:'POST',body});
   function renderProfile(){
     const email=typeof session?.user?.email==='string'?session.user.email.trim():'';
@@ -75,15 +77,59 @@
       node('p','Viaje: '+(trip?`${trip.route_label} · ${trip.scheduled_date}`:'No disponible')));
     return context;
   }
-  function renderOpsDeliveries(){const area=$('ops-deliveries');area.replaceChildren();if(!deliveries.length)area.append(node('p','Todavía no hay entregas.','muted'));deliveries.forEach(d=>{const item=node('div','','item');item.append(node('strong',d.customer_name),node('small',`${d.invoice_reference||'Sin factura'} · ${labels[d.status]}`),deliveryContext(d));const button=node('button','Crear enlace limitado','secondary');button.type='button';button.onclick=async()=>{button.disabled=true;try{const token=await rpc('incargo_create_tracking_link',{p_delivery:d.id,p_hours:72});const link=`https://www.incargo.co/seguimiento.html#token=${token}`;const output=node('p',link,'muted');output.style.overflowWrap='anywhere';item.append(output);await renderLinks(d.id,item);notice('Enlace creado. Cópialo y compártelo por el canal autorizado; no se envió ningún mensaje.');}catch(error){fail(error);}finally{button.disabled=false;}};item.append(button);area.append(item);renderLinks(d.id,item).catch(fail);});}
+  function departureButton(delivery){
+    if(role!=='operations')return null;
+    const pending=departures.get(delivery.id);
+    if(delivery.status!=='pending'&&!pending)return null;
+    const button=node('button',pending?.busy?'Registrando salida…':pending?.confirmed?'Actualizar estado':pending?'Verificar salida':'Marcar En ruta');
+    button.type='button';button.className='departure-action';button.disabled=departureInFlight||Boolean(pending?.busy);
+    button.setAttribute('aria-label',button.textContent+' · '+(delivery.remittance_reference||delivery.customer_name));
+    button.onclick=()=>startDeparture(delivery.id);
+    return button;
+  }
+  async function startDeparture(deliveryId){
+    if(role!=='operations'||departureInFlight)return;
+    let pending=departures.get(deliveryId);
+    if(pending?.busy)return;
+    const active=session,attemptGeneration=generation;
+    try{
+      check(active,attemptGeneration);
+      if(!pending){
+        if(deliveries.find(item=>item.id===deliveryId)?.status!=='pending')return;
+        pending={requestId:crypto.randomUUID(),busy:false,confirmed:false};departures.set(deliveryId,pending);
+      }
+      pending.busy=true;departureInFlight=true;renderOpsDeliveries();
+      if(!pending.confirmed){
+        const result=await confirmationRequest('/rest/v1/rpc/incargo_start_delivery',{method:'POST',body:{p_delivery:deliveryId,p_request:pending.requestId}});
+        check(active,attemptGeneration);
+        if(!result||!['in_transit','exception','delivered'].includes(result.status)||!['started','replayed','already_in_transit'].includes(result.outcome))throw Error('Respuesta de salida no válida.');
+        pending.confirmed=true;
+      }
+      // Refresh only the delivery list: avoid unrelated account/link administration.
+      const rows=await confirmationRequest('/rest/v1/incargo_deliveries?select=id,trip_id,customer_name,destination_text,invoice_reference,remittance_reference,status&order=created_at.desc',{});
+      check(active,attemptGeneration);if(!Array.isArray(rows))throw Error('No pudimos actualizar las entregas.');
+      deliveries=rows;departures.delete(deliveryId);renderOpsDeliveries();notice('Salida registrada. Estado de las entregas actualizado.');
+    }catch(error){
+      if(error?.stale||active!==session||attemptGeneration!==generation)return;
+      if(error?.code==='PGRST202'||error?.status===404){
+        departures.delete(deliveryId);notice('El registro de salida aún no está habilitado. Contacta al equipo de Incargo.',true);
+      }else if(error?.message==='departure requires pending delivery'){
+        departures.delete(deliveryId);notice('La entrega cambió de estado. Actualiza la página antes de continuar; no se registró otra salida.',true);
+      }else notice(pending?.confirmed?'La salida está registrada. Reintenta Actualizar estado para consultar la lista.':'No pudimos verificar la salida. Pulsa Verificar salida para comprobar el mismo intento.',true);
+    }finally{
+      if(active===session&&attemptGeneration===generation){departureInFlight=false;if(pending)pending.busy=false;renderOpsDeliveries();}
+    }
+  }
+
+  function renderOpsDeliveries(){const area=$('ops-deliveries');area.replaceChildren();if(!deliveries.length)area.append(node('p','Todavía no hay entregas.','muted'));deliveries.forEach(d=>{const item=node('div','','item');item.append(node('strong',d.customer_name),node('small',`${d.invoice_reference||'Sin factura'} · ${labels[d.status]}`),deliveryContext(d));const button=node('button','Crear enlace limitado','secondary');button.type='button';button.onclick=async()=>{button.disabled=true;try{const token=await rpc('incargo_create_tracking_link',{p_delivery:d.id,p_hours:72});const link=`https://www.incargo.co/seguimiento.html#token=${token}`;const output=node('p',link,'muted');output.style.overflowWrap='anywhere';item.append(output);await renderLinks(d.id,item);notice('Enlace creado. Cópialo y compártelo por el canal autorizado; no se envió ningún mensaje.');}catch(error){fail(error);}finally{button.disabled=false;}};const departure=departureButton(d);if(departure)item.append(departure);item.append(button);area.append(item);renderLinks(d.id,item).catch(fail);});}
   async function renderLinks(deliveryId,item){const old=item.querySelector('.links');if(old)old.remove();const links=await rpc('incargo_list_tracking_links',{p_delivery:deliveryId});const area=node('div','','links');(links||[]).forEach(link=>{if(link.revoked_at)return;const row=node('div','Vence: '+new Date(link.expires_at).toLocaleString('es-CO'),'item');const revoke=node('button','Revocar enlace','secondary');revoke.type='button';revoke.onclick=async()=>{revoke.disabled=true;try{await rpc('incargo_revoke_tracking_link_by_id',{p_id:link.id});await renderLinks(deliveryId,item);notice('Enlace revocado.');}catch(error){fail(error);}finally{revoke.disabled=false;}};row.append(revoke);area.append(row);});item.append(area);}
   function renderDriver(){
     const tripArea=$('driver-trips');tripArea.replaceChildren();if(!trips.length)tripArea.append(node('p','No tienes viajes asignados.','muted'));trips.forEach(t=>tripArea.append(node('p',`${t.route_label} · ${t.scheduled_date} · ${t.vehicle_plate}`)));
     const area=$('driver-deliveries');area.replaceChildren();const query=$('search').value.trim().toLocaleLowerCase('es');const matches=deliveries.filter(d=>[d.customer_name,d.invoice_reference,d.remittance_reference,d.destination_text].filter(Boolean).join(' ').toLocaleLowerCase('es').includes(query));
     if(!matches.length)area.append(node('p',deliveries.length?'No hay coincidencias.':'No tienes entregas asignadas.','muted'));
-    matches.forEach(d=>{const item=node('div','','item');item.append(node('strong',d.customer_name),node('small',`${d.invoice_reference||'Sin factura'} · ${labels[d.status]}`),deliveryContext(d));const button=node('button','Seleccionar','secondary');button.type='button';button.onclick=()=>{selectedId=d.id;renderDriver();};item.append(button);area.append(item);});
+    matches.forEach(d=>{const item=node('div','','item');item.append(node('strong',d.customer_name),node('small',`${d.invoice_reference||'Sin factura'} · ${labels[d.status]}`),deliveryContext(d));const button=node('button','Seleccionar','secondary');button.type='button';button.disabled=Boolean(confirmationAttempt);button.onclick=()=>{if(confirmationAttempt)return;selectedId=d.id;renderDriver();};item.append(button);area.append(item);});
     const selected=deliveries.find(d=>d.id===selectedId);$('selected').replaceChildren();if(selected)$('selected').append(node('strong',`${selected.customer_name} · ${labels[selected.status]}`),deliveryContext(selected));else $('selected').textContent='Selecciona una entrega.';
-    $('issue-form').hidden=!selected||selected.status==='delivered';$('confirm-form').hidden=!selected||selected.status==='delivered';
+    $('issue-form').hidden=!selected||selected.status==='delivered';$('confirm-form').hidden=!selected||(selected.status==='delivered'&&!confirmationAttempt);confirmationControls();
   }
   async function loadClientAdmin(){
     const accounts=await rpc('incargo_client_admin_accounts',{});
@@ -112,7 +158,7 @@
   submitClientAdmin('client-delivery-form','incargo_client_assign_delivery',data=>({p_account:data.get('account'),p_delivery:data.get('delivery')}));
   submitClientAdmin('client-unlink-user-form','incargo_client_unlink_user',data=>({p_user:data.get('user')}));
   submitClientAdmin('client-unassign-delivery-form','incargo_client_unassign_delivery',data=>({p_delivery:data.get('delivery')}));
-  async function reload(){trips=await rest('incargo_trips','select=id,route_label,scheduled_date,vehicle_plate,driver_user_id&order=scheduled_date.desc');deliveries=await rest('incargo_deliveries','select=id,trip_id,customer_name,destination_text,invoice_reference,remittance_reference,status&order=created_at.desc');if(role==='operations'){drivers=await rest('incargo_memberships','select=user_id&role=eq.driver');const picker=$('driver-select');picker.replaceChildren();const empty=node('option','Sin asignar');empty.value='';picker.append(empty);drivers.forEach(d=>{const option=node('option',d.user_id);option.value=d.user_id;picker.append(option);});renderTrips();renderOpsDeliveries();await refreshClientAdmin();}else renderDriver();}
+  async function reload({signal}={}){trips=await rest('incargo_trips','select=id,route_label,scheduled_date,vehicle_plate,driver_user_id&order=scheduled_date.desc',{signal});deliveries=await rest('incargo_deliveries','select=id,trip_id,customer_name,destination_text,invoice_reference,remittance_reference,status&order=created_at.desc',{signal});if(role==='operations'){drivers=await rest('incargo_memberships','select=user_id&role=eq.driver',{signal});const picker=$('driver-select');picker.replaceChildren();const empty=node('option','Sin asignar');empty.value='';picker.append(empty);drivers.forEach(d=>{const option=node('option',d.user_id);option.value=d.user_id;picker.append(option);});renderTrips();renderOpsDeliveries();await refreshClientAdmin();}else renderDriver();}
   async function init(){
     const response=await fetch('/api/incargo-config',{cache:'no-store'});
     if(!response.ok)throw Error('La conexión no está configurada. Contacta a Incargo.');
@@ -142,11 +188,68 @@
   $('trip-form').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget;const button=form.querySelector('button');button.disabled=true;try{const data=new FormData(form);if(!String(data.get('route')).trim()||!String(data.get('vehicle')).trim())throw Error('Completa ruta y placa.');await request('/rest/v1/incargo_trips',{method:'POST',body:{route_label:String(data.get('route')).trim(),scheduled_date:data.get('date'),vehicle_plate:String(data.get('vehicle')).trim().toUpperCase(),driver_user_id:data.get('driver')||null}});form.reset();await reload();notice('Viaje creado.');}catch(error){fail(error);}finally{button.disabled=false;}};
   $('delivery-form').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget;const button=form.querySelector('button');button.disabled=true;try{const data=new FormData(form);if(!String(data.get('customer')).trim())throw Error('Escribe el cliente.');await request('/rest/v1/incargo_deliveries',{method:'POST',body:{trip_id:data.get('trip'),customer_name:String(data.get('customer')).trim(),destination_text:data.get('destination')||null,invoice_reference:data.get('invoice')||null,remittance_reference:data.get('remittance')||null}});form.reset();await reload();notice('Entrega agregada.');}catch(error){fail(error);}finally{button.disabled=false;}};
   $('search').oninput=renderDriver;
-  $('issue-form').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget;const button=form.querySelector('button');button.disabled=true;try{if(!selectedId)throw Error('Selecciona una entrega.');await rpc('incargo_record_issue',{p_delivery:selectedId,p_request:crypto.randomUUID(),p_note:form.elements.note.value.trim()});form.reset();await reload();notice('Novedad guardada.');}catch(error){fail(error);}finally{button.disabled=false;}};
-  $('confirm-form').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget;const button=form.querySelector('button');button.disabled=true;try{if(!selectedId)throw Error('Selecciona una entrega.');const photo=form.elements.photo.files[0];if(!photo||!['image/png','image/jpeg','image/webp'].includes(photo.type)||photo.size>10485760||photo.size===0)throw Error('Selecciona una foto PNG, JPEG o WebP de hasta 10 MB.');const receiver=form.elements.receiver.value.trim();if(!receiver)throw Error('Indica quién recibe.');const ext={'image/png':'png','image/jpeg':'jpg','image/webp':'webp'}[photo.type];const path=`${selectedId}/${crypto.randomUUID()}.${ext}`;
-    await request(`/storage/v1/object/incargo-proofs/${path}`,{method:'POST',body:photo,storage:true});
-    await rpc('incargo_confirm_delivery',{p_delivery:selectedId,p_request:crypto.randomUUID(),p_object_path:path,p_receiver:receiver,p_observation:form.elements.observation.value.trim()||null});form.reset();await reload();notice('Entrega y soporte guardados.');
-  }catch(error){fail(error);}finally{button.disabled=false;}};
+  $('issue-form').onsubmit=async event=>{event.preventDefault();if(confirmationAttempt)return;const form=event.currentTarget;const button=form.querySelector('button');button.disabled=true;try{if(!selectedId)throw Error('Selecciona una entrega.');await rpc('incargo_record_issue',{p_delivery:selectedId,p_request:crypto.randomUUID(),p_note:form.elements.note.value.trim()});form.reset();await reload();notice('Novedad guardada.');}catch(error){fail(error);}finally{button.disabled=false;}};
+  function confirmationControls(){
+    const pending=Boolean(confirmationAttempt);
+    $('confirm-form').querySelectorAll?.('input,textarea').forEach(field=>field.disabled=pending);
+    $('issue-form').querySelector('button').disabled=pending;
+    const button=$('confirm-form').querySelector('button');button.disabled=confirmationBusy;
+    button.textContent=confirmationBusy?'Verificando entrega…':confirmationAttempt?.confirmed?'Actualizar vista':pending?'Verificar y reintentar':'Confirmar entrega';
+    $('confirm-state').textContent=!pending?'':confirmationAttempt.confirmed?'La entrega ya fue confirmada. Falta actualizar la lista.':'Este intento conserva la entrega, la foto y los datos originales. Si se interrumpe, verifica y reintenta aquí. Mantén esta pestaña abierta hasta terminar.';
+  }
+  // A timeout is an unknown outcome, never evidence that the server rolled back.
+  async function confirmationDeadline(action){
+    const controller=new AbortController();let timer;
+    try{return await Promise.race([
+      action(controller.signal),
+      new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(Error('La solicitud agotó el tiempo de espera.'));},60000);})
+    ]);}finally{clearTimeout(timer);}
+  }
+  const confirmationRequest=(path,options)=>confirmationDeadline(signal=>request(path,{...options,signal}));
+  async function confirmAttempt(attempt,ensureCurrent){
+    ensureCurrent();if(attempt.confirmed)return;
+    const confirm=()=>{ensureCurrent();return confirmationRequest('/rest/v1/rpc/incargo_confirm_delivery',{method:'POST',body:attempt.payload});};
+    if(attempt.started){
+      // The existing RPC recognizes this request before rejecting a delivered row,
+      // and verifies assignment and proof ownership. Never infer success from 409.
+      try{await confirm();attempt.confirmed=true;return;}
+      catch(error){if(error.status!==400||error.message!=='proof missing')throw error;}
+    }
+    ensureCurrent();attempt.started=true;
+    await confirmationRequest(`/storage/v1/object/incargo-proofs/${attempt.payload.p_object_path}`,{method:'POST',body:attempt.photo,storage:true});
+    await confirm();attempt.confirmed=true;
+  }
+  $('confirm-form').onsubmit=async event=>{
+    event.preventDefault();if(confirmationBusy)return;
+    const form=event.currentTarget,active=session,attemptGeneration=generation;
+    try{
+      check(active,attemptGeneration);
+      if(!confirmationAttempt){
+        const selected=deliveries.find(d=>d.id===selectedId);
+        if(!selected||selected.status==='delivered')throw Error('Selecciona una entrega pendiente.');
+        const photo=form.elements.photo.files[0];
+        if(!photo||!['image/png','image/jpeg','image/webp'].includes(photo.type)||photo.size>10485760||photo.size===0)throw Error('Selecciona una foto PNG, JPEG o WebP de hasta 10 MB.');
+        const receiver=form.elements.receiver.value.trim(),observation=form.elements.observation.value.trim();
+        if(!receiver||receiver.length>120)throw Error('Indica quién recibe, con un máximo de 120 caracteres.');
+        if(observation.length>500)throw Error('La observación admite hasta 500 caracteres.');
+        const ext={'image/png':'png','image/jpeg':'jpg','image/webp':'webp'}[photo.type];
+        confirmationAttempt={photo,started:false,confirmed:false,payload:Object.freeze({p_delivery:selected.id,p_request:crypto.randomUUID(),p_object_path:`${selected.id}/${crypto.randomUUID()}.${ext}`,p_receiver:receiver,p_observation:observation||null})};
+      }
+      confirmationBusy=true;renderDriver();
+      await confirmAttempt(confirmationAttempt,()=>check(active,attemptGeneration));check(active,attemptGeneration);
+      await confirmationDeadline(signal=>reload({signal}));check(active,attemptGeneration);
+      confirmationAttempt=null;form.reset();renderDriver();notice('Entrega y soporte guardados.');
+    }catch(error){
+      if(error?.stale||active!==session||attemptGeneration!==generation)return;
+      if(confirmationAttempt)notice(confirmationAttempt.confirmed?'Entrega confirmada. No pudimos actualizar la lista; pulsa Actualizar vista.':'No pudimos verificar el resultado. Pulsa Verificar y reintentar para comprobar este mismo intento.',true);
+      else fail(error);
+    }finally{
+      if(active===session&&attemptGeneration===generation){confirmationBusy=false;confirmationControls();}
+    }
+  };
+  globalThis.addEventListener?.('beforeunload',event=>{
+    if(confirmationAttempt&&!confirmationAttempt.confirmed){event.preventDefault();event.returnValue='';}
+  });
   const restoreAttempt=generation;
   void (async()=>{try{await init();if(generation!==restoreAttempt)return;const next=await retain().restore();if(generation===restoreAttempt&&next)await showSession(next,restoreAttempt);}catch(error){if(generation===restoreAttempt)fail(error);}})();
 })();

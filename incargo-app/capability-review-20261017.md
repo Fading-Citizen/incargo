@@ -1,3 +1,5 @@
+> Estado vigente: ver integration-readiness.md. Este documento conserva evidencia cronológica; las referencias a bloqueo Git, aprobación o activación pendiente describen el momento de su redacción.
+
 # Incargo: capacidades y corrección de identificación de entregas
 
 Revisión del 17 de octubre de 2026, base main 98db6822a510287f5857cf30812d8fdbe6a997e9. Árbol limpio al iniciar; GitHub sin PR abiertos al consultar. No se encontró AGENTS.md en raíz del repo ni sus directorios padre consultados.
@@ -9,11 +11,11 @@ No se puede declarar la plataforma completa ni equivalente a la referencia. Libr
 | Capacidad | Implementado en código | Verificación y límite |
 | --- | --- | --- |
 | Operaciones | Crear viajes/entregas, asignar conductor, enlaces limitados y cuentas comerciales | Fixtures locales; sin operación productiva en esta revisión |
-| Conductor | Viajes asignados, búsqueda, novedades, confirmación con receptor/foto/observación | Destino/remesa/viaje se consultaban pero no se mostraban. Corregido en tarjetas y selección |
+| Conductor | Viajes asignados, búsqueda, novedades, confirmación con receptor/foto/observación | Destino/remesa/viaje publicados en df4cd09. Reintento inmutable preparado y probado localmente; no publicado aún |
 | Cliente autenticado | Identidad comercial, lista paginada, actualización, hitos, estados de error y sesión | Pruebas aisladas; no demuestra acceso productivo A/B ni soporte en este portal |
 | Seguimiento por enlace | Una entrega, eventos y soporte temporal mediante Edge | Ruta separada del portal de cuenta; no equivale a lista de envíos |
 | Roles y perfil | Contextos cliente/operaciones por pestaña; operaciones o conductor según membresía verificada | Una persona puede tener contexto cliente y operativo; no se infiere acceso a empresas por nombre/correo |
-| Estado En ruta | Etiqueta y valor de esquema existen | No se encontró acción de UI ni RPC de transición en las migraciones revisadas; falta cerrar el flujo auditado antes de prometer seguimiento completo |
+| Estado En ruta | Acción de operaciones pendiente → en ruta y RPC atómica preparados localmente | 73 tests Node y PostgreSQL local concurrente; falta autorización específica de funciones/grants, aplicación y publicación. Ver in-transit-review.md |
 | Excel/Sheets | Validadores y propuestas; inspecciones/vinculaciones siguen en Apps Script | No hay evidencia de conciliación/importación completa de histórico ni fuente canónica de viajes confirmada |
 | Móvil | Web responsive | QA aislada conductor a ancho DOM 355 px y operaciones a 1745 px, sin overflow; no app nativa ni prueba offline |
 
@@ -30,7 +32,16 @@ QA con navegador real y fixture local de CSP connect-src none: tarjetas, búsque
 ## Pendientes concretos
 
 1. Recuperar referencia con metadatos en un entorno compatible y contrastar píxeles.
-2. Diseñar transición En ruta con validación de asignación y evento idempotente; su aplicación requiere autorización específica de DB/migración.
-3. Resolver reintentos de confirmación: el código actual genera IDs nuevos por envío y puede dejar foto huérfana tras fallo de RPC; además revisar cambio de selección durante subida.
+2. Activar la propuesta En ruta ya implementada y verificada localmente: requiere autorización específica de funciones/grants y publicación. Operaciones conserva su ámbito global actual del proyecto; no se inventa segmentación por empresa. Ver in-transit-review.md.
+3. Reintentos de confirmación corregidos localmente: mismo request_id/ruta/payload, verificación por RPC antes de subir otra vez, timeout, guarda contra doble submit y selección bloqueada. 63 tests Node y 3 Python pasan; pendiente publicación por aprobación comunicada por el padre. La recuperación después de cerrar/recargar la pestaña y la limpieza de fotos huérfanas siguen pendientes; ver confirmation-retry-review.md.
 4. Confirmar fuente canónica, mapeo, conciliación y corte de Excel/Sheets; no migrar por nombre ni inferir empresa.
 5. E2E autenticado cliente/operaciones/conductor con fixture acordada, soporte, revocación y dos cuentas/empresas. No se crearon usuarios, envíos, correos ni datos reales.
+
+
+QA adicional: el portal cliente conserva caracteres U+FFFD en sus textos, observados al verificar el nuevo hito En ruta. No está cubierto por los tests UTF-8 de operaciones. Pendiente corrección específica y QA del portal. La referencia original sigue sin píxeles materializados conforme al helper.
+
+
+Actualización posterior: el defecto UTF-8 del portal cliente quedó corregido localmente con 79/79 pruebas Node y QA sintética móvil/escritorio. Ver client-copy-review.md. Sin publicación ni cambios remotos.
+
+
+Actualización de activación: las dos funciones En ruta fueron autorizadas, aplicadas y verificadas en gmjsqboyuvierfwruspv. ACL final: propietario postgres y authenticated; anon/service_role sin EXECUTE. No se publicó frontend ni se tocaron entregas reales. Ver in-transit-activation.md para evidencia y límites.
