@@ -169,19 +169,95 @@ def transform_inspections(rows):
             'accounted_rows': sum(counts.values())}}
 
 
+VINC_COLUMNS = ('TIMESTAMP', 'CORREO_REGISTRO', 'TIPO_VINCULACION',
+                'TIPO_VINCULACION_OTRO', 'NOMBRE_COMPLETO', 'TIPO_IDENTIFICACION',
+                'NUMERO_IDENTIFICACION', 'CORREO_ELECTRONICO', 'ACEPTA_CONTRATO',
+                'ACEPTADO_EN', 'VERSION_CONTRATO')
+
+
+def transform_vinculaciones(rows):
+    """Stage only documented headered layouts; never infer consent or identities."""
+    rows = [list(row) for row in rows]
+    if any(not isinstance(cell, str) for row in rows for cell in row):
+        raise ValueError('CSV cells must be strings')
+    snapshot = digest(rows)
+    first = next((i for i, row in enumerate(rows) if any(c.strip() for c in row)), None)
+    header = tuple(c.strip().upper() for c in rows[first]) if first is not None else ()
+    supported = header in (VINC_COLUMNS, VINC_COLUMNS + ('FIRMA_B64',))
+    output, seen = [], {}
+    for number, raw in enumerate(rows, 1):
+        record = {'source_row': number, 'source_key': f'{snapshot}:{number}',
+                  'raw': raw, 'row_sha256': digest(raw), 'classification': 'quarantine',
+                  'reasons': [], 'layout': None, 'fields': {}, 'evidence': [],
+                  'date_interpretation': 'not_attempted', 'ready_for_import': False,
+                  'contract_document_resolution': 'unverified',
+                  'consent_interpretation': 'not_attempted'}
+        output.append(record)
+        if not any(c.strip() for c in raw):
+            record['classification'] = 'blank'
+            continue
+        if supported and number - 1 == first:
+            record['classification'] = 'header'
+            continue
+        if record['row_sha256'] in seen:
+            record['reasons'].append('duplicate_raw_row')
+            record['duplicate_of_row'] = seen[record['row_sha256']]
+        else:
+            seen[record['row_sha256']] = number
+        if not supported:
+            record['reasons'].append('missing_or_unsupported_header')
+            continue
+        record['layout'] = 'vinculaciones_' + str(len(header))
+        if len(raw) < len(header):
+            record['reasons'].append('short_row')
+        if len(raw) > len(header):
+            record['reasons'].append('extra_columns')
+        if tuple(c.strip().upper() for c in raw) in (VINC_COLUMNS, VINC_COLUMNS + ('FIRMA_B64',)):
+            record['reasons'].append('repeated_header')
+        record['fields'] = dict(zip(header, raw))
+        # Literal recorded values only: no normalization into a consent boolean.
+        acceptance = record['fields'].get('ACEPTA_CONTRATO')
+        record['acceptance_literal'] = acceptance
+        record['contract_version_literal'] = record['fields'].get('VERSION_CONTRATO')
+        if acceptance not in ('SI', 'NO'):
+            record['reasons'].append('unknown_acceptance_literal')
+        for field in ('TIMESTAMP', 'ACEPTADO_EN', 'VERSION_CONTRATO'):
+            if not record['fields'].get(field, '').strip():
+                record['reasons'].append('missing_' + field.lower())
+        # An unlabelled extra column is never assumed to be a signature.
+        signature = record['fields'].get('FIRMA_B64', '')
+        record['signature_column_present'] = 'FIRMA_B64' in header
+        record['evidence'] = [evidence(signature, 'signature')]
+        if record['evidence'][0]['status'] in ('truncated', 'invalid_encoding'):
+            record['reasons'].append(record['evidence'][0]['status'] + '_evidence')
+        if not record['reasons']:
+            record['classification'] = 'staged'
+    counts = Counter(r['classification'] for r in output)
+    return {'format_version': 1, 'kind': 'vinculaciones', 'snapshot_sha256': snapshot,
+            'source_timezone': 'America/Bogota', 'timezone_applied': False,
+            'rows': output, 'reconciliation': {'input_rows': len(rows),
+            **{k: counts[k] for k in ('header', 'blank', 'staged', 'quarantine')},
+            'accounted_rows': sum(counts.values())}}
+
+
 if __name__ == '__main__':
     import csv
     import io
     import sys
     from pathlib import Path
-    if len(sys.argv) != 3:
-        raise SystemExit('usage: python legacy_transform.py synthetic-input.csv new-local-output.json')
-    source = Path(sys.argv[1]).read_bytes()
-    result = transform_inspections(list(csv.reader(io.StringIO(source.decode('utf-8-sig')), strict=True)))
+    args = sys.argv[1:]
+    kind = 'inspecciones'
+    if len(args) == 3:
+        kind, *args = args
+    if len(args) != 2 or kind not in ('inspecciones', 'vinculaciones'):
+        raise SystemExit('usage: python legacy_transform.py [inspecciones|vinculaciones] synthetic-input.csv new-local-output.json')
+    source = Path(args[0]).read_bytes()
+    transform = transform_inspections if kind == 'inspecciones' else transform_vinculaciones
+    result = transform(list(csv.reader(io.StringIO(source.decode('utf-8-sig')), strict=True)))
     result['raw_csv_text'] = source.decode('utf-8')
     result['source_file_sha256'] = hashlib.sha256(source).hexdigest()
     # Never overwrite a previous snapshot/output. stdout contains counts only.
-    with Path(sys.argv[2]).open('x', encoding='utf-8', newline='\n') as stream:
+    with Path(args[1]).open('x', encoding='utf-8', newline='\n') as stream:
         json.dump(result, stream, ensure_ascii=False, sort_keys=True, indent=2)
         stream.write('\n')
     print(json.dumps(result['reconciliation'], sort_keys=True))
