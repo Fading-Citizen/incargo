@@ -8,7 +8,7 @@ const path=require('node:path');
   const root=path.resolve(__dirname,'../../logistica-1.0.0');
   const server=http.createServer((req,res)=>{
     if(req.url==='/api/incargo-config'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({url:'https://mock.supabase.co',publishableKey:'publishable-test-only'}));return;}
-    const filename=req.url.slice(1);if(!['index.html','cliente.html','incargo-client.js','incargo-session.js','operaciones.html','seguimiento.html','incargo-app.css','incargo-app.js','incargo-tracking.js'].includes(filename)){res.writeHead(404).end();return;}
+    const filename=req.url.slice(1);if(!['index.html','cliente.html','incargo-client.js','incargo-session.js','operaciones.html','seguimiento.html','incargo-app.css','incargo-app.js','incargo-operations.css','incargo-operations-ui.js','incargo-tracking.js'].includes(filename)){res.writeHead(404).end();return;}
     res.setHeader('Content-Type',filename.endsWith('.css')?'text/css':filename.endsWith('.js')?'application/javascript':'text/html');fs.createReadStream(path.join(root,filename)).pipe(res);
   });
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -37,6 +37,7 @@ const path=require('node:path');
     assert.equal(await page.locator('#workspace').isHidden(),true);
     await page.locator('#login-form [name=email]').fill('ops@example.invalid');await page.locator('#login-form [name=password]').fill('fixture');await page.locator('#login-form button').click();
     await page.locator('#ops').waitFor({state:'visible'});
+    await page.getByRole('button',{name:'Accesos de cliente',exact:true}).click();
     await page.getByText(/No pudimos cargar las cuentas/).waitFor({state:'visible'});
     assert.equal(await page.locator('#client-account-form button').isDisabled(),true);
     clientAdminUnavailable=false;await page.locator('#client-admin-retry').click();
@@ -46,9 +47,12 @@ const path=require('node:path');
     assert.equal(await page.locator('#profile').isHidden(),true);await page.locator('#profile-toggle').click();
     assert.equal(await page.locator('#profile-email').textContent(),'ops@example.invalid');assert.equal(await page.locator('#profile-role').textContent(),'Operaciones');
     assert.equal(await page.locator('#profile-toggle').getAttribute('aria-expanded'),'true');await page.locator('#profile-toggle').click();
+    await page.getByRole('button',{name:'Viajes',exact:true}).click();
     await page.getByText('Todavía no hay viajes.').waitFor({state:'visible'});
     await page.locator('#trip-form [name=route]').fill('Ruta ficticia');await page.locator('#trip-form [name=date]').fill('2026-10-15');await page.locator('#trip-form [name=vehicle]').fill('DEM123');await page.locator('#trip-form button').click();await page.getByText('Viaje creado.').waitFor({state:'visible'});
     assert.equal(trips.length,1);
+    await page.getByRole('button',{name:'Entregas',exact:true}).click();
+    await page.getByRole('link',{name:'+ Agregar entrega',exact:true}).click();
     await page.locator('#delivery-form [name=customer]').fill('Cliente Ficticio');await page.locator('#delivery-form button').click();await page.getByText('Entrega agregada.').waitFor({state:'visible'});assert.equal(deliveries.length,1);
     await page.getByRole('button',{name:'Crear enlace limitado'}).click();await page.getByText(/seguimiento.html#token=/).waitFor({state:'visible'});
     await page.screenshot({path:'/tmp/incargo-live-ops-mobile.png',fullPage:true});
