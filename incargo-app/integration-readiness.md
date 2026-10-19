@@ -1,3 +1,5 @@
+> Cierre de regresiones al 2026-10-19: ver [driver-regression-review.md](driver-regression-review.md). Distingue evidencia aislada y E2E pendiente; el resto de este documento conserva el estado histórico de su incremento.
+
 # Incremento Incargo: alcance y validación
 
 Base revisada: main, df4cd09bf9b2750848426fcdd2438c19221c7a0f, igual al remoto antes de publicación. Sin conflictos ni cambios ajenos identificados; diff --check pasa. La publicación está autorizada y usa controles de ejecución por acción. La solicitud de carga de un ensayo local no corresponde a commit/push; no se repite.

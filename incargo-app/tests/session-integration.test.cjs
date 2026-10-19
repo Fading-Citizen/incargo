@@ -136,3 +136,32 @@ test('driver restored session reloads authorized destinations; failed initial fe
  const failed=harness('operations');failed.role('driver');failed.hook(url=>url.includes('/incargo_deliveries?')?Promise.reject(Error('Fixture network failure')):null);await failed.login();
  assert.equal(failed.get('driver-deliveries').children.length,0);assert.match(failed.get('notice').textContent,/Fixture network failure/);
 });
+
+for(const outcome of [200,401,'network'])test('driver: late initial '+outcome+' cannot replace a subsequent driver session',async()=>{
+ const h=harness('operations');h.role('driver');let release,reject;
+ h.hook(url=>url.includes('/incargo_deliveries?')?new Promise((resolve,fail)=>{release=resolve;reject=fail;}):null);
+ const pending=h.login();await tick();await tick();assert.equal(typeof release,'function');
+ h.logout();h.user('B');withDeliveries(h,[deliveryRows[1]]);await h.login();
+ const notice=h.get('notice').textContent;
+ if(outcome==='network')reject(Error('Previous driver request failed'));
+ else release(h.response([deliveryRows[0]],outcome));
+ await pending;
+ assert.equal(h.workspace().hidden,false);assert.equal(JSON.parse([...h.storage.values()][0]).user_id,'B');
+ assert.match(visibleText(h.get('driver-deliveries')),/Empresa B/);
+ assert.doesNotMatch(visibleText(h.get('driver-deliveries')),/Empresa A|Destino norte|REM-A/);
+ assert.equal(h.get('selected').children.length,0);assert.equal(h.get('notice').textContent,notice);
+});
+
+test('driver: an empty assignment after reload is explicit and offers no delivery action',async()=>{
+ const h=harness('operations');h.role('driver');withDeliveries(h);await h.login();
+ h.get('driver-deliveries').children[0].children.at(-1).onclick();
+ const restored=harness('operations',{storage:h.storage});restored.role('driver');await restored.ready();
+ assert.equal(restored.workspace().hidden,false);
+ assert.match(visibleText(restored.get('driver-trips')),/No tienes viajes asignados/);
+ assert.match(visibleText(restored.get('driver-deliveries')),/No tienes entregas asignadas/);
+ assert.doesNotMatch(visibleText(restored.get('driver-deliveries')),/Empresa A|Empresa B|REM-A/);
+ assert.equal(restored.get('selected').children.length,0);
+ assert.equal(restored.get('issue-form').hidden,true);assert.equal(restored.get('confirm-form').hidden,true);
+ for(const query of ['REM-A','']){restored.get('search').value=query;restored.get('search').oninput();assert.match(visibleText(restored.get('driver-deliveries')),/No tienes entregas asignadas/);}
+ assert(!restored.calls.some(url=>/incargo_confirm_delivery|incargo_report_issue|storage\/v1\/object/.test(url)));
+});
