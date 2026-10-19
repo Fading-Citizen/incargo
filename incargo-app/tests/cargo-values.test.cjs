@@ -1,0 +1,5 @@
+const {test}=require('node:test'),assert=require('node:assert/strict');
+const cargo=require('../../logistica-1.0.0/incargo-cargo.js');
+test('optional cargo stays null and rollout defaults off',()=>{assert.equal(cargo.enabled,false);assert.deepEqual(cargo.parse({}),{origin_text:null,cargo_description:null,package_count:null,gross_weight_kg:null});});
+test('cargo trims text and parses positive counts and explicit kg',()=>{assert.deepEqual(cargo.parse({origin_text:' A ',cargo_description:' cajas ',package_count:'2',gross_weight_kg:'12,345'}),{origin_text:'A',cargo_description:'cajas',package_count:2,gross_weight_kg:12.345});});
+test('rejects fabricated, fractional, out of range or nonfinite quantities',()=>{for(const value of ['0','-1','1.5','Infinity','NaN','1e3','2147483648'])assert.throws(()=>cargo.parse({package_count:value}));for(const value of ['0','-1','NaN','Infinity','1e3','1.2345','1000000000'])assert.throws(()=>cargo.parse({gross_weight_kg:value}));assert.throws(()=>cargo.parse({origin_text:'x'.repeat(201)}));assert.throws(()=>cargo.parse({cargo_description:'x'.repeat(501)}));});

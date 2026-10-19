@@ -6,7 +6,7 @@ const vm=require('node:vm');
 const source=fs.readFileSync(path.join(__dirname,'../../logistica-1.0.0/incargo-client.js'),'utf8');
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 const row=n=>({delivery_id:String(n),reference:'PRUEBA-'+n,status:'pending',created_at:'2026-10-16T00:00:00Z',last_event_at:null});
-function harness(){
+function harness(cargoEnabled=false){
  const nodes=new Map();
  class Element {
   constructor(){this.children=[];this.hidden=false;this.disabled=false;this.textContent='';this.elements={email:{value:''}};}
@@ -19,7 +19,7 @@ function harness(){
   removeAttribute(){}
  }
  const get=id=>{if(!nodes.has(id))nodes.set(id,new Element());return nodes.get(id);};
- let rows=[],identity=[{account_id:'test-account',display_name:'PRUEBAS'}],identityHook=null,listHook=null,detailHook=null,logisticsHook=null,calls=0,lastBody;
+ let rows=[],identity=[{account_id:'test-account',display_name:'PRUEBAS'}],identityHook=null,listHook=null,detailHook=null,logisticsHook=null,cargoHook=null,calls=0,lastBody;
  const response=(body,status=200)=>({ok:status<400,status,json:async()=>body});
  const retainedStorage=new Map();const context={setTimeout:()=>1,clearTimeout:()=>{},sessionStorage:{getItem:k=>retainedStorage.get(k)??null,setItem:(k,v)=>retainedStorage.set(k,v),removeItem:k=>retainedStorage.delete(k)},document:{getElementById:get,querySelector:()=>get('tabs'),querySelectorAll:()=>[],createElement:()=>new Element()},FormData:class {get(name){return name==='email'?'qa@example.invalid':'fixture';}},location:{origin:'https://example.invalid'},fetch:async(url,options={})=>{
   if(url==='/api/incargo-config')return response({url:'https://fixture.invalid',publishableKey:'fixture'});
@@ -27,12 +27,14 @@ function harness(){
   if(url.endsWith('/auth/v1/user'))return response({id:'fixture'});
   if(url.endsWith('/incargo_client_identity'))return identityHook?identityHook():response(identity);
   if(url.endsWith('/incargo_client_my_deliveries')){calls++;lastBody=JSON.parse(options.body);return listHook?listHook():response(rows);}
+  if(url.endsWith('/incargo_client_delivery_cargo'))return cargoHook?cargoHook(JSON.parse(options.body)):response([]);
   if(url.endsWith('/incargo_client_delivery_logistics'))return logisticsHook?logisticsHook(JSON.parse(options.body)):response([]);
   if(url.endsWith('/incargo_client_delivery_milestones'))return detailHook?detailHook():response([]);
   throw Error('Unexpected request '+url);
  }};
+ context.IncargoCargo={...require('../../logistica-1.0.0/incargo-cargo.js'),enabled:cargoEnabled};
  vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(__dirname,'../../logistica-1.0.0/incargo-session.js'),'utf8'),context);vm.runInContext(source,context);
- return {get,setIdentityHook:v=>identityHook=v,setRows:v=>rows=v,setIdentity:v=>identity=v,setList:v=>listHook=v,setDetail:v=>detailHook=v,setLogistics:v=>logisticsHook=v,response,
+ return {get,setIdentityHook:v=>identityHook=v,setRows:v=>rows=v,setIdentity:v=>identity=v,setList:v=>listHook=v,setDetail:v=>detailHook=v,setLogistics:v=>logisticsHook=v,setCargo:v=>cargoHook=v,response,
  calls:()=>calls,lastBody:()=>lastBody,login:async()=>{await get('login-form').onsubmit({preventDefault(){},currentTarget:get('login-form')});await tick();},
  refresh:()=>get('refresh').onclick(),count:()=>get('deliveries').children.length,
  detail:()=>get('deliveries').children[0].children.at(-1).onclick()};
@@ -229,3 +231,18 @@ for(const action of ['close','logout','switch','filter'])test('late logistics su
 test('current logistics authorization error clears the entire customer view',async()=>{
  const h=harness();h.setRows([row(1)]);h.setLogistics(()=>h.response({},401));await h.login();await h.detail();assert.equal(h.get('client-workspace').hidden,true);assert.equal(h.get('logistics-fields').children.length,0);assert.equal(h.get('detail-reference').textContent,'');
 });
+test('cargo disabled never calls the pending RPC',async()=>{const h=harness();h.setCargo(()=>{throw Error('Unexpected call');});h.setRows([row(1)]);await h.login();await h.detail();assert.equal(h.get('cargo-fields').children.length,0);});
+test('enabled cargo null, invalid, error, retry, and literal text',async()=>{
+ const h=harness(true);h.setRows([row(1)]);await h.login();await h.detail();assert.match(h.get('cargo-status').textContent,/No hay datos/);
+ h.setCargo(()=>h.response([{delivery_id:'1',package_count:-1}]));await h.detail();assert.equal(h.get('cargo-retry').hidden,false);
+ h.setCargo(()=>h.response({},500));await h.detail();assert.match(h.get('cargo-status').textContent,/No pudimos/);
+ h.setCargo(()=>h.response([{delivery_id:'1',origin_text:'<img src=x>',cargo_description:null,package_count:null,gross_weight_kg:12.345,private_note:'PRIVATE'}]));await h.get('cargo-retry').onclick();const text=detailText(h.get('cargo-fields'));assert.match(text,/<img src=x>/);assert.match(text,/12,345 kg/);assert.match(text,/Sin cantidad registrada/);assert.doesNotMatch(text,/PRIVATE/);assert.equal(h.get('cargo-retry').hidden,true);
+});
+for(const action of ['close','logout','switch','filter','refresh'])test('late cargo cannot cross '+action,async()=>{
+ for(const status of [200,500,401]){const h=harness(true);h.setRows([row('A'),row('B')]);await h.login();let release;h.setCargo(()=>new Promise(r=>release=r));const pending=h.detail();await tick();
+ if(action==='close')h.get('close-detail').onclick();if(action==='logout')h.get('logout').onclick();if(action==='refresh')await h.refresh();if(action==='filter'){h.get('client-search').value='B';h.get('client-search').oninput();}
+ if(action==='switch'){h.setCargo(()=>h.response([{delivery_id:'B',origin_text:'Origen B'}]));await h.get('deliveries').children[1].children.at(-1).onclick();}
+ release(h.response([{delivery_id:'A',origin_text:'OLD A'}],status));await pending;assert.doesNotMatch(detailText(h.get('cargo-fields')),/OLD A/);if(action==='switch')assert.match(detailText(h.get('cargo-fields')),/Origen B/);else assert.equal(h.get('cargo-fields').children.length,0);
+ }
+});
+test('current cargo auth error clears view',async()=>{const h=harness(true);h.setRows([row(1)]);h.setCargo(()=>h.response({},401));await h.login();await h.detail();assert.equal(h.get('client-workspace').hidden,true);assert.equal(h.get('cargo-fields').children.length,0);});

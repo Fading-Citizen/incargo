@@ -3,6 +3,9 @@
   const $=id=>document.getElementById(id);
   let retained,expiryTimer,generation=0;let config, session, role, trips=[], deliveries=[], drivers=[], selectedId=null;
   let confirmationAttempt=null,confirmationBusy=false;
+  const cargo=globalThis.IncargoCargo;
+  if(cargo?.enabled){$('cargo-inputs').hidden=false;$('cargo-inputs').disabled=false;}
+  const cargoSelect=()=>cargo?.enabled?',origin_text,cargo_description,package_count,gross_weight_kg':'';
   const departures=new Map();let departureInFlight=false;
   const labels={pending:'Pendiente',in_transit:'En ruta',exception:'Novedad',delivered:'Entregada'};
   const node=(tag,text,cls)=>{const e=document.createElement(tag);e.textContent=text;if(cls)e.className=cls;return e;};
@@ -10,6 +13,7 @@
   const fail=error=>{if(error?.stale)return;notice(error?.message||'No se pudo completar la operación.',true);};
   const stale=()=>Object.assign(Error('Solicitud anterior descartada.'),{stale:true});
   function clear(){
+    if(cargo?.enabled)$('delivery-form').reset();
     generation++;departures.clear();departureInFlight=false;confirmationAttempt=null;confirmationBusy=false;$('confirm-form').reset();$('issue-form').reset();confirmationControls();retained?.clear();clearTimeout(expiryTimer);session=null;role=null;trips=[];deliveries=[];drivers=[];selectedId=null;
     closeProfile();$('login-form').querySelector('button').disabled=false;$('profile-email').textContent='No disponible';$('profile-role').textContent='No disponible';
     for(const id of ['ops-trips','ops-deliveries','driver-trips','driver-deliveries','driver-select','delivery-trip'])$(id).replaceChildren();
@@ -75,6 +79,7 @@
     context.append(node('p','Destino: '+(delivery.destination_text?.trim()||'Sin destino registrado')),
       node('p','Remesa: '+(delivery.remittance_reference?.trim()||'Sin remesa')),
       node('p','Viaje: '+(trip?`${trip.route_label} · ${trip.scheduled_date}`:'No disponible')));
+    if(cargo?.enabled){try{for(const [label,value] of cargo.fields(delivery))context.append(node('p',label+': '+value));}catch{context.append(node('p','No pudimos mostrar los datos de carga. Actualiza la vista.'));}}
     return context;
   }
   function departureButton(delivery){
@@ -106,7 +111,7 @@
         pending.confirmed=true;
       }
       // Refresh only the delivery list: avoid unrelated account/link administration.
-      const rows=await confirmationRequest('/rest/v1/incargo_deliveries?select=id,trip_id,customer_name,destination_text,invoice_reference,remittance_reference,status&order=created_at.desc',{});
+      const rows=await confirmationRequest('/rest/v1/incargo_deliveries?select=id,trip_id,customer_name,destination_text,invoice_reference,remittance_reference,status'+cargoSelect()+'&order=created_at.desc',{});
       check(active,attemptGeneration);if(!Array.isArray(rows))throw Error('No pudimos actualizar las entregas.');
       deliveries=rows;departures.delete(deliveryId);renderOpsDeliveries();notice('Salida registrada. Estado de las entregas actualizado.');
     }catch(error){
@@ -158,7 +163,7 @@
   submitClientAdmin('client-delivery-form','incargo_client_assign_delivery',data=>({p_account:data.get('account'),p_delivery:data.get('delivery')}));
   submitClientAdmin('client-unlink-user-form','incargo_client_unlink_user',data=>({p_user:data.get('user')}));
   submitClientAdmin('client-unassign-delivery-form','incargo_client_unassign_delivery',data=>({p_delivery:data.get('delivery')}));
-  async function reload({signal}={}){trips=await rest('incargo_trips','select=id,route_label,scheduled_date,vehicle_plate,driver_user_id&order=scheduled_date.desc',{signal});deliveries=await rest('incargo_deliveries','select=id,trip_id,customer_name,destination_text,invoice_reference,remittance_reference,status&order=created_at.desc',{signal});if(role==='operations'){drivers=await rest('incargo_memberships','select=user_id&role=eq.driver',{signal});const picker=$('driver-select');picker.replaceChildren();const empty=node('option','Sin asignar');empty.value='';picker.append(empty);drivers.forEach(d=>{const option=node('option',d.user_id);option.value=d.user_id;picker.append(option);});renderTrips();renderOpsDeliveries();await refreshClientAdmin();}else renderDriver();}
+  async function reload({signal}={}){trips=await rest('incargo_trips','select=id,route_label,scheduled_date,vehicle_plate,driver_user_id&order=scheduled_date.desc',{signal});deliveries=await rest('incargo_deliveries','select=id,trip_id,customer_name,destination_text,invoice_reference,remittance_reference,status'+cargoSelect()+'&order=created_at.desc',{signal});if(role==='operations'){drivers=await rest('incargo_memberships','select=user_id&role=eq.driver',{signal});const picker=$('driver-select');picker.replaceChildren();const empty=node('option','Sin asignar');empty.value='';picker.append(empty);drivers.forEach(d=>{const option=node('option',d.user_id);option.value=d.user_id;picker.append(option);});renderTrips();renderOpsDeliveries();await refreshClientAdmin();}else renderDriver();}
   async function init(){
     const response=await fetch('/api/incargo-config',{cache:'no-store'});
     if(!response.ok)throw Error('La conexión no está configurada. Contacta a Incargo.');
@@ -186,7 +191,7 @@
   };
   $('logout').onclick=()=>{clear();$('login-form').querySelector('button').disabled=false;notice('Sesión cerrada en esta pestaña.');};
   $('trip-form').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget;const button=form.querySelector('button');button.disabled=true;try{const data=new FormData(form);if(!String(data.get('route')).trim()||!String(data.get('vehicle')).trim())throw Error('Completa ruta y placa.');await request('/rest/v1/incargo_trips',{method:'POST',body:{route_label:String(data.get('route')).trim(),scheduled_date:data.get('date'),vehicle_plate:String(data.get('vehicle')).trim().toUpperCase(),driver_user_id:data.get('driver')||null}});form.reset();await reload();notice('Viaje creado.');}catch(error){fail(error);}finally{button.disabled=false;}};
-  $('delivery-form').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget;const button=form.querySelector('button');button.disabled=true;try{const data=new FormData(form);if(!String(data.get('customer')).trim())throw Error('Escribe el cliente.');await request('/rest/v1/incargo_deliveries',{method:'POST',body:{trip_id:data.get('trip'),customer_name:String(data.get('customer')).trim(),destination_text:data.get('destination')||null,invoice_reference:data.get('invoice')||null,remittance_reference:data.get('remittance')||null}});form.reset();await reload();notice('Entrega agregada.');}catch(error){fail(error);}finally{button.disabled=false;}};
+  $('delivery-form').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget;const button=form.querySelector('button');if(button.disabled)return;button.disabled=true;try{const data=new FormData(form);if(!String(data.get('customer')).trim())throw Error('Escribe el cliente.');await request('/rest/v1/incargo_deliveries',{method:'POST',body:{trip_id:data.get('trip'),customer_name:String(data.get('customer')).trim(),destination_text:data.get('destination')||null,invoice_reference:data.get('invoice')||null,remittance_reference:data.get('remittance')||null,...(cargo?.enabled?cargo.parse(Object.fromEntries(data)): {})}});form.reset();await reload();notice('Entrega agregada.');}catch(error){fail(error);}finally{button.disabled=false;}};
   $('search').oninput=renderDriver;
   $('issue-form').onsubmit=async event=>{event.preventDefault();if(confirmationAttempt)return;const form=event.currentTarget;const button=form.querySelector('button');button.disabled=true;try{if(!selectedId)throw Error('Selecciona una entrega.');await rpc('incargo_record_issue',{p_delivery:selectedId,p_request:crypto.randomUUID(),p_note:form.elements.note.value.trim()});form.reset();await reload();notice('Novedad guardada.');}catch(error){fail(error);}finally{button.disabled=false;}};
   function confirmationControls(){

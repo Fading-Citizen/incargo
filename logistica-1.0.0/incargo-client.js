@@ -71,7 +71,27 @@
     return new Date(value).toLocaleString('es-CO',{timeZone:'America/Bogota',year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
   }
   function field(label,value){const box=document.createElement('div'),term=document.createElement('dt'),description=document.createElement('dd');term.textContent=label;description.textContent=value;box.append(term,description);return box;}
+  const cargo=globalThis.IncargoCargo;
+  function resetCargo(){if(!cargo?.enabled)return;$('cargo-fields').replaceChildren();$('cargo-status').textContent='';$('cargo-retry').hidden=true;}
+  async function loadCargo(id,active,selected){
+    if(!cargo?.enabled)return;
+    resetCargo();$('cargo-detail').hidden=false;$('cargo-unavailable').textContent='Servicio aún no disponible en esta vista.';$('cargo-status').textContent='Cargando origen y carga.';
+    try{
+      const rows=await rpc('incargo_client_delivery_cargo',{p_delivery:id},active.session);
+      if(!current(active)||selected!==selection)return;
+      if(!Array.isArray(rows)||rows.length>1||rows.some(row=>!row||row.delivery_id!==id))throw Error('Invalid cargo');
+      const items=rows.length?cargo.fields(rows[0]):[];
+      $('cargo-fields').replaceChildren(...items.map(([label,value])=>field(label,value)));
+      $('cargo-status').textContent=rows.length?'Datos registrados por operaciones.':'No hay datos disponibles para este envío. Actualiza tus envíos para comprobar el acceso.';
+    }catch(error){
+      if(!current(active)||selected!==selection)return;
+      if(/sesión terminó/.test(error.message)){clear();message(error.message,true);}
+      else{$('cargo-fields').replaceChildren();$('cargo-status').textContent='No pudimos consultar origen y carga. Reintenta.';$('cargo-retry').hidden=false;}
+    }
+  }
+  if(cargo?.enabled)$('cargo-retry').onclick=()=>detailId?showDetail(detailId,detailTrigger):undefined;
   function resetDetail(){
+    resetCargo();
     detailId=null;$('logistics-fields').replaceChildren();$('logistics-status').textContent='';$('logistics-retry').hidden=true;$('detail-summary').replaceChildren();$('detail-reference').textContent='';$('detail-state').textContent='';$('detail-explanation').textContent='';$('detail-freshness').textContent='';$('detail-retry').hidden=true;
   }
   async function showDetail(id,trigger){
@@ -83,10 +103,11 @@
     $('detail-explanation').textContent=stateDescriptions[row.status]||'No hay una descripción disponible para este estado.';
     $('detail-summary').replaceChildren(field('Registrado en el sistema',formattedDate(row.created_at)),field('Último hito informado en la lista',row.last_event_at?formattedDate(row.last_event_at):'Sin hitos informados'));
     $('detail-freshness').textContent='Estado de la última consulta de envíos. Usa Actualizar envíos para comprobar cambios.';
-    $('logistics-fields').replaceChildren();$('logistics-status').textContent='Cargando datos logísticos.';$('logistics-retry').hidden=true;$('detail-retry').hidden=true;$('detail-title').focus?.();$('detail').scrollIntoView?.({block:'start'});$('milestones').replaceChildren();$('detail-status').textContent='Cargando hitos.';
+    resetCargo();$('logistics-fields').replaceChildren();$('logistics-status').textContent='Cargando datos logísticos.';$('logistics-retry').hidden=true;$('detail-retry').hidden=true;$('detail-title').focus?.();$('detail').scrollIntoView?.({block:'start'});$('milestones').replaceChildren();$('detail-status').textContent='Cargando hitos.';
     try{
       if(!await revalidate(active))return;
       const logistics=loadLogistics(id,active,selected);
+      const cargoRequest=loadCargo(id,active,selected);
       const events=await rpc('incargo_client_delivery_milestones',{p_delivery:id},active.session);
       if(!current(active)||selected!==selection)return;
       if(!Array.isArray(events)||events.some(event=>!event||typeof event.event_type!=='string'))throw Error('No pudimos cargar el historial. Reintenta la consulta.');
@@ -97,7 +118,7 @@
         const li=document.createElement('li');li.textContent=(milestones[event.event_type]||'Actualización')+' · '+formattedDate(event.occurred_at);
         const description=document.createElement('p');description.textContent=eventDescriptions[event.event_type]||'Evento informado por el sistema.';li.append(description);$('milestones').append(li);
       }
-      await logistics;if(!current(active)||selected!==selection)return;
+      await Promise.all([logistics,cargoRequest]);if(!current(active)||selected!==selection)return;
       $('detail-freshness').textContent='Historial consultado: '+formattedDate(new Date().toISOString())+' (hora de Colombia). La hora de consulta no es la hora del último hito.';
     }catch(error){if(!current(active)||selected!==selection)return;if(/sesión terminó/.test(error.message)){clear();message(error.message,true);}else{$('detail-status').textContent=error.message;$('detail-retry').hidden=false;}}
   }

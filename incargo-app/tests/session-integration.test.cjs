@@ -2,9 +2,9 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 const root=path.join(__dirname,'../../logistica-1.0.0');
 const source=Object.fromEntries(['incargo-session.js','incargo-client.js','incargo-app.js'].map(f=>[f,fs.readFileSync(path.join(root,f),'utf8')]));
 const tick=()=>new Promise(r=>setImmediate(r));
-function harness(context,{storage=new Map(),clock={now:1800000000000},user='A'}={}){
+function harness(context,{storage=new Map(),clock={now:1800000000000},user='A',cargoEnabled=false,formValues={}}={}){
  const nodes=new Map(),timers=new Map();let timerId=0,focused=null;
- class Element{constructor(){this.children=[];this.hidden=false;this.disabled=false;this.textContent='';this.value='';this.style={};this.elements={email:{value:''}};}append(...v){this.children.push(...v);}replaceChildren(...v){this.children=v;}querySelector(){return this.button??=new Element();}reset(){}setAttribute(name,value){(this.attributes??={})[name]=value;}removeAttribute(){}focus(){focused=this;}closest(){return this;}remove(){}}
+ class Element{constructor(){this.children=[];this.hidden=false;this.disabled=false;this.textContent='';this.value='';this.style={};this.elements={email:{value:''}};}append(...v){this.children.push(...v);}replaceChildren(...v){this.children=v;}querySelector(){return this.button??=new Element();}reset(){this.resets=(this.resets||0)+1;}setAttribute(name,value){(this.attributes??={})[name]=value;}removeAttribute(){}focus(){focused=this;}closest(){return this;}remove(){}}
  const get=id=>{if(!nodes.has(id))nodes.set(id,new Element());return nodes.get(id);};
  get('workspace').hidden=get('client-workspace').hidden=get('profile').hidden=true;
  let identity=[{account_id:'account-A',display_name:'Company A'}],role='operations',hook=null,authUser=user;
@@ -13,7 +13,7 @@ function harness(context,{storage=new Map(),clock={now:1800000000000},user='A'}=
  setTimeout(fn,delay){const id=++timerId;timers.set(id,{fn,at:clock.now+delay});return id;},clearTimeout:id=>timers.delete(id),
  sessionStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},
  document:{getElementById:get,querySelector:()=>get('tabs'),querySelectorAll:()=>[],createElement:()=>new Element()},
- FormData:class{get(n){return n==='email'?'fixture@example.invalid':n==='password'?'fixture':null;}},location:{origin:'https://example.invalid'},
+ FormData:class{get(n){return n==='email'?'fixture@example.invalid':n==='password'?'fixture':formValues[n]??null;}*[Symbol.iterator](){yield*Object.entries(formValues);}},location:{origin:'https://example.invalid'},
  fetch:async(url,options={})=>{calls.push(url);if(hook){const r=hook(url,options);if(r)return r;}
   if(url==='/api/incargo-config')return response({url:'https://fixture.invalid',publishableKey:'fixture'});
   if(url.includes('/auth/v1/token'))return response({access_token:'synthetic-'+authUser,refresh_token:'NEVER-STORE',expires_at:1800000060,user:{id:authUser}});
@@ -23,6 +23,7 @@ function harness(context,{storage=new Map(),clock={now:1800000000000},user='A'}=
   if(url.endsWith('/incargo_client_my_deliveries'))return response([{delivery_id:'fixture',reference:'PRUEBA',status:'pending',created_at:'2026-10-16'}]);
   return response([]);
  }};
+ sandbox.IncargoCargo={...require('../../logistica-1.0.0/incargo-cargo.js'),enabled:cargoEnabled};
  vm.runInNewContext(source['incargo-session.js'],sandbox);vm.runInNewContext(source[context==='client'?'incargo-client.js':'incargo-app.js'],sandbox);
  const workspace=()=>get(context==='client'?'client-workspace':'workspace');
  return {get,storage,clock,calls,response,workspace,ready:tick,focused:()=>focused,hook:v=>hook=v,identity:v=>identity=v,role:v=>role=v,user:v=>authUser=v,
@@ -164,4 +165,20 @@ test('driver: an empty assignment after reload is explicit and offers no deliver
  assert.equal(restored.get('issue-form').hidden,true);assert.equal(restored.get('confirm-form').hidden,true);
  for(const query of ['REM-A','']){restored.get('search').value=query;restored.get('search').oninput();assert.match(visibleText(restored.get('driver-deliveries')),/No tienes entregas asignadas/);}
  assert(!restored.calls.some(url=>/incargo_confirm_delivery|incargo_report_issue|storage\/v1\/object/.test(url)));
+});
+test('operations cargo creation validates, preserves failed draft and sends one concurrent INSERT',async()=>{
+ const values={customer:'PRUEBA',trip:'fixture-trip',origin_text:' Origen A ',cargo_description:'Cajas',package_count:'2',gross_weight_kg:'12.345'};
+ const h=harness('operations',{cargoEnabled:true,formValues:values});await h.login();assert.equal(h.get('cargo-inputs').disabled,false);
+ let release,sent=[];h.hook((url,opts)=>{if(url.endsWith('/incargo_deliveries')&&opts.method==='POST'){sent.push(JSON.parse(opts.body));return new Promise(r=>release=r);}});
+ const form=h.get('delivery-form'),baseline=form.resets||0,submit=()=>form.onsubmit({preventDefault(){},currentTarget:form});
+ const pending=submit();await tick();await submit();assert.equal(sent.length,1);assert.equal(sent[0].origin_text,'Origen A');assert.equal(sent[0].package_count,2);assert.equal(sent[0].gross_weight_kg,12.345);
+ release(h.response({message:'Fixture failure'},500));await pending;assert.equal(form.resets||0,baseline);assert.equal(form.querySelector('button').disabled,false);assert.match(h.get('notice').textContent,/Fixture failure/);
+ values.package_count='0';await submit();assert.equal(sent.length,1);assert.match(h.get('notice').textContent,/entero positivo/);
+ h.logout();assert.equal(form.resets,baseline+1);
+});
+test('operations cargo null payload and reloaded display do not invent quantities',async()=>{
+ const h=harness('operations',{cargoEnabled:true,formValues:{customer:'PRUEBA',trip:'fixture-trip'}});await h.login();let body;
+ h.hook((url,opts)=>{if(url.endsWith('/incargo_deliveries')&&opts.method==='POST'){body=JSON.parse(opts.body);return h.response(null);}if(url.includes('/incargo_deliveries?'))return h.response([{id:'fixture',trip_id:'fixture-trip',customer_name:'PRUEBA',status:'pending',origin_text:null,cargo_description:null,package_count:null,gross_weight_kg:null}]);});
+ const form=h.get('delivery-form'),baseline=form.resets||0;await form.onsubmit({preventDefault(){},currentTarget:form});for(const key of ['origin_text','cargo_description','package_count','gross_weight_kg'])assert.equal(body[key],null);assert.equal(form.resets,baseline+1);assert.equal(h.get('ops-deliveries').children.length,1);
+ const text=n=>[n.textContent,...n.children.map(text)].join(' ');assert.match(text(h.get('ops-deliveries')),/Sin origen registrado.*Sin descripción registrada.*Sin cantidad registrada.*Sin peso registrado/);
 });
