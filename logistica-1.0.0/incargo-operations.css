@@ -28,3 +28,11 @@
 #cargo-inputs>p{grid-column:1/-1;margin:0}
 #delivery-form>button{align-self:start;justify-self:start}
 @media(max-width:640px){#cargo-inputs{grid-template-columns:minmax(0,1fr);padding:16px}}
+#client-requests{grid-column:1/-1;background:#fff;border:1px solid #dce5e1;border-radius:14px;padding:24px}
+#client-requests[hidden]{display:none}
+.request-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:20px}
+.request-card{display:grid;gap:12px;align-content:start;overflow-wrap:anywhere}
+.request-card p{margin:0}
+.request-card>button{justify-self:start}
+.request-confirm{display:flex!important;align-items:center;gap:10px}
+.request-confirm input[type=checkbox]{width:20px;height:20px;min-height:20px;flex:0 0 20px;padding:0;margin:0}

@@ -71,6 +71,7 @@
     return new Date(value).toLocaleString('es-CO',{timeZone:'America/Bogota',year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
   }
   function field(label,value){const box=document.createElement('div'),term=document.createElement('dt'),description=document.createElement('dd');term.textContent=label;description.textContent=value;box.append(term,description);return box;}
+  if(globalThis.IncargoAccessRequests?.enabled)$('request-access-link').hidden=false;
   const cargo=globalThis.IncargoCargo;
   function resetCargo(){if(!cargo?.enabled)return;$('cargo-fields').replaceChildren();$('cargo-status').textContent='';$('cargo-retry').hidden=true;}
   async function loadCargo(id,active,selected){

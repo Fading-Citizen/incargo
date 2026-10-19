@@ -13,6 +13,7 @@
   const fail=error=>{if(error?.stale)return;notice(error?.message||'No se pudo completar la operación.',true);};
   const stale=()=>Object.assign(Error('Solicitud anterior descartada.'),{stale:true});
   function clear(){
+    accessRequests?.reset();
     if(cargo?.enabled)$('delivery-form').reset();
     generation++;departures.clear();departureInFlight=false;confirmationAttempt=null;confirmationBusy=false;$('confirm-form').reset();$('issue-form').reset();confirmationControls();retained?.clear();clearTimeout(expiryTimer);session=null;role=null;trips=[];deliveries=[];drivers=[];selectedId=null;
     closeProfile();$('login-form').querySelector('button').disabled=false;$('profile-email').textContent='No disponible';$('profile-role').textContent='No disponible';
@@ -46,6 +47,7 @@
   }
   const rest=(table,query='',options={})=>request(`/rest/v1/${table}?${query}`,options);
   const rpc=(name,body)=>request(`/rest/v1/rpc/${name}`,{method:'POST',body});
+  const accessRequests=globalThis.IncargoAccessRequests?.enabled?globalThis.IncargoAccessRequests.createOperations({root:$('client-requests'),rpc,document}):null;
   function renderProfile(){
     const email=typeof session?.user?.email==='string'?session.user.email.trim():'';
     $('profile-email').textContent=email||'No disponible';
@@ -137,7 +139,10 @@
     $('issue-form').hidden=!selected||selected.status==='delivered';$('confirm-form').hidden=!selected||(selected.status==='delivered'&&!confirmationAttempt);confirmationControls();
   }
   async function loadClientAdmin(){
+    const active=session,attempt=generation;
     const accounts=await rpc('incargo_client_admin_accounts',{});
+    if(accessRequests)await accessRequests.load(accounts);
+    check(active,attempt);
     document.querySelectorAll('.client-account-select').forEach(select=>{select.replaceChildren();for(const account of accounts){const option=node('option',account.display_name);option.value=account.account_id;select.append(option);}});
     document.querySelectorAll('.client-delivery-select,#client-delivery-select').forEach(select=>{select.replaceChildren();for(const delivery of deliveries){const option=node('option',`${delivery.customer_name} · ${delivery.remittance_reference||'Sin remesa'}`);option.value=delivery.id;select.append(option);}});
     document.querySelectorAll('#ops form[id^="client-"] button').forEach(button=>button.disabled=false);

@@ -1,0 +1,10 @@
+.request-page{background:#f4f8f6;color:#183b36}
+.request-page header{background:#fff;border-bottom:1px solid #dce5e1;padding:20px max(20px,calc((100% - 900px)/2))}
+.request-page a{color:#126650;text-underline-offset:3px}
+.request-page header a{font-weight:800;text-decoration:none;letter-spacing:.03em}
+.request-page main{max-width:940px}
+.request-page .card{padding:clamp(20px,4vw,36px)}
+.request-page h1{font-size:clamp(26px,4vw,36px);line-height:1.15}
+.request-page p{line-height:1.6}
+#request-workspace>button{margin:0 8px 16px 0}
+#request-workspace>a{display:inline-block;margin-top:16px}
