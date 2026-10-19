@@ -1,4 +1,4 @@
-/* Prepared only: enable after approved schema/RPC activation and postflight. */
+/* Origin/cargo activated after approved schema/RPC postflight. */
 (() => {
   'use strict';
   const text=(value,max,label)=>{const s=String(value??'').trim();if(s.length>max)throw Error(label+' excede '+max+' caracteres.');return s||null;};
@@ -15,6 +15,6 @@
     const data=parse(row);
     return [['Origen',data.origin_text||'Sin origen registrado'],['Descripción de la carga',data.cargo_description||'Sin descripción registrada'],['Bultos',data.package_count===null?'Sin cantidad registrada':String(data.package_count)],['Peso bruto (kg)',data.gross_weight_kg===null?'Sin peso registrado':data.gross_weight_kg.toLocaleString('es-CO',{maximumFractionDigits:3})+' kg']];
   }
-  const api=Object.freeze({enabled:false,parse,fields});
+  const api=Object.freeze({enabled:true,parse,fields});
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else globalThis.IncargoCargo=api;
 })();

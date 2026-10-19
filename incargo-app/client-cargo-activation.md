@@ -1,3 +1,14 @@
+# Origen y carga: activado el 19/10/2026
+
+Aprobación expresa de Lenu: Sentinel_174f1a6f12688191993d0a56e6710d52, «ok autorizo», tras presentar cuatro campos opcionales y consulta autenticada limitada al cliente vinculado. Se aplicó exactamente el SQL preparado en 37d0e5d. La gestión de solicitudes no forma parte de esta activación.
+
+Preflight y postflight mediante SQL Editor del proyecto Incargo gmjsqboyuvierfwruspv: https://supabase.com/dashboard/project/gmjsqboyuvierfwruspv/sql/5577c34a-3100-401b-8e39-83da0daef5f9 . Antes: columnas/funciones ausentes; SELECT/INSERT y USAGE existentes; políticas limitadas a operations y conductor asignado. Aplicación en una transacción: «Success. No rows returned». Después: cuatro columnas nullable sin defaults, cuatro CHECK esperados, helper SECURITY DEFINER y wrapper invoker STABLE/search_path vacío; ambas ACL exclusivamente postgres y authenticated. SQL conservado en client-cargo-applied.sql. No se registró migración Supabase CLI; aplicación por Dashboard documentada en Git. No volver a ejecutar CREATE/ADD.
+
+UI habilitada con enabled:true. QA CUA sobre frontend real y fixtures sin conexiones externas: captura/guardado sintético operativo y detalle cliente en escritorio y móvil 390×844 (ancho efectivo 355, scrollWidth 341). Se corrigió el fieldset que estiraba el botón de guardar. Pruebas finales 83/83 Node y 9/9 PostgreSQL aislado. No se insertaron ni modificaron entregas reales para probar. Lectura autenticada con registros reales no acreditada. Advisor observado: 0 errores, 18 advertencias y 5 sugerencias; no equivale a certificación global de seguridad.
+
+El documento siguiente conserva la propuesta histórica y sus límites; sus menciones a pendiente/deshabilitado describen el estado anterior a esta activación. La edición de carga histórica, importación, mapas y solicitudes no se habilitan aquí.
+
+---
 # Origen y carga: preparación, NO activado
 
 Base productiva 308e84bc05927ba866f727f161255b35b4f8c246. El usuario autorizó desarrollar captura y presentación; esta preparación no aplica SQL remoto ni amplía acceso productivo. No se publica un despliegue con marcadores vacíos. `IncargoCargo.enabled` permanece false en el archivo servido.
