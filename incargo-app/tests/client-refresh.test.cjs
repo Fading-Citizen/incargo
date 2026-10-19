@@ -13,6 +13,7 @@ function harness(){
   append(...children){this.children.push(...children);}
   replaceChildren(...children){this.children=children;}
   querySelector(){return this.button??=new Element();}
+  focus(){this.focused=true;}
   reset(){}
   setAttribute(){}
   removeAttribute(){}
@@ -134,4 +135,42 @@ test('client Spanish copy renders milestone and expired-session states',async()=
  h.setDetail(()=>h.response({},403));await h.detail();
  assert.equal(h.get('client-workspace').hidden,true);
  assert.equal(h.get('notice').textContent,'Tu sesión terminó o ya no tienes acceso. Ingresa nuevamente.');
+});
+
+
+test('local filters intersect reference and status, clear restores loaded rows without requests',async()=>{
+ const h=harness();h.setRows([row(1),{...row(2),status:'delivered'}]);await h.login();const calls=h.calls();
+ h.get('client-search').value='prueba';h.get('client-status').value='delivered';h.get('client-search').oninput();
+ assert.equal(h.count(),1);assert.equal(h.get('filter-count').textContent,'1 de 2 envíos cargados');
+ h.get('client-search').value='absent';h.get('client-search').oninput();assert.equal(h.count(),0);assert.match(h.get('filter-count').textContent,/No hay coincidencias/);
+ h.get('clear-client-filters').onclick();assert.equal(h.count(),2);assert.equal(h.calls(),calls);assert(h.get('client-search').focused);
+});
+test('filters survive refresh, pagination and error retry without hiding pending/error messages',async()=>{
+ const h=harness();h.setRows(Array.from({length:50},(_,i)=>row(i)));await h.login();
+ h.get('client-search').value='PRUEBA-99';h.get('client-search').oninput();assert.equal(h.count(),0);
+ h.setRows([row(99)]);await h.get('more').onclick();assert.equal(h.count(),1);assert.match(h.get('filter-count').textContent,/1 de 51/);
+ h.setList(()=>h.response({},500));await h.refresh();const error=h.get('list-status').textContent;
+ h.get('clear-client-filters').onclick();assert.equal(h.get('list-status').textContent,error);assert.equal(h.get('filter-count').textContent,'');
+ h.setList(null);h.setRows([]);await h.get('more').onclick();assert.equal(h.count(),0);assert.match(h.get('list-status').textContent,/Aún no hay/);
+});
+test('close and Escape invalidate late milestone responses and restore the opener focus',async()=>{
+ for(const status of [200,500,401]){
+ const h=harness();h.setRows([row(1)]);await h.login();const opener=h.get('deliveries').children[0].children.at(-1);let release;
+ h.setDetail(()=>new Promise(resolve=>release=resolve));const pending=h.detail();await tick();assert(h.get('detail-title').focused);
+ h.get('close-detail').onclick();assert(opener.focused);assert.equal(h.get('detail').hidden,true);
+ release(h.response(status===200?[{event_type:'delivered',occurred_at:'2026-10-16'}]:{},status));await pending;
+ assert.equal(h.get('detail').hidden,true);assert.equal(h.get('milestones').children.length,0);assert.equal(h.get('client-workspace').hidden,false);
+ h.setDetail(null);await h.detail();let prevented=false;h.get('detail').onkeydown({key:'Escape',preventDefault(){prevented=true},stopPropagation(){}});assert(prevented);assert.equal(h.get('detail').hidden,true);
+ }
+});
+test('filtering closes details and late results cannot appear under a different filtered delivery',async()=>{
+ const h=harness();h.setRows([row(1),row(2)]);await h.login();let release;h.setDetail(()=>new Promise(resolve=>release=resolve));const pending=h.detail();await tick();
+ h.get('client-search').value='PRUEBA-2';h.get('client-search').oninput();release(h.response([{event_type:'delivered',occurred_at:'2026-10-16'}]));await pending;
+ assert.equal(h.count(),1);assert.equal(h.get('detail').hidden,true);assert.equal(h.get('milestones').children.length,0);
+ h.get('logout').onclick();assert.equal(h.get('client-search').value,'');assert.equal(h.get('client-status').value,'');assert.equal(h.get('filter-count').textContent,'');
+});
+
+test('closing after the opener was replaced returns focus to the client search',async()=>{
+ const h=harness();h.setRows([row(1)]);await h.login();const opener=h.get('deliveries').children[0].children.at(-1);
+ await h.detail();opener.isConnected=false;h.get('close-detail').onclick();assert(h.get('client-search').focused);assert.equal(h.get('detail').hidden,true);
 });

@@ -8,3 +8,6 @@
 .delivery-context{overflow-wrap:anywhere;color:#425f70;font-size:.9rem;line-height:1.5}.delivery-context p{margin:.35rem 0}.grid>*,.item{min-width:0}.item{overflow-wrap:anywhere}
 
 .departure-action{display:block;margin:.75rem 0 .25rem}
+
+/* Client filters use only the currently loaded authorized rows. */
+.client-filters{display:flex;align-items:end;gap:16px;flex-wrap:wrap;margin-top:24px}.client-filters label{display:grid;gap:8px;flex:1 1 220px}.client-filters input,.client-filters select{width:100%;box-sizing:border-box}.client-filters button{margin:0}#detail{margin-top:24px}#detail-title:focus{outline:2px solid #b28b28;outline-offset:4px}@media(max-width:600px){.client-filters{display:grid;grid-template-columns:minmax(0,1fr)}.client-filters button{width:100%}}

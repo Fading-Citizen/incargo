@@ -5,6 +5,7 @@
   const milestones={created:'Recibido',in_transit:'En ruta',exception:'Novedad',delivered:'Entregada'};
   let retained,expiryTimer;let config,session,accountId=null,items=[],cursor=null,generation=0,selection=0,loading=false;
   function message(text,error=false){$('notice').textContent=text;$('notice').className=text?(error?'error':'success'):'';}
+  let detailTrigger=null;
   let authView='login',authRequest=0;
   const authCopy={login:['Ingresa a Mis envíos','Usa el correo y la contraseña de tu cuenta de cliente.'],register:['Crea tu cuenta','Después de verificar tu correo, Incargo deberá vincularte a una cuenta comercial.'],recovery:['Recupera tu contraseña','Te enviaremos un enlace para establecer una contraseña nueva.']};
   function view(name){retained?.clear();authView=name;authRequest++;generation++;for(const mode of Object.keys(authCopy))$(mode+'-form').hidden=mode!==name;document.querySelector('.auth-tabs').hidden=name==='recovery';document.querySelectorAll('[data-auth-view]').forEach(button=>{const active=button.dataset.authView===name;button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');});$('auth-title').textContent=authCopy[name][0];$('auth-description').textContent=authCopy[name][1];message('');}
@@ -14,7 +15,7 @@
   async function settings(){if(!config){const response=await fetch('/api/incargo-config',{cache:'no-store'});if(!response.ok)throw Error('El acceso no está disponible. Inténtalo más tarde.');config=await response.json();if(!config.url||!config.publishableKey)throw Error('El acceso no está disponible. Inténtalo más tarde.');}return config;}
   async function authPost(path,body){await settings();return fetch(config.url+'/auth/v1/'+path,{method:'POST',headers:{apikey:config.publishableKey,'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'});}
   function authFailure(response,defaultText){if(response.status===429)return 'Demasiados intentos. Espera un momento y vuelve a probar.';return defaultText;}
-  function clear(){retained?.clear();clearTimeout(expiryTimer);generation++;selection++;session=null;accountId=null;items=[];cursor=null;loading=false;$('deliveries').replaceChildren();$('milestones').replaceChildren();$('detail').hidden=true;$('client-workspace').hidden=true;$('login').hidden=false;$('account-name').textContent='';$('list-status').textContent='';$('more').hidden=true;$('more').disabled=false;$('refresh').disabled=false;}
+  function clear(){ $('client-search').value='';$('client-status').value='';$('filter-count').textContent='';detailTrigger=null;retained?.clear();clearTimeout(expiryTimer);generation++;selection++;session=null;accountId=null;items=[];cursor=null;loading=false;$('deliveries').replaceChildren();$('milestones').replaceChildren();$('detail').hidden=true;$('client-workspace').hidden=true;$('login').hidden=false;$('account-name').textContent='';$('list-status').textContent='';$('more').hidden=true;$('more').disabled=false;$('refresh').disabled=false;}
   const ticket=()=>({generation,session,accountId});
   const current=t=>{if(t.generation!==generation||t.session!==session||t.accountId!==accountId)return false;if(session&&session.expires_at*1000<=Date.now()){clear();message('Tu sesión terminó. Ingresa nuevamente.',true);return false;}return true;};
   function retain(){return retained??=IncargoSession.create({context:'client',config});}
@@ -33,8 +34,11 @@
   }
   function showList(){
     const area=$('deliveries');area.replaceChildren();
-    for(const row of items){const card=document.createElement('article');card.className='card';const title=document.createElement('h2');title.textContent=row.reference||'Sin remesa';const status=document.createElement('p');status.textContent='Estado: '+(states[row.status]||'No disponible');const date=document.createElement('p');date.className='muted';date.textContent='Creado: '+new Date(row.created_at).toLocaleDateString('es-CO')+(row.last_event_at?' · Último hito: '+new Date(row.last_event_at).toLocaleDateString('es-CO'):'');const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent='Ver hitos';button.onclick=()=>showDetail(row.delivery_id);card.append(title,status,date,button);area.append(card);}
-    $('list-status').textContent=items.length?'':'Aún no hay envíos vinculados a tu cuenta.';
+    const query=($('client-search').value||'').trim().toLocaleLowerCase('es'),status=$('client-status').value||'';
+    const filtered=items.filter(row=>(!status||row.status===status)&&(!query||(row.reference||'').toLocaleLowerCase('es').includes(query)));
+    $('filter-count').textContent=items.length?filtered.length+' de '+items.length+' envíos cargados'+(!filtered.length?' · No hay coincidencias.':''):'';
+    for(const row of filtered){const card=document.createElement('article');card.className='card';const title=document.createElement('h2');title.textContent=row.reference||'Sin remesa';const status=document.createElement('p');status.textContent='Estado: '+(states[row.status]||'No disponible');const date=document.createElement('p');date.className='muted';date.textContent='Creado: '+new Date(row.created_at).toLocaleDateString('es-CO')+(row.last_event_at?' · Último hito: '+new Date(row.last_event_at).toLocaleDateString('es-CO'):'');const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent='Ver hitos';button.onclick=()=>showDetail(row.delivery_id,button);card.append(title,status,date,button);area.append(card);}
+    if(!loading)$('list-status').textContent=items.length?'':'Aún no hay envíos vinculados a tu cuenta.';
   }
   async function revalidate(active){
     const identity=await rpc('incargo_client_identity',{},active.session);
@@ -50,19 +54,19 @@
       const page=await rpc('incargo_client_my_deliveries',cursor?{p_before_created_at:cursor.created_at,p_before_id:cursor.delivery_id}:{},active.session);
       if(!current(active))return;
       if(!Array.isArray(page))throw Error('No pudimos consultar tus envíos. Inténtalo más tarde.');
-      items.push(...page);cursor=page.length===50?page.at(-1):null;button.hidden=!cursor;showList();button.textContent='Cargar más';
+      items.push(...page);cursor=page.length===50?page.at(-1):null;button.hidden=!cursor;showList();$('list-status').textContent=items.length?'':'Aún no hay envíos vinculados a tu cuenta.';button.textContent='Cargar más';
     }catch(error){if(!current(active))return;if(/sesión terminó/.test(error.message)){clear();message(error.message,true);}else{$('list-status').textContent=error.message;button.textContent='Reintentar';button.hidden=false;}}
     finally{if(current(active)){loading=false;button.disabled=false;$('refresh').disabled=false;}}
   }
   async function refreshDeliveries(){
     if(!session||loading)return;
-    generation++;selection++;items=[];cursor=null;
+    generation++;closeDetail(false);items=[];cursor=null;$('filter-count').textContent='';
     $('deliveries').replaceChildren();$('milestones').replaceChildren();$('detail').hidden=true;$('more').hidden=true;
     await loadMore();
   }
-  async function showDetail(id){
+  async function showDetail(id,trigger){
     if(!session)return;
-    const active=ticket(),selected=++selection;$('detail').hidden=false;$('milestones').replaceChildren();$('detail-status').textContent='Cargando hitos.';
+    detailTrigger=trigger;const active=ticket(),selected=++selection;$('detail').hidden=false;$('detail-title').focus?.();$('milestones').replaceChildren();$('detail-status').textContent='Cargando hitos.';
     try{
       if(!await revalidate(active))return;
       const events=await rpc('incargo_client_delivery_milestones',{p_delivery:id},active.session);
@@ -71,6 +75,15 @@
       for(const event of events){const li=document.createElement('li');li.textContent=(milestones[event.event_type]||'Actualización')+' · '+new Date(event.occurred_at).toLocaleString('es-CO');$('milestones').append(li);}
     }catch(error){if(!current(active)||selected!==selection)return;if(/sesión terminó/.test(error.message)){clear();message(error.message,true);}else $('detail-status').textContent=error.message;}
   }
+  function closeDetail(restoreFocus=true){
+    selection++;$('detail').hidden=true;$('milestones').replaceChildren();$('detail-status').textContent='';
+    if(restoreFocus)(detailTrigger?.isConnected===false?$('client-search'):detailTrigger)?.focus?.();detailTrigger=null;
+  }
+  function applyFilters(){const listMessage=$('list-status').textContent;closeDetail(false);showList();$('list-status').textContent=listMessage;}
+  $('client-search').oninput=applyFilters;$('client-status').onchange=applyFilters;
+  $('clear-client-filters').onclick=()=>{$('client-search').value='';$('client-status').value='';applyFilters();$('client-search').focus?.();};
+  $('close-detail').onclick=()=>closeDetail();
+  $('detail').onkeydown=event=>{if(event.key==='Escape'&&!$('detail').hidden){event.preventDefault();event.stopPropagation();closeDetail();}};
   $('register-form').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget,button=form.querySelector('button'),data=new FormData(form),email=String(data.get('email')).trim(),password=String(data.get('password')),attempt=authRequest;if(password.length<12||password!==data.get('confirmation')){message('La contraseña debe tener al menos 12 caracteres y coincidir en ambos campos.',true);return;}button.disabled=true;button.textContent='Creando cuenta.';message('Creando cuenta.');try{const response=await authPost('signup?redirect_to='+encodeURIComponent(location.origin+'/activacion.html'),{email,password});if(attempt!==authRequest)return;if(!response.ok)throw Error(authFailure(response,'No pudimos crear la cuenta. Revisa los datos o inténtalo más tarde.'));form.reset();message('Revisa tu correo para verificar la cuenta. Después, solicita a Incargo que vincule tus envíos.');}catch(error){if(attempt===authRequest)message(error.message==='Failed to fetch'?'Sin conexión. Inténtalo de nuevo.':error.message,true);}finally{button.disabled=false;button.textContent='Crear cuenta';}};
   $('recovery-form').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget,button=form.querySelector('button'),email=String(new FormData(form).get('email')).trim(),attempt=authRequest;button.disabled=true;button.textContent='Enviando.';message('Enviando enlace.');try{const response=await authPost('recover?redirect_to='+encodeURIComponent(location.origin+'/activacion.html'),{email});if(attempt!==authRequest)return;if(!response.ok)throw Error(authFailure(response,'No pudimos enviar el enlace. Inténtalo más tarde.'));message('Si existe una cuenta para ese correo, recibirás un enlace de recuperación.');}catch(error){if(attempt===authRequest)message(error.message==='Failed to fetch'?'Sin conexión. Inténtalo de nuevo.':error.message,true);}finally{button.disabled=false;button.textContent='Enviar enlace de recuperación';}};
   $('login-form').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget,button=form.querySelector('.primary-action');clear();const attempt=generation;button.disabled=true;button.textContent='Ingresando.';message('Comprobando tu acceso.');try{
