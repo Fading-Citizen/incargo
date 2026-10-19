@@ -174,3 +174,31 @@ test('closing after the opener was replaced returns focus to the client search',
  const h=harness();h.setRows([row(1)]);await h.login();const opener=h.get('deliveries').children[0].children.at(-1);
  await h.detail();opener.isConnected=false;h.get('close-detail').onclick();assert(h.get('client-search').focused);assert.equal(h.get('detail').hidden,true);
 });
+
+const detailText=node=>[node.textContent,...node.children.map(detailText)].join(' ');
+test('shipment detail identifies the reference and uses only authorized fields, with Colombia dates',async()=>{
+ const h=harness();h.setRows([{...row(1),reference:'PRUEBA <img src=x>',status:'in_transit',destination_text:'PRIVATE DESTINATION',note:'PRIVATE NOTE',created_at:'2026-10-16T03:00:00Z'}]);await h.login();
+ h.setDetail(()=>h.response([{event_type:'in_transit',occurred_at:'2026-10-16T15:00:00Z',note:'PRIVATE NOTE'},{event_type:'created',occurred_at:'2026-10-16T03:00:00Z'}]));await h.detail();
+ assert.equal(h.get('detail-reference').textContent,'PRUEBA <img src=x>');assert.equal(h.get('detail-state').textContent,'En ruta');
+ assert.match(detailText(h.get('detail-summary')),/15.*oct.*2026.*22:00/);
+ assert.match(detailText(h.get('milestones').children[0]),/Registro del envío.*no acredita recepción física/);
+ assert.match(h.get('detail-freshness').textContent,/La hora de consulta no es la hora del último hito/);
+ assert.doesNotMatch(detailText(h.get('milestones'))+detailText(h.get('detail-summary')),/PRIVATE/);
+});
+test('malformed history and server error offer detail-only retry without duplicating events',async()=>{
+ for(const failure of [{unexpected:true},[null]]){const h=harness();h.setRows([row(1)]);await h.login();h.setDetail(()=>h.response(failure));await h.detail();
+ assert.equal(h.get('detail-retry').hidden,false);assert.equal(h.get('milestones').children.length,0);const lists=h.calls();
+ h.setDetail(()=>h.response([{event_type:'in_transit',occurred_at:'invalid'}]));await h.get('detail-retry').onclick();
+ assert.equal(h.calls(),lists);assert.equal(h.get('milestones').children.length,1);assert.match(h.get('milestones').children[0].textContent,/Fecha no disponible/);assert.equal(h.get('detail-retry').hidden,true);
+ }
+ const h=harness();h.setRows([row(1)]);await h.login();h.setDetail(()=>h.response({},500));await h.detail();assert.equal(h.get('detail-retry').hidden,false);
+ h.get('close-detail').onclick();await h.get('detail-retry').onclick();assert.equal(h.get('detail-reference').textContent,'');assert.equal(h.get('detail').hidden,true);
+});
+test('late history of A cannot overwrite B reference, timeline or retry state',async()=>{
+ for(const status of [200,500,401]){const h=harness();h.setRows([row('A'),{...row('B'),status:'delivered'}]);await h.login();let release;
+ h.setDetail(()=>new Promise(r=>release=r));const first=h.detail();await tick();h.setDetail(()=>h.response([{event_type:'delivered',occurred_at:'2026-10-19T15:00:00Z'}]));
+ await h.get('deliveries').children[1].children.at(-1).onclick();release(h.response([],status));await first;
+ assert.equal(h.get('detail-reference').textContent,'PRUEBA-B');assert.equal(h.get('detail-state').textContent,'Entregada');assert.equal(h.get('milestones').children.length,1);assert.equal(h.get('detail-retry').hidden,true);
+ h.get('logout').onclick();assert.equal(h.get('detail-reference').textContent,'');assert.equal(h.get('detail-summary').children.length,0);
+ }
+});

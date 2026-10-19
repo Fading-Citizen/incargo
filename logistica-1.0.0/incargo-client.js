@@ -2,10 +2,10 @@
   'use strict';
   const $=id=>document.getElementById(id);
   const states={pending:'Pendiente',in_transit:'En ruta',exception:'Novedad',delivered:'Entregada'};
-  const milestones={created:'Recibido',in_transit:'En ruta',exception:'Novedad',delivered:'Entregada'};
+  const milestones={created:'Registro del envío',in_transit:'En ruta',exception:'Novedad',delivered:'Entregada'};
   let retained,expiryTimer;let config,session,accountId=null,items=[],cursor=null,generation=0,selection=0,loading=false;
   function message(text,error=false){$('notice').textContent=text;$('notice').className=text?(error?'error':'success'):'';}
-  let detailTrigger=null;
+  let detailTrigger=null,detailId=null;
   let authView='login',authRequest=0;
   const authCopy={login:['Ingresa a Mis envíos','Usa el correo y la contraseña de tu cuenta de cliente.'],register:['Crea tu cuenta','Después de verificar tu correo, Incargo deberá vincularte a una cuenta comercial.'],recovery:['Recupera tu contraseña','Te enviaremos un enlace para establecer una contraseña nueva.']};
   function view(name){retained?.clear();authView=name;authRequest++;generation++;for(const mode of Object.keys(authCopy))$(mode+'-form').hidden=mode!==name;document.querySelector('.auth-tabs').hidden=name==='recovery';document.querySelectorAll('[data-auth-view]').forEach(button=>{const active=button.dataset.authView===name;button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');});$('auth-title').textContent=authCopy[name][0];$('auth-description').textContent=authCopy[name][1];message('');}
@@ -15,7 +15,7 @@
   async function settings(){if(!config){const response=await fetch('/api/incargo-config',{cache:'no-store'});if(!response.ok)throw Error('El acceso no está disponible. Inténtalo más tarde.');config=await response.json();if(!config.url||!config.publishableKey)throw Error('El acceso no está disponible. Inténtalo más tarde.');}return config;}
   async function authPost(path,body){await settings();return fetch(config.url+'/auth/v1/'+path,{method:'POST',headers:{apikey:config.publishableKey,'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'});}
   function authFailure(response,defaultText){if(response.status===429)return 'Demasiados intentos. Espera un momento y vuelve a probar.';return defaultText;}
-  function clear(){ $('client-search').value='';$('client-status').value='';$('filter-count').textContent='';detailTrigger=null;retained?.clear();clearTimeout(expiryTimer);generation++;selection++;session=null;accountId=null;items=[];cursor=null;loading=false;$('deliveries').replaceChildren();$('milestones').replaceChildren();$('detail').hidden=true;$('client-workspace').hidden=true;$('login').hidden=false;$('account-name').textContent='';$('list-status').textContent='';$('more').hidden=true;$('more').disabled=false;$('refresh').disabled=false;}
+  function clear(){ resetDetail(); $('client-search').value='';$('client-status').value='';$('filter-count').textContent='';detailTrigger=null;retained?.clear();clearTimeout(expiryTimer);generation++;selection++;session=null;accountId=null;items=[];cursor=null;loading=false;$('deliveries').replaceChildren();$('milestones').replaceChildren();$('detail').hidden=true;$('client-workspace').hidden=true;$('login').hidden=false;$('account-name').textContent='';$('list-status').textContent='';$('more').hidden=true;$('more').disabled=false;$('refresh').disabled=false;}
   const ticket=()=>({generation,session,accountId});
   const current=t=>{if(t.generation!==generation||t.session!==session||t.accountId!==accountId)return false;if(session&&session.expires_at*1000<=Date.now()){clear();message('Tu sesión terminó. Ingresa nuevamente.',true);return false;}return true;};
   function retain(){return retained??=IncargoSession.create({context:'client',config});}
@@ -37,7 +37,7 @@
     const query=($('client-search').value||'').trim().toLocaleLowerCase('es'),status=$('client-status').value||'';
     const filtered=items.filter(row=>(!status||row.status===status)&&(!query||(row.reference||'').toLocaleLowerCase('es').includes(query)));
     $('filter-count').textContent=items.length?filtered.length+' de '+items.length+' envíos cargados'+(!filtered.length?' · No hay coincidencias.':''):'';
-    for(const row of filtered){const card=document.createElement('article');card.className='card';const title=document.createElement('h2');title.textContent=row.reference||'Sin remesa';const status=document.createElement('p');status.textContent='Estado: '+(states[row.status]||'No disponible');const date=document.createElement('p');date.className='muted';date.textContent='Creado: '+new Date(row.created_at).toLocaleDateString('es-CO')+(row.last_event_at?' · Último hito: '+new Date(row.last_event_at).toLocaleDateString('es-CO'):'');const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent='Ver hitos';button.onclick=()=>showDetail(row.delivery_id,button);card.append(title,status,date,button);area.append(card);}
+    for(const row of filtered){const card=document.createElement('article');card.className='card';const title=document.createElement('h2');title.textContent=row.reference||'Sin remesa';const status=document.createElement('p');status.textContent='Estado: '+(states[row.status]||'No disponible');const date=document.createElement('p');date.className='muted';date.textContent='Registro: '+formattedDate(row.created_at)+(row.last_event_at?' · Último hito: '+formattedDate(row.last_event_at):'');const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent='Ver hitos';button.onclick=()=>showDetail(row.delivery_id,button);card.append(title,status,date,button);area.append(card);}
     if(!loading)$('list-status').textContent=items.length?'':'Aún no hay envíos vinculados a tu cuenta.';
   }
   async function revalidate(active){
@@ -64,21 +64,46 @@
     $('deliveries').replaceChildren();$('milestones').replaceChildren();$('detail').hidden=true;$('more').hidden=true;
     await loadMore();
   }
+  const stateDescriptions={pending:'El envío está registrado como pendiente. Aún no consta una salida en este estado.',in_transit:'Operaciones registró la salida. Este estado no indica una posición en tiempo real.',exception:'Hay una novedad registrada. Consulta a Incargo para conocer las indicaciones de tu envío.',delivered:'La entrega figura como completada en el sistema.'};
+  const eventDescriptions={created:'Registro del envío en el sistema; no acredita recepción física.',in_transit:'Salida registrada por operaciones.',exception:'Se registró una novedad en el envío.',delivered:'Confirmación de entrega registrada.'};
+  function formattedDate(value){
+    if(!value||!Number.isFinite(new Date(value).getTime()))return 'Fecha no disponible';
+    return new Date(value).toLocaleString('es-CO',{timeZone:'America/Bogota',year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+  }
+  function field(label,value){const box=document.createElement('div'),term=document.createElement('dt'),description=document.createElement('dd');term.textContent=label;description.textContent=value;box.append(term,description);return box;}
+  function resetDetail(){
+    detailId=null;$('detail-summary').replaceChildren();$('detail-reference').textContent='';$('detail-state').textContent='';$('detail-explanation').textContent='';$('detail-freshness').textContent='';$('detail-retry').hidden=true;
+  }
   async function showDetail(id,trigger){
     if(!session)return;
-    detailTrigger=trigger;const active=ticket(),selected=++selection;$('detail').hidden=false;$('detail-title').focus?.();$('milestones').replaceChildren();$('detail-status').textContent='Cargando hitos.';
+    const row=items.find(item=>item.delivery_id===id);if(!row)return;
+    detailTrigger=trigger;detailId=id;const active=ticket(),selected=++selection;
+    $('detail').hidden=false;$('detail-reference').textContent=row.reference||'Sin remesa';
+    $('detail-state').textContent=states[row.status]||'Estado no disponible';
+    $('detail-explanation').textContent=stateDescriptions[row.status]||'No hay una descripción disponible para este estado.';
+    $('detail-summary').replaceChildren(field('Registrado en el sistema',formattedDate(row.created_at)),field('Último hito informado en la lista',row.last_event_at?formattedDate(row.last_event_at):'Sin hitos informados'));
+    $('detail-freshness').textContent='Estado de la última consulta de envíos. Usa Actualizar envíos para comprobar cambios.';
+    $('detail-retry').hidden=true;$('detail-title').focus?.();$('detail').scrollIntoView?.({block:'start'});$('milestones').replaceChildren();$('detail-status').textContent='Cargando hitos.';
     try{
       if(!await revalidate(active))return;
       const events=await rpc('incargo_client_delivery_milestones',{p_delivery:id},active.session);
       if(!current(active)||selected!==selection)return;
-      $('milestones').replaceChildren();$('detail-status').textContent=events.length?'':'Todavía no hay hitos registrados.';
-      for(const event of events){const li=document.createElement('li');li.textContent=(milestones[event.event_type]||'Actualización')+' · '+new Date(event.occurred_at).toLocaleString('es-CO');$('milestones').append(li);}
-    }catch(error){if(!current(active)||selected!==selection)return;if(/sesión terminó/.test(error.message)){clear();message(error.message,true);}else $('detail-status').textContent=error.message;}
+      if(!Array.isArray(events)||events.some(event=>!event||typeof event.event_type!=='string'))throw Error('No pudimos cargar el historial. Reintenta la consulta.');
+      $('milestones').replaceChildren();$('detail-status').textContent=events.length?events.length+' '+(events.length===1?'hito registrado.':'hitos registrados.'):'Todavía no hay hitos registrados.';
+      const ordered=[...events].sort((a,b)=>(Date.parse(a.occurred_at)||0)-(Date.parse(b.occurred_at)||0));
+      const latest=ordered.at(-1);$('detail-summary').replaceChildren(field('Registro del envío',formattedDate(row.created_at)),field('Último hito del historial',latest?formattedDate(latest.occurred_at):'Sin hitos registrados'));
+      for(const event of ordered){
+        const li=document.createElement('li');li.textContent=(milestones[event.event_type]||'Actualización')+' · '+formattedDate(event.occurred_at);
+        const description=document.createElement('p');description.textContent=eventDescriptions[event.event_type]||'Evento informado por el sistema.';li.append(description);$('milestones').append(li);
+      }
+      $('detail-freshness').textContent='Historial consultado: '+formattedDate(new Date().toISOString())+' (hora de Colombia). La hora de consulta no es la hora del último hito.';
+    }catch(error){if(!current(active)||selected!==selection)return;if(/sesión terminó/.test(error.message)){clear();message(error.message,true);}else{$('detail-status').textContent=error.message;$('detail-retry').hidden=false;}}
   }
   function closeDetail(restoreFocus=true){
-    selection++;$('detail').hidden=true;$('milestones').replaceChildren();$('detail-status').textContent='';
+    selection++;$('detail').hidden=true;$('milestones').replaceChildren();$('detail-status').textContent='';resetDetail();
     if(restoreFocus)(detailTrigger?.isConnected===false?$('client-search'):detailTrigger)?.focus?.();detailTrigger=null;
   }
+  $('detail-retry').onclick=()=>detailId?showDetail(detailId,detailTrigger):undefined;
   function applyFilters(){const listMessage=$('list-status').textContent;closeDetail(false);showList();$('list-status').textContent=listMessage;}
   $('client-search').oninput=applyFilters;$('client-status').onchange=applyFilters;
   $('clear-client-filters').onclick=()=>{$('client-search').value='';$('client-status').value='';applyFilters();$('client-search').focus?.();};
