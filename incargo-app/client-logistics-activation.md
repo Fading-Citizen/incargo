@@ -1,20 +1,25 @@
-# Datos logísticos cliente: activación pendiente
+# Datos logísticos cliente: activado el 19/10/2026
 
-Base 508f2d7e9dcc322e5605536cfec9ceb7cc888df8. Lenu autorizó mostrar al cliente de cada envío origen/destino, ruta, fecha programada y carga conforme se registren; confirmó que Incargo no tiene GPS. Esta autorización comercial no se interpreta como aprobación automática de nuevos permisos de ejecución. No se aplicó SQL remoto ni se modificó frontend en este lote.
+Lenu aprobó expresamente aplicar la consulta de destino, ruta y fecha programada para el cliente vinculado (respuesta «si apruebo», evidencia de conversación Sentinel_62710103b5a0819193ba310c47ee163c). Se aplicó exclusivamente el contrato revisado en dda1597cc00b4c6936ba8b4133239f405752e16e al proyecto Incargo gmjsqboyuvierfwruspv mediante el SQL Editor autenticado del Dashboard. No se crearon columnas, modificaron RLS/Auth/grants de tablas ni escribieron datos operativos.
 
-## Cambio concreto listo para aprobación
+## Aplicación y postflight
 
-Aplicar exclusivamente `client-logistics.proposal.sql` al proyecto Incargo gmjsqboyuvierfwruspv, tras verificar definiciones/esquema y ausencia de conflicto de nombres:
+- Preflight: funciones ausentes; columnas y tipos existentes compatibles; authenticated ya disponía de USAGE de incargo_private. Editor: https://supabase.com/dashboard/project/gmjsqboyuvierfwruspv/sql/f6b97072-3109-4ccb-b2a2-a9bb1b4298a9 .
+- Transacción aplicada: respuesta «Success. No rows returned». SQL conservado en `client-logistics-applied.sql`; la propuesta original se conserva como documento histórico, aunque su cabecera diga pendiente. No volver a ejecutar CREATE FUNCTION.
+- Editor usado para aplicación y después postflight: https://supabase.com/dashboard/project/gmjsqboyuvierfwruspv/sql/eb459070-8e69-4b91-b60b-425fa25220c9 . No se creó entrada en el historial de migraciones de Supabase CLI; esta es una aplicación por Dashboard documentada en Git.
+- Postflight confirmó ambas definiciones, STABLE y search_path vacío: helper privado SECURITY DEFINER y envoltorio público SECURITY INVOKER. ACL de ambas: `{postgres=X/postgres,authenticated=X/postgres}`. Sin EXECUTE de PUBLIC, anon o service_role.
+- El helper une auth.uid → membresía comercial → vínculo explícito de entrega → viaje y filtra p_delivery. Devuelve exclusivamente delivery_id, destination_text, route_label y scheduled_date. El rol operativo por sí solo no concede acceso comercial.
+- Security Advisor consultado y refrescado: 0 errores, 18 advertencias, 5 sugerencias. La lista de advertencias mostrada corresponde a funciones existentes (incluida rls_auto_enable); no aparece la nueva RPC. No se modificaron otros permisos ni se declara el proyecto libre de advertencias.
 
-- Crear `incargo_private.client_delivery_logistics(uuid)` SECURITY DEFINER, STABLE, search_path vacío, que une el usuario de auth.uid con su membresía comercial, vínculo explícito de entrega y viaje.
-- Crear `public.incargo_client_delivery_logistics(uuid)` SECURITY INVOKER como envoltorio.
-- Revocar EXECUTE heredado a PUBLIC, anon, authenticated y service_role en esas dos funciones; conceder EXECUTE exclusivamente a authenticated (además del propietario). El helper aplica el mismo alcance si se invoca directamente.
-- Retornar únicamente delivery_id, destination_text, route_label y scheduled_date. Ningún operador obtiene datos de otra cuenta mediante este RPC por tener rol operations: debe tener el vínculo comercial correspondiente.
-- No crear tablas/columnas, cambiar RLS, grants de tablas, Auth, funciones existentes ni enlaces comerciales. No escribir registros ni notificar.
+## Interfaz y comprobaciones
 
-**Riesgo nuevo exacto:** los usuarios ya vinculados podrán leer el destino textual y la etiqueta/fecha del viaje que antes solo veía operaciones. Destinos pueden contener direcciones completas y las etiquetas de ruta pueden contener texto libre: revisar la calidad de esos campos antes de habilitarlos. La prueba SQL no acredita el contenido de los registros remotos. El script es una propuesta revisable, no una migración registrada ni aplicada; si se aprueba, generar/registrar la migración por el procedimiento acordado, conservar SQL/hash y ejecutar postflight de ACL/definiciones.
+El detalle cliente consulta el nuevo RPC tras revalidar identidad; presenta destino, ruta y **Fecha programada del viaje**, aclarando que no es ETA. Ausencia, null y error tienen mensajes diferentes. Los datos se limpian al cerrar/cambiar el detalle, filtrar o cambiar/cerrar sesión; una respuesta tardía no puede repoblar otra selección. Reintentar vuelve a consultar sin escribir. No hay fallback a tablas operativas.
 
-Tras aprobar y verificar la activación: conectar el detalle cliente a este RPC, renderizar solo sus cuatro columnas, volver a validar identidad y selección ante respuestas tardías, mostrar ausencia/error por separado, y etiquetar scheduled_date como **Fecha programada del viaje**, nunca ETA. Si no devuelve fila, limpiar información logística; no consultar tablas operativas como fallback. La ficha e historial publicados en 508f2d7 siguen disponibles mientras tanto.
+- 63/63 pruebas Node: client-refresh, session-integration y client-encoding. Incluyen contenido renderizado como texto, respuestas inválidas, fecha sin desplazamiento de día, null, vacío, reintento y respuestas tardías 200/500/401 ante cierre, filtro, selección y logout.
+- 7/7 PostgreSQL aislado del contrato (prueba previa a la activación, sin cambios al SQL): cuentas A/B, ID ajeno, helper directo, roles sin vínculo, doble rol, revocación/reasignación, ACL y denegación de lectura directa. No son pruebas multiusuario remotas.
+- QA CUA con frontend real y fixtures locales, conexión externa bloqueada: escritorio y viewport móvil solicitado 390×844 (ancho efectivo 355, scrollWidth 341), campos legibles sin desbordamiento; error con reintento y ausencia comprobados. Fixtures sintéticas, no operaciones reales.
+- Pestaña real https://www.incargo.co/cliente muestra formulario de ingreso. Falta lectura autenticada de estos tres campos en producción; no se creó usuario, no se extrajo token ni se cerró sesión por rutina.
+- No hay build, tipos o lint configurados para esta web estática. El runner Playwright histórico no se cuenta como aprobado: su dependencia no está instalada; la QA visual se realizó con CUA.
 
 ## Origen y carga no existentes
 
@@ -28,8 +33,8 @@ Transferencia a aprobar: geocodificación enviaría el texto de origen/destino a
 
 Precio consultado 19/10/2026: MapTiler publica Flex desde USD 30/mes más tráfico adicional; Free se presenta para pruebas/PoC/personal/no comercial, por lo que no se presupone adecuado para operación comercial. Falta volumen mensual para calcular coste total y límite aprobado. Fuentes: https://www.maptiler.com/cloud/pricing/ y https://docs.maptiler.com/cloud/api/geocoding/ . Alternativa de cartografía propia requiere infraestructura, almacenamiento/licencia y operación presupuestados; tampoco se activa por inferencia.
 
-## Evidencia aislada
+## Evidencia aislada anterior a la activación
 
-`INCARGO_PG_RUNTIME=<runtime local> node --test incargo-app/tests/client-logistics-postgres.test.cjs`: **7/7**, seis casos más suite principal, PostgreSQL desechable en loopback. Prueba A/B y acceso por ID ajeno, helper directo, usuario sin vínculo, ID desconocido/nulo, identidad nula, rol driver/operations sin vínculo, doble rol, destino null, revocación/reasignación y ACL (incluido EXECUTE por defecto de service_role), además de ausencia de lectura directa de entregas por cliente. El servidor local se detiene al terminar. No se consultó Supabase remoto.
+`INCARGO_PG_RUNTIME=<runtime local> node --test incargo-app/tests/client-logistics-postgres.test.cjs`: **7/7**, seis casos más suite principal, PostgreSQL desechable en loopback. Prueba A/B y acceso por ID ajeno, helper directo, usuario sin vínculo, ID desconocido/nulo, identidad nula, rol driver/operations sin vínculo, doble rol, destino null, revocación/reasignación y ACL (incluido EXECUTE por defecto de service_role), además de ausencia de lectura directa de entregas por cliente. El servidor local se detiene al terminar. En aquel lote previo no se consultó Supabase remoto; la activación y postflight posteriores constan arriba.
 
 La propuesta usa funciones con permisos acotados conforme a la documentación oficial: https://supabase.com/docs/guides/database/functions . El índice changelog.md no pudo recuperarse con el lector web (tipo text/markdown no soportado); no se actualizó ninguna dependencia ni API SDK.

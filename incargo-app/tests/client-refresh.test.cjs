@@ -19,7 +19,7 @@ function harness(){
   removeAttribute(){}
  }
  const get=id=>{if(!nodes.has(id))nodes.set(id,new Element());return nodes.get(id);};
- let rows=[],identity=[{account_id:'test-account',display_name:'PRUEBAS'}],identityHook=null,listHook=null,detailHook=null,calls=0,lastBody;
+ let rows=[],identity=[{account_id:'test-account',display_name:'PRUEBAS'}],identityHook=null,listHook=null,detailHook=null,logisticsHook=null,calls=0,lastBody;
  const response=(body,status=200)=>({ok:status<400,status,json:async()=>body});
  const retainedStorage=new Map();const context={setTimeout:()=>1,clearTimeout:()=>{},sessionStorage:{getItem:k=>retainedStorage.get(k)??null,setItem:(k,v)=>retainedStorage.set(k,v),removeItem:k=>retainedStorage.delete(k)},document:{getElementById:get,querySelector:()=>get('tabs'),querySelectorAll:()=>[],createElement:()=>new Element()},FormData:class {get(name){return name==='email'?'qa@example.invalid':'fixture';}},location:{origin:'https://example.invalid'},fetch:async(url,options={})=>{
   if(url==='/api/incargo-config')return response({url:'https://fixture.invalid',publishableKey:'fixture'});
@@ -27,11 +27,12 @@ function harness(){
   if(url.endsWith('/auth/v1/user'))return response({id:'fixture'});
   if(url.endsWith('/incargo_client_identity'))return identityHook?identityHook():response(identity);
   if(url.endsWith('/incargo_client_my_deliveries')){calls++;lastBody=JSON.parse(options.body);return listHook?listHook():response(rows);}
+  if(url.endsWith('/incargo_client_delivery_logistics'))return logisticsHook?logisticsHook(JSON.parse(options.body)):response([]);
   if(url.endsWith('/incargo_client_delivery_milestones'))return detailHook?detailHook():response([]);
   throw Error('Unexpected request '+url);
  }};
  vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(__dirname,'../../logistica-1.0.0/incargo-session.js'),'utf8'),context);vm.runInContext(source,context);
- return {get,setIdentityHook:v=>identityHook=v,setRows:v=>rows=v,setIdentity:v=>identity=v,setList:v=>listHook=v,setDetail:v=>detailHook=v,response,
+ return {get,setIdentityHook:v=>identityHook=v,setRows:v=>rows=v,setIdentity:v=>identity=v,setList:v=>listHook=v,setDetail:v=>detailHook=v,setLogistics:v=>logisticsHook=v,response,
  calls:()=>calls,lastBody:()=>lastBody,login:async()=>{await get('login-form').onsubmit({preventDefault(){},currentTarget:get('login-form')});await tick();},
  refresh:()=>get('refresh').onclick(),count:()=>get('deliveries').children.length,
  detail:()=>get('deliveries').children[0].children.at(-1).onclick()};
@@ -201,4 +202,30 @@ test('late history of A cannot overwrite B reference, timeline or retry state',a
  assert.equal(h.get('detail-reference').textContent,'PRUEBA-B');assert.equal(h.get('detail-state').textContent,'Entregada');assert.equal(h.get('milestones').children.length,1);assert.equal(h.get('detail-retry').hidden,true);
  h.get('logout').onclick();assert.equal(h.get('detail-reference').textContent,'');assert.equal(h.get('detail-summary').children.length,0);
  }
+});
+
+test('logistics shows only approved fields and preserves a date-only scheduled day',async()=>{
+ const h=harness();h.setRows([row(1)]);h.setLogistics(()=>h.response([{delivery_id:'1',destination_text:'Destino <img src=x>',route_label:'Ruta PRUEBA',scheduled_date:'2026-10-21',vehicle_plate:'PRIVATE',receiver_name:'PRIVATE',note:'PRIVATE'}]));await h.login();await h.detail();
+ const text=detailText(h.get('logistics-fields'));assert.match(text,/Destino <img src=x>/);assert.match(text,/21 de octubre de 2026/);assert.match(text,/Fecha programada del viaje/);assert.doesNotMatch(text,/PRIVATE/);assert.match(h.get('logistics-status').textContent,/no es una fecha estimada/);
+});
+test('logistics empty, malformed, absent fields and errors remain distinct; retry recovers',async()=>{
+ const h=harness();h.setRows([row(1)]);await h.login();await h.detail();assert.match(h.get('logistics-status').textContent,/No hay datos logísticos/);
+ for(const payload of [[{delivery_id:'foreign',destination_text:'OTHER'}],{},[null]]){h.setLogistics(()=>h.response(payload));await h.detail();assert.equal(h.get('logistics-retry').hidden,false);assert.equal(h.get('logistics-fields').children.length,0);}
+ h.setLogistics(()=>h.response({},500));await h.detail();assert.match(h.get('logistics-status').textContent,/No pudimos consultar/);assert.equal(h.get('detail-status').textContent,'Todavía no hay hitos registrados.');
+ h.setLogistics(()=>h.response([{delivery_id:'1',destination_text:null,route_label:'',scheduled_date:'2026-02-31'}]));await h.get('logistics-retry').onclick();assert.equal(h.get('logistics-retry').hidden,true);assert.match(detailText(h.get('logistics-fields')),/Sin destino registrado.*Sin ruta registrada.*Sin fecha programada/);
+});
+for(const action of ['close','logout','switch','filter'])test('late logistics success/error cannot restore after '+action,async()=>{
+ for(const status of [200,500,401]){
+ const h=harness();h.setRows([row('A'),row('B')]);await h.login();let release;h.setLogistics(()=>new Promise(r=>release=r));const pending=h.detail();await tick();
+ if(action==='close')h.get('close-detail').onclick();
+ if(action==='logout')h.get('logout').onclick();
+ if(action==='filter'){h.get('client-search').value='B';h.get('client-search').oninput();}
+ if(action==='switch'){h.setLogistics(()=>h.response([{delivery_id:'B',destination_text:'Destino B',route_label:null,scheduled_date:null}]));await h.get('deliveries').children[1].children.at(-1).onclick();}
+ release(h.response([{delivery_id:'A',destination_text:'OLD A'}],status));await pending;
+ assert.doesNotMatch(detailText(h.get('logistics-fields')),/OLD A/);
+ if(action==='switch'){assert.match(detailText(h.get('logistics-fields')),/Destino B/);assert.equal(h.get('client-workspace').hidden,false);}else assert.equal(h.get('logistics-fields').children.length,0);
+ }
+});
+test('current logistics authorization error clears the entire customer view',async()=>{
+ const h=harness();h.setRows([row(1)]);h.setLogistics(()=>h.response({},401));await h.login();await h.detail();assert.equal(h.get('client-workspace').hidden,true);assert.equal(h.get('logistics-fields').children.length,0);assert.equal(h.get('detail-reference').textContent,'');
 });
