@@ -52,3 +52,17 @@ A delayed shipment identity response could start stale cargo requests after clos
 An incomplete config response was cached and could trigger a credential request to an invalid endpoint, preventing recovery without reload. Validate the URL and publishable-key strings before caching. The regression test failed before the fix and now passes for three malformed configurations, asserting no credential request and a successful login/submission retry without reload.
 
 Integrated validation: 90 functional tests passed (navigation, customer details, request portal/UI, sessions and isolated PostgreSQL). The separate legacy activation browser runner could not start because its Playwright dependency is unavailable. Supported CUA browser QA confirmed synthetic mobile login/submission, pending status, navigation to the customer list, detail rendering and closing/focus; no real requests or records were used. No Auth, permission, remote schema or provider change. Real authenticated end-to-end coverage remains unverified.
+
+## Activation runner coverage recovery (2026-10-20)
+
+No package.json or declared Playwright dependency exists in this checkout. The old runner also hardcodes /usr/bin/chromium and /tmp screenshots. No dependency was installed. Preserve that runner unchanged as tests/activation.browser.cjs (explicit browser run); tests/activation.test.cjs now uses the existing node:test + VM pattern with the real production script and root redirect script, fake DOM, and a strict synthetic fetch handler. It opens no server and makes no network requests.
+
+Targeted command: node --test incargo-app/tests/activation.test.cjs — 14/14 passed. Functional mapping from the legacy runner:
+- Root invite/recovery redirects preserve the fragment, then activation clears it; signup redirect is additionally covered.
+- Password mismatch makes no update; short password additionally covered; 422 keeps the form retryable; second update succeeds and resets/hides it.
+- Recovery/invite/signup token hashes send exact verification types and hashes; invite password update succeeds; signup hides the form and retains the real HTML customer destination.
+- Expired recovery/signup bearer responses hide the form and show link help.
+- Invite otp_expired, recovery server error and incomplete links clear the fragment and do not contact Auth.
+- Hash verification 403 otp_expired versus 503, configuration 503 and network failure preserve the distinction between invalid links and service outages.
+
+Boundary: this verifies script behavior and DOM state through fixtures. It does not verify browser navigation execution, native input constraints, actual layout/visibility, mobile screenshots or real Supabase authentication. Those browser-specific assertions remain in activation.browser.cjs and were not executed. No UI/product/Auth/DB change in this follow-up; no repeated full-suite run.

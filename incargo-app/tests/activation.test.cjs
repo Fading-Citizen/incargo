@@ -1,101 +1,58 @@
-const {chromium}=require('playwright');
+const {test}=require('node:test');
 const assert=require('node:assert/strict');
-const fs=require('node:fs');
-const http=require('node:http');
-const path=require('node:path');
-
-(async()=>{
-  const root=path.resolve(__dirname,'../../logistica-1.0.0');
-  const server=http.createServer((request,response)=>{
-    if(request.url==='/api/incargo-config'){response.setHeader('Content-Type','application/json');response.end(JSON.stringify({url:'https://mock.supabase.co',publishableKey:'publishable-test-only'}));return;}
-    const name=request.url==='/'?'index.html':request.url.slice(1);if(!['index.html','activacion.html','incargo-app.css','incargo-activation.js'].includes(name)){response.writeHead(404).end();return;}
-    response.setHeader('Content-Type',name.endsWith('.css')?'text/css':name.endsWith('.js')?'application/javascript':'text/html');fs.createReadStream(path.join(root,name)).pipe(response);
-  });
-  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
-  const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/chromium',args:['--no-sandbox']});
-  try{
-    const page=await browser.newPage({viewport:{width:390,height:844}});
-    let updates=0;
-    await page.route('https://mock.supabase.co/auth/v1/user',route=>{
-      if(route.request().method()==='PUT'){
-        updates++;
-        if(updates===1)return route.fulfill({status:422,contentType:'application/json',body:'{"message":"La contraseña no cumple los requisitos."}'});
-      }
-      return route.fulfill({status:200,contentType:'application/json',body:'{"id":"synthetic-user"}'});
-    });
-    const base='http://127.0.0.1:'+server.address().port;
-    await page.goto(base+'/#access_token=synthetic-token&type=invite');
-    await page.locator('#activation-form').waitFor({state:'visible'});
-    assert.equal(page.url(),base+'/activacion.html');
-    await page.locator('[name=password]').fill('twelve-characters-A');
-    await page.locator('[name=confirmation]').fill('mismatch-password-A');
-    await page.locator('#activation-form button').click();
-    assert.equal(updates,0);
-    await page.locator('[name=confirmation]').fill('twelve-characters-A');
-    await page.locator('#activation-form button').click();
-    await page.getByText('La contraseña no cumple los requisitos.').waitFor({state:'visible'});
-    assert.equal(await page.locator('#activation-form').isVisible(),true);
-    await page.locator('#activation-form button').click();
-    await page.getByText('Contraseña establecida. Ya puedes ingresar a Incargo.').waitFor({state:'visible'});
-    assert.equal(updates,2);
-    await page.screenshot({path:'/tmp/incargo-activation-mobile.png',fullPage:true});
-    const recovery=await browser.newPage();
-    const verifiedTypes=[];
-    await recovery.route('https://mock.supabase.co/auth/v1/verify',route=>{verifiedTypes.push(route.request().postDataJSON().type);return route.fulfill({status:200,contentType:'application/json',body:'{"access_token":"synthetic-verified"}'});});
-    await recovery.route('https://mock.supabase.co/auth/v1/user',route=>route.fulfill({status:200,contentType:'application/json',body:'{"id":"synthetic-user"}'}));
-    await recovery.goto(base+'/#access_token=synthetic-recovery&type=recovery');
-    await recovery.getByText('Enlace de recuperación verificado.',{exact:false}).waitFor();
-    assert.equal(recovery.url(),base+'/activacion.html');
-    assert.equal(await recovery.locator('#activation-form').isVisible(),true);
-    await recovery.goto(base+'/activacion.html#token_hash=synthetic-hash&type=recovery');
-    await recovery.getByText('Enlace de recuperación verificado.',{exact:false}).waitFor();
-    await recovery.screenshot({path:'/tmp/incargo-recovery-form.png',fullPage:true});
-    await recovery.goto(base+'/activacion.html#token_hash=synthetic-invite-hash&type=invite');
-    await recovery.getByText('Enlace de invitación verificado.',{exact:false}).waitFor();
-    assert.deepEqual(verifiedTypes,['recovery','invite']);
-    await recovery.locator('[name=password]').fill('twelve-characters-B');
-    await recovery.locator('[name=confirmation]').fill('twelve-characters-B');
-    await recovery.locator('#activation-form button').click();
-    await recovery.getByText('Contraseña establecida. Ya puedes ingresar a Incargo.').waitFor();
-    await recovery.goto(base+'/activacion.html#token_hash=synthetic-signup-hash&type=signup');
-    await recovery.getByText(/Ya puedes ingresar a Mis envíos/).waitFor();
-    assert.equal(await recovery.locator('#activation-form').isHidden(),true);
-    assert.equal(await recovery.getByRole('link',{name:'Ir a Mis envíos'}).getAttribute('href'),'cliente.html');
-    assert.deepEqual(verifiedTypes,['recovery','invite','signup']);
-    const expired=await browser.newPage();
-    await expired.route('https://mock.supabase.co/auth/v1/user',route=>route.fulfill({status:401,contentType:'application/json',body:'{}'}));
-    await expired.goto(base+'/activacion.html#access_token=synthetic-expired&type=recovery');
-    await expired.getByText('El enlace de recuperación venció o no es válido.').waitFor();
-    assert.equal(await expired.locator('#activation-form').isHidden(),true);
-    await expired.goto(base+'/activacion.html#error=access_denied&error_code=otp_expired&type=invite');
-    await expired.getByText('El enlace de invitación venció o no es válido.').waitFor();
-    assert.equal(expired.url(),base+'/activacion.html');
-    await expired.goto(base+'/activacion.html#error=server_error&error_code=unexpected_failure&type=recovery');
-    await expired.getByText('No se pudo verificar el enlace de recuperación. Inténtalo de nuevo más tarde.').waitFor();
-    assert.equal(await expired.locator('#activation-help').isHidden(),true);
-    await expired.goto(base+'/activacion.html#access_token=synthetic-token&type=signup');
-    await expired.getByText('El enlace de verificación venció o no es válido.').waitFor();
-    await expired.goto(base+'/activacion.html#type=recovery');
-    await expired.getByText('Abre el enlace completo de invitación, verificación o recuperación desde tu correo.').waitFor();
-    const failed=await browser.newPage();
-    await failed.route('https://mock.supabase.co/auth/v1/verify',route=>route.fulfill({status:403,contentType:'application/json',body:'{"code":"otp_expired"}'}));
-    await failed.goto(base+'/activacion.html#token_hash=synthetic-expired&type=recovery');
-    await failed.getByText('El enlace de recuperación venció o no es válido.').waitFor();
-    await failed.unroute('https://mock.supabase.co/auth/v1/verify');
-    await failed.route('https://mock.supabase.co/auth/v1/verify',route=>route.fulfill({status:503,contentType:'application/json',body:'{"message":"internal service unavailable"}'}));
-    await failed.goto(base+'/activacion.html#token_hash=synthetic-error&type=recovery');
-    await failed.getByText('No se pudo verificar el enlace de recuperación. Inténtalo de nuevo más tarde.').waitFor();
-    assert.equal(await failed.locator('#activation-help').isHidden(),true);
-    const unavailable=await browser.newPage();
-    await unavailable.route('**/api/incargo-config',route=>route.fulfill({status:503,body:'{}'}));
-    await unavailable.goto(base+'/activacion.html#access_token=synthetic-token&type=recovery');
-    await unavailable.getByText('El acceso no está configurado. Contacta a Incargo.').waitFor();
-    assert.equal(await unavailable.locator('#activation-help').isHidden(),true);
-    const offline=await browser.newPage();
-    await offline.route('https://mock.supabase.co/auth/v1/user',route=>route.abort('failed'));
-    await offline.goto(base+'/activacion.html#access_token=synthetic-token&type=recovery');
-    await offline.getByText('No se pudo verificar el enlace de recuperación. Inténtalo de nuevo más tarde.').waitFor();
-    assert.equal(await offline.locator('#activation-help').isHidden(),true);
-    console.log('Activation flow passed: invite and recovery redirects, token/hash verification, password validation, expiry, invalid links, and service errors.');
-  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
-})().catch(error=>{console.error(error);process.exitCode=1});
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const root=path.resolve(__dirname,'../../logistica-1.0.0');
+const source=fs.readFileSync(path.join(root,'incargo-activation.js'),'utf8');
+const html=fs.readFileSync(path.join(root,'activacion.html'),'utf8');
+const redirect=fs.readFileSync(path.join(root,'index.html'),'utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
+const tick=()=>new Promise(resolve=>setImmediate(resolve));
+const response=(body={},status=200)=>({ok:status<400,status,json:async()=>body});
+async function fixture(hash,hook=()=>null){
+ const calls=[],nodes=new Map(),listeners={};
+ const get=id=>{if(!nodes.has(id))nodes.set(id,{hidden:true,textContent:'',className:'',elements:{password:{value:''},confirmation:{value:''}},button:{disabled:false},addEventListener(type,fn){this[type]=fn;},querySelector(){return this.button;},reset(){this.resets=(this.resets||0)+1;this.elements.password.value='';this.elements.confirmation.value='';}});return nodes.get(id);};
+ const location={hash,search:'',pathname:'/activacion.html'};
+ vm.runInNewContext(source,{URLSearchParams,location,history:{replaceState(_a,_b,url){location.pathname=url;location.hash='';location.search='';}},document:{getElementById:get,querySelector:()=>get('heading')},window:{addEventListener(type,fn){listeners[type]=fn;}},fetch:async(url,options={})=>{
+  calls.push({url,options});const result=hook(url,options);if(result)return result;
+  if(url==='/api/incargo-config')return response({url:'https://fixture.invalid',publishableKey:'fixture'});
+  if(url==='https://fixture.invalid/auth/v1/verify')return response({access_token:'synthetic-verified'});
+  if(url==='https://fixture.invalid/auth/v1/user')return response({id:'synthetic-user'});
+  throw Error('Unexpected fixture request: '+url);
+ }});
+ await tick();return {get,calls,location,submit:async(password='twelve-characters-A',confirmation=password)=>{const form=get('activation-form');form.elements.password.value=password;form.elements.confirmation.value=confirmation;await form.submit({preventDefault(){}});},navigate:async hash=>{location.hash=hash;listeners.hashchange();await tick();}};
+}
+const status=h=>h.get('activation-status').textContent;
+for(const type of ['invite','recovery','signup'])test(type+': root redirect preserves fragment then activation removes it',async()=>{
+ const hash='#access_token=synthetic-token&type='+type;let target;
+ vm.runInNewContext(redirect,{URLSearchParams,location:{hash,replace:url=>target=url}});
+ assert.equal(target,'/activacion.html'+hash);
+ const h=await fixture(hash);assert.equal(h.location.hash,'');assert.equal(h.location.pathname,'/activacion.html');
+ assert.equal(h.get('activation-form').hidden,type==='signup');
+ assert.match(status(h),type==='signup'?/Ya puedes ingresar a Mis envíos/:/verificado/);
+ assert.equal(h.calls.at(-1).options.headers.Authorization,'Bearer synthetic-token');
+});
+test('password mismatch and short value make no update; 422 is retryable and success clears form',async()=>{
+ let updates=0;const h=await fixture('#access_token=synthetic&type=invite',(_url,options)=>options.method==='PUT'&&++updates===1?response({message:'La contraseña no cumple los requisitos.'},422):null);
+ await h.submit('twelve-characters-A','mismatch-password-A');await h.submit('short');assert.equal(updates,0);
+ await h.submit();assert.equal(updates,1);assert.equal(status(h),'La contraseña no cumple los requisitos.');assert.equal(h.get('activation-form').hidden,false);assert.equal(h.get('activation-form').button.disabled,false);
+ await h.submit();assert.equal(updates,2);assert.match(status(h),/Contraseña establecida/);assert.equal(h.get('activation-form').hidden,true);assert.equal(h.get('activation-form').resets,1);assert.equal(h.get('activation-form').button.disabled,false);
+});
+test('hash verification handles recovery, invite and signup with exact types and customer destination',async()=>{
+ const h=await fixture('#token_hash=synthetic-recovery&type=recovery');assert.match(status(h),/recuperación verificado/);
+ await h.navigate('#token_hash=synthetic-invite&type=invite');assert.match(status(h),/invitación verificado/);await h.submit();assert.match(status(h),/Contraseña establecida/);
+ await h.navigate('#token_hash=synthetic-signup&type=signup');assert.match(status(h),/Ya puedes ingresar a Mis envíos/);assert.equal(h.get('activation-form').hidden,true);
+ assert.deepEqual(h.calls.filter(c=>c.url.endsWith('/verify')).map(c=>JSON.parse(c.options.body)),[{type:'recovery',token_hash:'synthetic-recovery'},{type:'invite',token_hash:'synthetic-invite'},{type:'signup',token_hash:'synthetic-signup'}]);
+ assert.match(html,/<a href="cliente.html">Ir a Mis envíos<\/a>/);
+});
+for(const type of ['recovery','signup'])test(type+': expired bearer hides form and explains invalid link',async()=>{
+ const h=await fixture('#access_token=synthetic-expired&type='+type,url=>url.endsWith('/user')?response({},401):null);assert.match(status(h),/venció o no es válido/);assert.equal(h.get('activation-form').hidden,true);assert.equal(h.get('activation-help').hidden,false);
+});
+for(const [fragment,pattern,help] of [
+ ['error=access_denied&error_code=otp_expired&type=invite',/invitación venció/,false],
+ ['error=server_error&error_code=unexpected_failure&type=recovery',/No se pudo verificar el enlace de recuperación/,true],
+ ['type=recovery',/Abre el enlace completo/,false]
+])test('link error: '+fragment,async()=>{const h=await fixture('#'+fragment);assert.match(status(h),pattern);assert.equal(h.location.hash,'');assert.equal(h.calls.length,0);assert.equal(h.get('activation-form').hidden,true);assert.equal(h.get('activation-help').hidden,help);});
+for(const [code,body,pattern,help] of [[403,{code:'otp_expired'},/recuperación venció/,false],[503,{message:'internal service unavailable'},/No se pudo verificar/,true]])test('hash verification response '+code,async()=>{
+ const h=await fixture('#token_hash=synthetic&type=recovery',url=>url.endsWith('/verify')?response(body,code):null);assert.match(status(h),pattern);assert.equal(h.get('activation-form').hidden,true);assert.equal(h.get('activation-help').hidden,help);assert.equal(h.calls.some(c=>c.url.endsWith('/user')),false);
+});
+test('configuration outage hides form and does not request Auth',async()=>{const h=await fixture('#access_token=synthetic&type=recovery',url=>url==='/api/incargo-config'?response({},503):null);assert.match(status(h),/El acceso no está configurado/);assert.equal(h.calls.length,1);assert.equal(h.get('activation-form').hidden,true);assert.equal(h.get('activation-help').hidden,true);});
+test('network failure is a service error, not an expired link',async()=>{const h=await fixture('#access_token=synthetic&type=recovery',url=>{if(url.endsWith('/user'))throw Error('fixture network failure');});assert.match(status(h),/No se pudo verificar el enlace de recuperación/);assert.equal(h.get('activation-form').hidden,true);assert.equal(h.get('activation-help').hidden,true);});
