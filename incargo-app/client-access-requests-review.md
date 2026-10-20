@@ -46,3 +46,9 @@ Comprobar ausencia de tabla/funciones, columnas Auth email/email_confirmed_at/de
 ## Follow-up regression review (2026-10-20)
 
 A delayed shipment identity response could start stale cargo requests after closing the detail or selecting another delivery, clearing the new cargo display. A new isolated test reproduced the failure before the fix and covers both transitions. The detail now checks its selection after identity validation before launching any dependent requests. Validation: 79/79 detail, request UI, request portal and session tests passed; CUA visual inspection used only local fixtures. No Auth, database, permission or real-data changes. Real-account end-to-end verification remains separate.
+
+## Portal configuration recovery (2026-10-20)
+
+An incomplete config response was cached and could trigger a credential request to an invalid endpoint, preventing recovery without reload. Validate the URL and publishable-key strings before caching. The regression test failed before the fix and now passes for three malformed configurations, asserting no credential request and a successful login/submission retry without reload.
+
+Integrated validation: 90 functional tests passed (navigation, customer details, request portal/UI, sessions and isolated PostgreSQL). The separate legacy activation browser runner could not start because its Playwright dependency is unavailable. Supported CUA browser QA confirmed synthetic mobile login/submission, pending status, navigation to the customer list, detail rendering and closing/focus; no real requests or records were used. No Auth, permission, remote schema or provider change. Real authenticated end-to-end coverage remains unverified.

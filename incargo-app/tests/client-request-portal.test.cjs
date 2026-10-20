@@ -9,3 +9,17 @@ test('explicit submit sends only company, status is pending, approved state hide
 test('double submit makes one request and errors leave status consultation available',async()=>{const h=fixture();await h.login();let release;h.hook(url=>url.endsWith('incargo_request_client_access')?new Promise(r=>release=r):null);const first=h.submit();await tick();await h.submit();assert.equal(h.calls.filter(c=>c.url.endsWith('incargo_request_client_access')).length,1);release(h.response({},500));await first;assert.match(h.get('request-notice').textContent,/No pudimos confirmar/);assert.equal(h.get('request-form').querySelector('button').disabled,false);});
 test('late submit after logout cannot restore request state and next login controls work',async()=>{const h=fixture();await h.login();let release;h.hook(url=>url.endsWith('incargo_request_client_access')?new Promise(r=>release=r):null);const pending=h.submit();await tick();h.get('request-logout').onclick();release(h.response('pending'));await pending;assert.equal(h.get('request-workspace').hidden,true);assert.equal(h.get('request-form').querySelector('button').disabled,false);h.hook(null);await h.login();assert.equal(h.get('request-workspace').hidden,false);});
 test('latest refresh wins; expiry clears workspace',async()=>{const h=fixture();await h.login();let release;h.hook(url=>url.endsWith('incargo_my_client_access_request')?new Promise(r=>release=r):null);const pending=h.get('request-refresh').onclick();await tick();h.hook(null);h.rows([{status:'approved'}]);await h.get('request-refresh').onclick();release(h.response([{status:'pending'}]));await pending;assert.match(h.get('request-notice').textContent,/aprobada/);h.timers.at(-1)();assert.equal(h.get('request-workspace').hidden,true);});
+
+test('invalid configuration never sends credentials and login retry recovers without reload',async()=>{
+ for(const config of [{},{url:'https://fixture.invalid'},{url:42,publishableKey:'fixture'}]){
+  const h=fixture();h.hook(url=>url==='/api/incargo-config'?h.response(config):null);
+  await h.login();
+  assert.equal(h.calls.filter(c=>c.url.includes('/auth/v1/token')).length,0);
+  assert.equal(h.get('request-login').hidden,false);
+  assert.equal(h.get('request-login').querySelector('button').disabled,false);
+  h.hook(null);await h.login();
+  assert.equal(h.calls.filter(c=>c.url==='/api/incargo-config').length,2);
+  assert.equal(h.get('request-workspace').hidden,false);
+  await h.submit();assert.match(h.get('request-notice').textContent,/pendiente/);
+ }
+});
