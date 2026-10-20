@@ -246,3 +246,21 @@ for(const action of ['close','logout','switch','filter','refresh'])test('late ca
  }
 });
 test('current cargo auth error clears view',async()=>{const h=harness(true);h.setRows([row(1)]);h.setCargo(()=>h.response({},401));await h.login();await h.detail();assert.equal(h.get('client-workspace').hidden,true);assert.equal(h.get('cargo-fields').children.length,0);});
+
+test('late identity validation cannot restart cargo after closing or selecting another delivery',async()=>{
+ for(const next of ['close','other']){
+  const h=harness(true);h.setRows([row(1),row(2)]);await h.login();
+  let release;const cargoIds=[];
+  h.setCargo(body=>{cargoIds.push(body.p_delivery);return h.response([{delivery_id:body.p_delivery,origin_text:'ORIGIN '+body.p_delivery}]);});
+  h.setIdentityHook(()=>new Promise(resolve=>release=resolve));
+  const pending=h.detail();await tick();h.setIdentityHook(null);
+  if(next==='close')h.get('close-detail').onclick();
+  else await h.get('deliveries').children[1].children.at(-1).onclick();
+  const status=h.get('cargo-status').textContent,fields=h.get('cargo-fields').children;
+  release(h.response([{account_id:'test-account',display_name:'PRUEBAS'}]));await pending;
+  assert.deepEqual(cargoIds,next==='close'?[]:['2']);
+  assert.equal(h.get('cargo-status').textContent,status);
+  assert.equal(h.get('cargo-fields').children,fields);
+  assert.equal(h.get('detail').hidden,next==='close');
+ }
+});

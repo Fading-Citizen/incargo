@@ -106,7 +106,7 @@
     $('detail-freshness').textContent='Estado de la última consulta de envíos. Usa Actualizar envíos para comprobar cambios.';
     resetCargo();$('logistics-fields').replaceChildren();$('logistics-status').textContent='Cargando datos logísticos.';$('logistics-retry').hidden=true;$('detail-retry').hidden=true;$('detail-title').focus?.();$('detail').scrollIntoView?.({block:'start'});$('milestones').replaceChildren();$('detail-status').textContent='Cargando hitos.';
     try{
-      if(!await revalidate(active))return;
+      if(!await revalidate(active)||selected!==selection)return;
       const logistics=loadLogistics(id,active,selected);
       const cargoRequest=loadCargo(id,active,selected);
       const events=await rpc('incargo_client_delivery_milestones',{p_delivery:id},active.session);

@@ -42,3 +42,7 @@ Comprobar ausencia de tabla/funciones, columnas Auth email/email_confirmed_at/de
 - 78/78 ejecución final conjunta de UI de solicitudes, portal y regresiones de sesión/cliente; 8/8 PostgreSQL final tras el ajuste de estado derivado.
 - QA CUA local con frontend real, flag habilitado solo por fixture y CSP que bloquea conexiones externas: revisión, selección/confirmación/aprobación sintética, estado vacío; portal con ingreso y envío sintéticos. Escritorio y móvil inspeccionados, ancho efectivo 355 sin desbordamiento horizontal. No se aprobaron ni crearon cuentas reales.
 - Sin QA autenticada contra RPC remota porque no está aplicada. Pendiente aprobación exacta y postflight antes de publicar. No se declara completo el onboarding real.
+
+## Follow-up regression review (2026-10-20)
+
+A delayed shipment identity response could start stale cargo requests after closing the detail or selecting another delivery, clearing the new cargo display. A new isolated test reproduced the failure before the fix and covers both transitions. The detail now checks its selection after identity validation before launching any dependent requests. Validation: 79/79 detail, request UI, request portal and session tests passed; CUA visual inspection used only local fixtures. No Auth, database, permission or real-data changes. Real-account end-to-end verification remains separate.
