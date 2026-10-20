@@ -1,4 +1,4 @@
--- REVIEW ONLY. NOT APPLIED. Incargo gmjsqboyuvierfwruspv.
+-- APPLIED 2026-10-20 through authenticated Dashboard transaction. Incargo gmjsqboyuvierfwruspv.
 -- Explicit requests, not an enumeration of registered Auth users.
 begin;
 create table incargo_private.client_access_requests (

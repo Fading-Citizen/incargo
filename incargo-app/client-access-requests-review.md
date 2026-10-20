@@ -1,3 +1,6 @@
+# Activation verified 2026-10-20
+
+Approved by Lenu (Sentinel_c6852628ce4081918c274cdc287461da). The SQL proposal below was applied through the authenticated Incargo Dashboard as one transaction; it is not recorded as a CLI migration. Production postflight confirmed the private table with RLS and owner-only table ACL, all eight functions with empty search_path and execute limited to owner/authenticated, public invoker wrappers and private definer helpers. No request or commercial membership was created for testing. The frontend flag is now enabled. Validation: 86/86 Node and isolated Postgres tests passed after activation. CUA inspected the active client portal and operations request UI against isolated fixtures; synthetic approval removed the pending request. Earlier mobile QA at 355px remains applicable because activation changes only the feature flag. No production customer request was submitted or approved for QA. Historical preparation notes below describe the pre-approval state.
 # Solicitudes de cliente: preparación sin activación
 
 Base publicada: a683de78a151bed480aeaa376b663584f38987f9 (origen/carga). Autorización de desarrollo: Lenu Sentinel_bd59a2b32a448191bcfce40b856b8f44. No autoriza aplicar permisos de solicitudes: SQL solo propuesto, flag `IncargoAccessRequests.enabled=false`, sin push ni despliegue de este flujo.

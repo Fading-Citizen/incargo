@@ -1,7 +1,7 @@
-/* Prepared only. Requires explicit approval of client-access-requests.proposal.sql. */
+/* Activated after approved SQL and production postflight on 2026-10-20. */
 (() => {
  'use strict';
- const enabled=false;
+ const enabled=true;
  function createOperations({root,rpc,document}){
   let epoch=0,busy=false,accounts=[];
   const el=(tag,text)=>{const n=document.createElement(tag);n.textContent=text;return n;};
