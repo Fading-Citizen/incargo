@@ -15,6 +15,7 @@ import ShipmentKanban from "./modules/ShipmentKanban";
 import { NewDelivery, TripModule } from "./modules/OperationsForms";
 import DeliveryFile from "./modules/DeliveryFile";
 import Accounts from "./modules/Accounts";
+import FleetAssignments from "./modules/FleetAssignments";
 import Commercial from "./modules/Commercial";
 import Finance from "./modules/Finance";
 const sections = [
@@ -84,6 +85,7 @@ function EnterprisePanel() {
     [capabilities, setCapabilities] = useState({
       commercial: false,
       finance: false,
+      lifecycle: false,
     });
   useEffect(() => {
     let active = true;
@@ -94,6 +96,7 @@ function EnterprisePanel() {
           setCapabilities({
             commercial: c.commercial === true,
             finance: c.finance === true,
+            lifecycle: c.lifecycle === true,
           });
       })
       .catch((e) => {
@@ -112,6 +115,7 @@ function EnterprisePanel() {
       ? [["commercial", "Pedidos y cotizaciones", "comercial"]]
       : []),
     ...sections,
+    ["fleet", "Vehículos y conductores", "operaciones"],
     ...(capabilities.finance
       ? [["finance", "Facturación y cartera", "payments"]]
       : []),
@@ -215,9 +219,15 @@ function EnterprisePanel() {
               <Commercial
                 accounts={state.accounts || []}
                 deliveries={state.deliveries}
+                lifecycle={capabilities.lifecycle}
               />
             ) : view === "finance" ? (
-              <Finance accounts={state.accounts || []} />
+              <Finance
+                accounts={state.accounts || []}
+                lifecycle={capabilities.lifecycle}
+              />
+            ) : view === "fleet" ? (
+              <FleetAssignments state={state} />
             ) : view === "reports" ? (
               <Reports state={state} />
             ) : (

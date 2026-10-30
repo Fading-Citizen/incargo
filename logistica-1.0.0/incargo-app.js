@@ -291,7 +291,7 @@
     await request('/rest/v1/'+table,{method:'POST',body:{id:requestId,...payload}});
   }
   globalThis.IncargoOperations=Object.freeze({
-    refresh:()=>{requireOperations();return reload();},
+    async refresh(){requireOperations();await reload();notice('Datos actualizados.');},
     async businessCapabilities(){requireOperations();try{return await rpc('incargo_business_capabilities',{});}catch(error){if(error?.status===404||error?.code==='PGRST202')return {commercial:false,finance:false};throw error;}},
     async quoteBoard(){requireOperations();return rpc('incargo_quote_board',{});},
     async orderBoard(){requireOperations();return rpc('incargo_order_board',{});},
@@ -299,6 +299,10 @@
     async financeBoard(){requireOperations();return rpc('incargo_finance_board',{});},
     async invoiceDetail(id){requireOperations();return rpc('incargo_invoice_detail',{p_id:id});},
     async createQuote(request,data){requireOperations();return rpc('incargo_create_quote',{p_request:request,p_data:data});},
+    async reviseQuote(request,id,reason,data){requireOperations();return rpc('incargo_revise_quote',{p_request:request,p_quote:id,p_reason:reason,p_data:data});},
+    async cancelOrder(request,id,reason){requireOperations();return rpc('incargo_cancel_unassigned_order',{p_request:request,p_order:id,p_reason:reason});},
+    async administrativeNotes(type,id){requireOperations();return rpc('incargo_administrative_notes',{p_type:type,p_id:id});},
+    async addAdministrativeNote(request,type,id,body,source){requireOperations();return rpc('incargo_add_administrative_note',{p_request:request,p_type:type,p_id:id,p_body:body,p_source:source});},
     async acceptQuote(request,id,reference){requireOperations();return rpc('incargo_accept_quote',{p_request:request,p_quote:id,p_reference:reference});},
     async linkOrderDelivery(request,order,delivery){requireOperations();return rpc('incargo_link_order_delivery',{p_request:request,p_order:order,p_delivery:delivery});},
     async registerInvoice(request,data){requireOperations();return rpc('incargo_register_admin_invoice',{p_request:request,p_data:data});},

@@ -57,4 +57,15 @@ Decisiones indispensables: sistema actual de facturación y responsable financie
 - Entidades nuevas de cotización, pedido, factura administrativa, recibo, aplicación y auditoría implementadas en SQL propuesto y probadas en PostgreSQL desechable; no activadas en Supabase real.
 - UI de cotizaciones/pedidos y facturación/cartera conectada a esos contratos. Prueba con recarga y saldo persistido en PostgreSQL, más prueba de concurrencia y reversos.
 - No se habilitaron permisos financieros por defecto. Las decisiones ya consultadas permanecen abiertas y bloquean la activación productiva de los contratos, no la auditoría ni el trabajo local.
-- No se afirma cierre de P0/P1 completo: faltan revisión/edición versionada de cotizaciones, cancelación/reversos comerciales, relación definitiva de pedidos/facturas, costos, flota, integración de proveedores y demás filas de la matriz. No se publicará este núcleo en main como «sistema completo».
+- No se afirma cierre de P0/P1 completo: faltan cancelación con ejecución/reversos comerciales o fiscales, relación definitiva de pedidos/facturas, operación de costos, catálogo verificado de flota, integración de proveedores y demás filas de la matriz. No se publicará este núcleo en main como «sistema completo».
+
+## Segundo checkpoint — revisiones, cancelación y recursos
+
+- Revisiones inmutables y aceptación de la versión vigente: SQL, UI y pruebas locales; se conserva cuenta/antecesor/motivo y se rechazan bifurcaciones o revisión de lo ya aceptado.
+- Cancelación administrativa limitada a pedido sin entregas, facturas ni costos: idempotente, auditada, visible en historial separado del Kanban activo. No cancela viajes ni anula documentos externos. Casos con ejecución siguen pendientes de decisión.
+- Notas administrativas append-only con soporte/autor, lectura/escritura según dominio; notas financieras requieren autorización financiera. No sustituyen notas crédito/débito ni modifican cartera.
+- Vehículos y conductores: consulta integrada de asignaciones verificadas por contratos existentes; no inventa catálogo, vigencia documental o disponibilidad.
+- Proveedores, costos y documentos: modelo propuesto cerrado, RLS, sin RPC ni grants. Pruebas locales de precisión/atribución/procedencia. Aún no es gestión operativa de gastos/flota.
+- [Inventario y transición externa](external-process-transition.md): contratos identificados desde código, riesgos de no-cors/identidad por fila, plan de recepción verificable, deduplicación y conciliación de evidencias. Sin llamar proveedores ni modificar sus datos.
+
+Activación pendiente de respuestas previas y revisión de permisos. Trabajo independiente concluido en esta rama; ningún resultado aislado se presenta como función ya activada en producción.

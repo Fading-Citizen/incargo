@@ -21,13 +21,35 @@ export type DeliveryDetail = {
   links: { id: string; expires_at: string; revoked_at?: string }[];
 };
 export interface OperationsApi {
-  businessCapabilities(): Promise<{ commercial: boolean; finance: boolean }>;
+  businessCapabilities(): Promise<{
+    commercial: boolean;
+    finance: boolean;
+    lifecycle?: boolean;
+  }>;
   quoteBoard(): Promise<import("./business").Quote[]>;
   orderBoard(): Promise<import("./business").Order[]>;
   receiptBoard(): Promise<import("./business").Receipt[]>;
   financeBoard(): Promise<import("./business").Invoice[]>;
   invoiceDetail(id: string): Promise<import("./business").InvoiceDetail>;
   createQuote(request: string, data: Record<string, unknown>): Promise<string>;
+  reviseQuote(
+    request: string,
+    id: string,
+    reason: string,
+    data: Record<string, unknown>,
+  ): Promise<string>;
+  cancelOrder(request: string, id: string, reason: string): Promise<string>;
+  administrativeNotes(
+    type: string,
+    id: string,
+  ): Promise<import("./business").AdministrativeNote[]>;
+  addAdministrativeNote(
+    request: string,
+    type: string,
+    id: string,
+    body: string,
+    source: string,
+  ): Promise<string>;
   acceptQuote(request: string, id: string, reference: string): Promise<string>;
   linkOrderDelivery(
     request: string,

@@ -56,13 +56,14 @@ create function incargo_enterprise.accept_quote(p_request uuid,p_quote uuid,p_re
  if length(btrim(coalesce(p_reference,''))) not between 4 and 500 then raise exception 'acceptance evidence required';end if;
  select * into strict q from incargo_enterprise.quotes where id=p_quote for update;
  if q.accepted_at is not null then raise exception 'quote already accepted';end if;
+ if exists(select 1 from incargo_enterprise.quotes where supersedes_id=p_quote) then raise exception 'superseded quote cannot be accepted';end if;
  update incargo_enterprise.quotes set accepted_at=now(),acceptance_reference=p_reference where id=p_quote;
  insert into incargo_enterprise.orders(quote_id,account_id,created_by) values(p_quote,q.account_id,auth.uid()) returning id into result;
  perform incargo_enterprise.remember('quote.accept',p_request,payload,result);return result;
 end$$;
 create function incargo_enterprise.link_delivery(p_request uuid,p_order uuid,p_delivery uuid) returns uuid language plpgsql security definer set search_path='' as $$declare result uuid;payload jsonb:=jsonb_build_object('order',p_order,'delivery',p_delivery);account uuid;begin
  perform incargo_enterprise.require_operations();result:=incargo_enterprise.replay('order.link_delivery',p_request,payload);if result is not null then return result;end if;
- select account_id into strict account from incargo_enterprise.orders where id=p_order for update;
+ select account_id into strict account from incargo_enterprise.orders where id=p_order and cancelled_at is null for update;
  if not exists(select 1 from public.incargo_client_delivery_links where delivery_id=p_delivery and account_id=account) then raise exception 'delivery account must match order';end if;
  insert into incargo_enterprise.order_deliveries values(p_order,p_delivery,now(),auth.uid());
  perform incargo_enterprise.remember('order.link_delivery',p_request,payload,p_order);return p_order;
@@ -71,8 +72,9 @@ create function incargo_enterprise.register_invoice(p_request uuid,p_data jsonb)
  perform incargo_enterprise.require_finance();result:=incargo_enterprise.replay('invoice.register',p_request,p_data);if result is not null then return result;end if;
  total:=incargo_enterprise.lines_total(p_data->'lines');if total<>(p_data->>'document_total')::numeric or p_data->>'document_total' is null then raise exception 'document total mismatch';end if;
  insert into incargo_enterprise.invoices(account_id,issuer_reference,external_number,currency,issue_date,due_date,lines,total,source_reference,created_by) values(account,p_data->>'issuer_reference',p_data->>'external_number',p_data->>'currency',(p_data->>'issue_date')::date,(p_data->>'due_date')::date,p_data->'lines',total,p_data->>'source_reference',auth.uid()) returning id into result;
- for order_id in select value::uuid from jsonb_array_elements_text(coalesce(p_data->'order_ids','[]'::jsonb)) loop
-  if not exists(select 1 from incargo_enterprise.orders where id=order_id and account_id=account) then raise exception 'order account mismatch';end if;
+ for order_id in select value::uuid from jsonb_array_elements_text(coalesce(p_data->'order_ids','[]'::jsonb)) order by value loop
+  perform 1 from incargo_enterprise.orders where id=order_id and account_id=account and cancelled_at is null for update;
+  if not found then raise exception 'order account mismatch or cancelled order';end if;
   insert into incargo_enterprise.invoice_orders values(result,order_id);
  end loop;
  perform incargo_enterprise.remember('invoice.register',p_request,p_data,result);return result;

@@ -27,3 +27,25 @@ with concurrent.futures.ThreadPoolExecutor(2) as pool:
     results=list(pool.map(lambda _:call("select to_jsonb(public.incargo_register_admin_invoice(:'req'::uuid,:'payload'::jsonb))",req=shared_request,payload=json.dumps(invoice)),range(2)))
 assert results[0]==results[1]
 print('PASS: concurrent allocations serialize to prevent invoice overpayment; concurrent same-request replay returns the same invoice.')
+# Same source quote cannot fork, nor be accepted concurrently with a revision.
+quote={'account_id':invoice['account_id'],'currency':'COP','origin':'LOCAL origin','destination':'LOCAL destination','description':tag+' lifecycle','lines':invoice['lines']}
+q=call("select to_jsonb(public.incargo_create_quote(:'req'::uuid,:'payload'::jsonb))",req=uuid.uuid4(),payload=json.dumps(quote))
+with concurrent.futures.ThreadPoolExecutor(2) as pool:
+    results=list(pool.map(lambda n:query("select to_jsonb(public.incargo_revise_quote(:'req'::uuid,:'quote'::uuid,:'reason',:'payload'::jsonb))",req=uuid.uuid4(),quote=q,reason='LOCAL concurrent revision '+str(n),payload=json.dumps(quote)),range(2)))
+assert sum(r.returncode==0 for r in results)==1,[r.stderr for r in results]
+q=call("select to_jsonb(public.incargo_create_quote(:'req'::uuid,:'payload'::jsonb))",req=uuid.uuid4(),payload=json.dumps(quote))
+with concurrent.futures.ThreadPoolExecutor(2) as pool:
+    accepted=pool.submit(query,"select to_jsonb(public.incargo_accept_quote(:'req'::uuid,:'quote'::uuid,'LOCAL concurrent acceptance'))",req=uuid.uuid4(),quote=q)
+    revised=pool.submit(query,"select to_jsonb(public.incargo_revise_quote(:'req'::uuid,:'quote'::uuid,'LOCAL concurrent revision',:'payload'::jsonb))",req=uuid.uuid4(),quote=q,payload=json.dumps(quote))
+    results=[accepted.result(),revised.result()]
+assert sum(r.returncode==0 for r in results)==1,[r.stderr for r in results]
+# Cancellation and invoice linking lock the same order. Neither combination may survive.
+q=call("select to_jsonb(public.incargo_create_quote(:'req'::uuid,:'payload'::jsonb))",req=uuid.uuid4(),payload=json.dumps(quote))
+o=call("select to_jsonb(public.incargo_accept_quote(:'req'::uuid,:'quote'::uuid,'LOCAL acceptance'))",req=uuid.uuid4(),quote=q)
+invoice['external_number']=tag+'-CANCEL-RACE';invoice['order_ids']=[o]
+with concurrent.futures.ThreadPoolExecutor(2) as pool:
+    cancelled=pool.submit(query,"select to_jsonb(public.incargo_cancel_unassigned_order(:'req'::uuid,:'order'::uuid,'LOCAL cancel before execution'))",req=uuid.uuid4(),order=o)
+    invoiced=pool.submit(query,"select to_jsonb(public.incargo_register_admin_invoice(:'req'::uuid,:'payload'::jsonb))",req=uuid.uuid4(),payload=json.dumps(invoice))
+    results=[cancelled.result(),invoiced.result()]
+assert sum(r.returncode==0 for r in results)==1,[r.stderr for r in results]
+print('PASS: concurrent revisions cannot fork; acceptance and revision are exclusive; cancellation and invoicing cannot both commit.')

@@ -1,3 +1,4 @@
+import AdministrativeNotes from "./AdministrativeNotes";
 import { useEffect, useState } from "react";
 import { api, type Account } from "../api";
 import {
@@ -19,7 +20,13 @@ import {
   PanelTableFrame,
 } from "../components/PanelPrimitives";
 /** List/detail composition adapted from Xtreme facturacion/page and [id]/Detail; no demo finance or fiscal provider. */
-export default function Finance({ accounts }: { accounts: Account[] }) {
+export default function Finance({
+  accounts,
+  lifecycle = false,
+}: {
+  accounts: Account[];
+  lifecycle?: boolean;
+}) {
   const [receipts, setReceipts] = useState<Receipt[]>([]),
     [orders, setOrders] = useState<Order[]>([]),
     [invoices, setInvoices] = useState<Invoice[]>([]),
@@ -156,6 +163,13 @@ export default function Finance({ accounts }: { accounts: Account[] }) {
               </table>
             </PanelTableFrame>
           </PanelSection>
+          {lifecycle && (
+            <AdministrativeNotes
+              key={detail.invoice.id}
+              type="invoice"
+              id={detail.invoice.id}
+            />
+          )}
           <PanelSection title="Abonos aplicados y reversos">
             {detail.allocations.length ? (
               detail.allocations.map((a) => (
@@ -333,11 +347,13 @@ export default function Finance({ accounts }: { accounts: Account[] }) {
                   >
                     <select name="order">
                       <option value="">Sin pedido vinculado</option>
-                      {orders.map((o) => (
-                        <option key={o.id} value={o.id}>
-                          {o.customer} · {o.description} · {o.id.slice(0, 8)}
-                        </option>
-                      ))}
+                      {orders
+                        .filter((o) => !o.cancelled_at)
+                        .map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.customer} · {o.description} · {o.id.slice(0, 8)}
+                          </option>
+                        ))}
                     </select>
                   </PanelField>
                 </div>

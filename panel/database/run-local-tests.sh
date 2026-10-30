@@ -15,7 +15,7 @@ for attempt in {1..30}; do
  fi
  sleep 1
 done
-for script in incargo-app/tests/policy-bootstrap.sql incargo-app/migration.sql incargo-app/migration_permissions_fix.sql incargo-app/migration_hardening.sql incargo-app/client-portal.proposal.sql panel/database/enterprise-model.proposal.sql panel/database/enterprise-read.proposal.sql panel/database/enterprise-local.test.sql panel/database/enterprise-activation.proposal.sql panel/database/enterprise-receipts.proposal.sql; do
+for script in incargo-app/tests/policy-bootstrap.sql incargo-app/migration.sql incargo-app/migration_permissions_fix.sql incargo-app/migration_hardening.sql incargo-app/client-portal.proposal.sql panel/database/enterprise-model.proposal.sql panel/database/enterprise-lifecycle.proposal.sql panel/database/enterprise-read.proposal.sql panel/database/enterprise-local.test.sql panel/database/enterprise-activation.proposal.sql panel/database/enterprise-receipts.proposal.sql panel/database/lifecycle-activation.proposal.sql panel/database/resources-model.proposal.sql panel/database/enterprise-lifecycle.test.sql panel/database/resources-model.test.sql; do
  "${local_docker[@]}" exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < "$script" >/dev/null
 done
 python3 panel/database/concurrency.test.py

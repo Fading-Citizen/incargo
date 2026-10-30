@@ -239,6 +239,7 @@ const assert = require("node:assert/strict"),
       .getByRole("button", { name: "Reintentar consulta", exact: true })
       .click();
     await page.locator(".shipment-card").first().waitFor();
+    assert.equal(await page.getByText("Error 503",{exact:true}).count(),0);
     await page.emulateMedia({ colorScheme: "dark" });
     assert.equal(
       await page
@@ -274,6 +275,29 @@ const assert = require("node:assert/strict"),
       path: "/tmp/incargo-enterprise-form-mobile.png",
       fullPage: true,
     });
+    await page
+      .getByRole("button", { name: "Vehículos y conductores", exact: true })
+      .click();
+    await page
+      .getByRole("heading", { name: "Vehículos y conductores", exact: true })
+      .waitFor();
+    const fleetTable = page.getByRole("table").first();
+    assert((await fleetTable.textContent()).includes("TEST01"));
+    await page
+      .getByLabel("Buscar placa, ruta o identificador de conductor")
+      .fill("TEST02");
+    assert(!(await fleetTable.textContent()).includes("TEST01"));
+    assert((await fleetTable.textContent()).includes("Sin asignar"));
+    await page.screenshot({
+      path: "/tmp/incargo-fleet-mobile.png",
+      fullPage: true,
+    });
+    assert.equal(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > innerWidth,
+      ),
+      false,
+    );
     await page.locator("#logout").click();
     assert.equal(await page.locator("#incargo-panel-root").textContent(), "");
     role = "driver";

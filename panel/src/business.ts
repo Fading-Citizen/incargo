@@ -15,6 +15,8 @@ export type Quote = {
   total: number;
   created_at: string;
   accepted_at?: string;
+  supersedes_id?: string;
+  revision_reason?: string;
 };
 export type Order = {
   id: string;
@@ -28,6 +30,8 @@ export type Order = {
   currency: string;
   total: number;
   execution_stage: string;
+  cancelled_at?: string;
+  cancellation_reason?: string;
   deliveries: { id: string; trip_id: string; status: string }[];
 };
 export type Invoice = {
@@ -71,4 +75,12 @@ export type Receipt = {
   external_reference: string;
   received_date: string;
   available: number;
+};
+
+export type AdministrativeNote = {
+  id: string;
+  body: string;
+  source_reference: string;
+  created_by: string;
+  created_at: string;
 };

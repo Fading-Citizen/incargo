@@ -11,10 +11,13 @@ Este trabajo **no declara completo el sistema de la empresa**. Corrige la entreg
 | Viajes / entregas | Formularios React directos, asignación, validaciones y UUID estable por intento de creación | API limitada sobre request/revalidación existentes |
 | Expediente | Recorrido/carga, eventos, prueba privada autenticada, crear/revocar enlace limitado | Contratos actuales; sin enviar mensajes |
 | Clientes | Cuentas canónicas, crear/vincular/revocar, solicitudes y aprobación verificada | RPC actuales; no agrupa nombres como identidad |
-| Cotizaciones / pedidos | Líneas explícitas, aceptación documentada, pedido antes del viaje, Kanban derivado de entregas vinculadas | UI y PostgreSQL local probados; contratos propuestos **no activados en producción** |
+| Cotizaciones / pedidos | Líneas explícitas, revisiones inmutables, aceptación de versión vigente, pedido antes del viaje, Kanban derivado y cancelación documentada sólo sin ejecución/facturación/costos | UI y PostgreSQL local probados; contratos propuestos **no activados en producción** |
 | Facturación / cartera | Registro de documentos externos, conceptos, cuenta/moneda, abonos, aplicación parcial, saldo y reverso auditado | UI y PostgreSQL local probados; permisos financieros pendientes de aprobación |
 | Fiscal / proveedores | Sin emisión electrónica, cobro ni conexión a proveedor | Decisión del sistema emisor pendiente |
-| Flota, costos, revisiones de cotización, cancelaciones, notas/créditos, procesos Apps Script/Formspree | Inventariados en matriz, no implementados por este lote | Trabajo posterior del programa; no se oculta esta brecha |
+| Notas administrativas | Observaciones append-only con autor y soporte en expediente de pedido/factura; no cambian saldos | Contrato y UI probados sólo en entorno aislado |
+| Vehículos / conductores | Consulta de asignaciones sobre viajes y accesos existentes, filtro por placa/ruta/conductor | Sin catálogo, disponibilidad ni cumplimiento inferidos |
+| Costos / proveedores / catálogo flota / documentos externos | Modelo cerrado con atribución de costo, precisión monetaria y procedencia de evidencia | Sin RPC/grants ni operación activada |
+| Cancelación con ejecución, notas crédito/débito y procesos Apps Script/Formspree | Documentados con restricciones y plan de transición | Requieren definición de proceso; no se presentan como resueltos |
 
 ## Arquitectura y protección de lo existente
 
@@ -38,7 +41,7 @@ Fuente sólo lectura: `EFO-Latam/xtmpanel`, main `564ded98c7b447d5a50b1554616efe
 
 [Diseño, SQL propuesto y controles](database/README.md). Los scripts `.proposal.sql` no son migraciones ejecutadas. Ningún permiso o usuario financiero se habilitó en Supabase real.
 
-Pendientes ya consultados: sistema actual de facturación, responsables autorizados y cardinalidad pedido–entregas/viajes. También se documenta el efecto de una reasignación posterior de cuenta y las limitaciones del primer núcleo financiero. Una revisión explícita de estos contratos precede a su activación.
+Pendientes ya consultados: sistema actual de facturación, responsables autorizados y cardinalidad pedido–entregas/viajes. La transición de procesos externos está en [el inventario de contratos y plan de conciliación](audit/external-process-transition.md). También se documenta el efecto de una reasignación posterior de cuenta y las limitaciones del primer núcleo financiero. Una revisión explícita de estos contratos precede a su activación.
 
 ## Desarrollo y pruebas
 
@@ -65,3 +68,9 @@ Validación del lote:
 - Navegador conectado a PostgreSQL local: cotización → aceptación → pedido y factura → abono → aplicación → recarga con saldo persistido → reverso auditado. Esto no equivale todavía al recorrido completo de todos los módulos de la empresa.
 
 Capturas bajo `qa/enterprise-*` y `qa/business-*` usan exclusivamente fixtures locales. La captura aportada por Lenu se inspeccionó por separado y no se copió al repositorio.
+
+## Segundo lote aislado
+
+La prueba de navegador ahora cubre revisión → aceptación de versión vigente → nota → cancelación previa a despacho → recarga. Pruebas transaccionales comprueban que dos revisiones no bifurcan una cotización, revisión y aceptación no coexisten, y cancelación y factura no pueden confirmar simultáneamente. El núcleo financiero anterior mantiene pruebas de saldos y reversos. Se verifica que notas de factura requieren finanzas y no alteran importes.
+
+Las tablas propuestas de recursos permanecen cerradas incluso después de activar los otros contratos en el entorno de prueba. No hay catálogo de vehículos importado, pagos a proveedores, documentos fiscales ni integración productiva de fuentes externas.

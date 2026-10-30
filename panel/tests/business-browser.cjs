@@ -32,6 +32,28 @@ function sql(query, params = {}) {
 }
 const signatures = {
   incargo_business_capabilities: [],
+  incargo_revise_quote: [
+    ["p_request", "uuid"],
+    ["p_quote", "uuid"],
+    ["p_reason", "text"],
+    ["p_data", "jsonb"],
+  ],
+  incargo_cancel_unassigned_order: [
+    ["p_request", "uuid"],
+    ["p_order", "uuid"],
+    ["p_reason", "text"],
+  ],
+  incargo_administrative_notes: [
+    ["p_type", "text"],
+    ["p_id", "uuid"],
+  ],
+  incargo_add_administrative_note: [
+    ["p_request", "uuid"],
+    ["p_type", "text"],
+    ["p_id", "uuid"],
+    ["p_body", "text"],
+    ["p_source", "text"],
+  ],
   incargo_quote_board: [],
   incargo_order_board: [],
   incargo_finance_board: [],
@@ -211,8 +233,51 @@ const signatures = {
     await quoteForm.getByLabel(/^Precio unitario/).fill("123.45");
     await quoteForm.getByLabel(/^Impuesto informado/).fill("0");
     await quoteForm.getByRole("button", { name: "Guardar cotización" }).click();
-    const quoteRow = page.locator("tr").filter({ hasText: tag });
+    let quoteRow = page.locator("tr").filter({ hasText: tag });
     await quoteRow.waitFor();
+    await quoteRow
+      .getByRole("button", { name: "Revisar cotización", exact: true })
+      .click();
+    const revisionForm = page.locator(".enterprise-form").filter({
+      has: page.getByRole("button", {
+        name: "Guardar nueva versión",
+        exact: true,
+      }),
+    });
+    await revisionForm
+      .locator("[name=reason]")
+      .fill("LOCAL requested route revision");
+    await revisionForm
+      .locator("[name=destination]")
+      .fill("Destino revisado local");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await revisionForm.scrollIntoViewIfNeeded();
+    assert.equal(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > innerWidth,
+      ),
+      false,
+    );
+    await page.screenshot({
+      path: "/tmp/incargo-lifecycle-revision-mobile.png",
+      fullPage: true,
+    });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await revisionForm
+      .getByRole("button", { name: "Guardar nueva versión", exact: true })
+      .click();
+    await page
+      .getByText("Versión sustituida · historial conservado")
+      .last()
+      .waitFor();
+    quoteRow = page
+      .locator("tr")
+      .filter({ hasText: tag })
+      .filter({
+        has: page.getByRole("button", {
+          name: "Registrar aceptación y crear pedido",
+        }),
+      });
     await quoteRow
       .locator("[name=reference]")
       .fill("Aceptación local verificada");
@@ -220,11 +285,67 @@ const signatures = {
     await quoteRow
       .getByRole("button", { name: "Registrar aceptación y crear pedido" })
       .click();
-    await quoteRow.getByText("Aceptada · pedido creado").waitFor();
+    await page
+      .locator("tr")
+      .filter({ hasText: tag })
+      .getByText("Aceptada · pedido creado")
+      .waitFor();
     await page
       .getByRole("button", { name: "Kanban de pedidos", exact: true })
       .click();
     await page.getByText(tag, { exact: true }).waitFor();
+    const orderCard = page.locator(".shipment-card").filter({ hasText: tag });
+    await orderCard
+      .getByRole("button", { name: "Abrir pedido", exact: true })
+      .click();
+    const noteForm = page.locator(".enterprise-form").filter({
+      has: page.getByRole("button", {
+        name: "Guardar nota administrativa",
+        exact: true,
+      }),
+    });
+    await noteForm
+      .locator("[name=body]")
+      .fill("LOCAL review evidence preserved");
+    await noteForm
+      .locator("[name=source]")
+      .fill("LOCAL customer correspondence");
+    await noteForm
+      .getByRole("button", { name: "Guardar nota administrativa", exact: true })
+      .click();
+    await page
+      .getByText("LOCAL review evidence preserved", { exact: true })
+      .waitFor();
+    const cancellation = page.locator(".enterprise-form").filter({
+      has: page.getByRole("button", {
+        name: "Cancelar pedido sin ejecución",
+        exact: true,
+      }),
+    });
+    await cancellation
+      .locator("[name=reason]")
+      .fill("LOCAL customer cancellation before dispatch");
+    await cancellation.getByRole("checkbox").check();
+    await cancellation
+      .getByRole("button", {
+        name: "Cancelar pedido sin ejecución",
+        exact: true,
+      })
+      .click();
+    await page
+      .getByText("LOCAL customer cancellation before dispatch", { exact: true })
+      .waitFor();
+    await page.reload();
+    await page
+      .getByRole("button", { name: "Pedidos y cotizaciones", exact: true })
+      .click();
+    await page
+      .getByText("LOCAL customer cancellation before dispatch", { exact: true })
+      .waitFor();
+    assert.equal(
+      await page.locator(".shipment-card").filter({ hasText: tag }).count(),
+      0,
+    );
     await page.screenshot({
       path: "/tmp/incargo-business-orders-desktop.png",
       fullPage: true,
@@ -283,7 +404,12 @@ const signatures = {
       .filter({ has: page.getByRole("button", { name: "Abrir documento" }) })
       .getByRole("button", { name: "Abrir documento" })
       .click();
-    const allocation = page.locator(".enterprise-form").last();
+    const allocation = page.locator(".enterprise-form").filter({
+      has: page.getByRole("button", {
+        name: "Aplicar abono registrado",
+        exact: true,
+      }),
+    });
     await allocation
       .locator("[name=receipt]")
       .selectOption({ label: tag + "-PAY · disponible $ 50,00" })
@@ -348,7 +474,7 @@ const signatures = {
     await page.getByText(/Revertido · Corrección local/).waitFor();
     assert.deepEqual(errors, []);
     console.log(
-      "PASS: browser → real disposable Postgres quote → accepted order without trip; invoice registration → receipt → allocation → page reload persistent balance → audited reversal. No production access.",
+      "PASS: browser → real disposable Postgres quote → revision → accepted order without trip → note → cancellation persisted on reload; invoice registration → receipt → allocation → page reload persistent balance → audited reversal. No production access.",
     );
   } finally {
     await browser.close();
