@@ -2,7 +2,7 @@
 -- This exposes new business functions; it does NOT enroll any user into finance.
 begin;
 create function incargo_enterprise.quote_board() returns jsonb language plpgsql stable security definer set search_path='' as $$declare result jsonb;begin perform incargo_enterprise.require_operations();select coalesce(jsonb_agg(to_jsonb(q) order by q.created_at desc,q.id),'[]'::jsonb) into result from incargo_enterprise.quotes q;return result;end$$;
-create function incargo_enterprise.capabilities() returns jsonb language plpgsql stable security definer set search_path='' as $$begin perform incargo_enterprise.require_operations();return jsonb_build_object('commercial',true,'finance',exists(select 1 from incargo_enterprise.finance_operators where user_id=auth.uid()));end$$;
+create function incargo_enterprise.capabilities() returns jsonb language plpgsql stable security definer set search_path='' as $$begin perform incargo_enterprise.require_operations();return jsonb_build_object('commercial',true,'finance',incargo_enterprise.finance_release_enabled() and exists(select 1 from incargo_enterprise.finance_operators where user_id=auth.uid()));end$$;
 revoke all on function incargo_enterprise.quote_board(),incargo_enterprise.capabilities() from public,anon,authenticated;
 grant usage on schema incargo_enterprise to authenticated;
 -- Helpers and all tables remain inaccessible. Only reviewed domain entrypoints are executable.

@@ -1,5 +1,8 @@
 (() => {
   'use strict';
+  // Release hold requested by Incargo: configuration or server capability cannot activate finance.
+  const FINANCE_RELEASE_ENABLED = false;
+  const requireFinanceRelease=()=>{if(!FINANCE_RELEASE_ENABLED)throw Error('Facturación pendiente de configuración y autorización de activación.');};
   const $=id=>document.getElementById(id);
   let retained,expiryTimer,generation=0;let config, session, role, trips=[], deliveries=[], drivers=[], selectedId=null;
   let confirmationAttempt=null,confirmationBusy=false,reloadEpoch=0,clientAccounts=[];
@@ -292,23 +295,23 @@
   }
   globalThis.IncargoOperations=Object.freeze({
     async refresh(){requireOperations();await reload();notice('Datos actualizados.');},
-    async businessCapabilities(){requireOperations();try{return await rpc('incargo_business_capabilities',{});}catch(error){if(error?.status===404||error?.code==='PGRST202')return {commercial:false,finance:false};throw error;}},
+    async businessCapabilities(){requireOperations();try{const capabilities=await rpc('incargo_business_capabilities',{});return {...capabilities,finance:FINANCE_RELEASE_ENABLED&&capabilities.finance===true};}catch(error){if(error?.status===404||error?.code==='PGRST202')return {commercial:false,finance:false};throw error;}},
     async quoteBoard(){requireOperations();return rpc('incargo_quote_board',{});},
     async orderBoard(){requireOperations();return rpc('incargo_order_board',{});},
-    async receiptBoard(){requireOperations();return rpc('incargo_receipt_board',{});},
-    async financeBoard(){requireOperations();return rpc('incargo_finance_board',{});},
-    async invoiceDetail(id){requireOperations();return rpc('incargo_invoice_detail',{p_id:id});},
+    async receiptBoard(){requireOperations();requireFinanceRelease();return rpc('incargo_receipt_board',{});},
+    async financeBoard(){requireOperations();requireFinanceRelease();return rpc('incargo_finance_board',{});},
+    async invoiceDetail(id){requireOperations();requireFinanceRelease();return rpc('incargo_invoice_detail',{p_id:id});},
     async createQuote(request,data){requireOperations();return rpc('incargo_create_quote',{p_request:request,p_data:data});},
     async reviseQuote(request,id,reason,data){requireOperations();return rpc('incargo_revise_quote',{p_request:request,p_quote:id,p_reason:reason,p_data:data});},
     async cancelOrder(request,id,reason){requireOperations();return rpc('incargo_cancel_unassigned_order',{p_request:request,p_order:id,p_reason:reason});},
-    async administrativeNotes(type,id){requireOperations();return rpc('incargo_administrative_notes',{p_type:type,p_id:id});},
-    async addAdministrativeNote(request,type,id,body,source){requireOperations();return rpc('incargo_add_administrative_note',{p_request:request,p_type:type,p_id:id,p_body:body,p_source:source});},
+    async administrativeNotes(type,id){requireOperations();if(type==='invoice'||type==='receipt')requireFinanceRelease();return rpc('incargo_administrative_notes',{p_type:type,p_id:id});},
+    async addAdministrativeNote(request,type,id,body,source){requireOperations();if(type==='invoice'||type==='receipt')requireFinanceRelease();return rpc('incargo_add_administrative_note',{p_request:request,p_type:type,p_id:id,p_body:body,p_source:source});},
     async acceptQuote(request,id,reference){requireOperations();return rpc('incargo_accept_quote',{p_request:request,p_quote:id,p_reference:reference});},
     async linkOrderDelivery(request,order,delivery){requireOperations();return rpc('incargo_link_order_delivery',{p_request:request,p_order:order,p_delivery:delivery});},
-    async registerInvoice(request,data){requireOperations();return rpc('incargo_register_admin_invoice',{p_request:request,p_data:data});},
-    async recordReceipt(request,data){requireOperations();return rpc('incargo_record_receipt',{p_request:request,p_data:data});},
-    async applyReceipt(request,receipt,invoice,amount){requireOperations();return rpc('incargo_apply_receipt',{p_request:request,p_receipt:receipt,p_invoice:invoice,p_amount:amount});},
-    async reverseAllocation(request,id,reason){requireOperations();return rpc('incargo_reverse_allocation',{p_request:request,p_allocation:id,p_reason:reason});},
+    async registerInvoice(request,data){requireOperations();requireFinanceRelease();return rpc('incargo_register_admin_invoice',{p_request:request,p_data:data});},
+    async recordReceipt(request,data){requireOperations();requireFinanceRelease();return rpc('incargo_record_receipt',{p_request:request,p_data:data});},
+    async applyReceipt(request,receipt,invoice,amount){requireOperations();requireFinanceRelease();return rpc('incargo_apply_receipt',{p_request:request,p_receipt:receipt,p_invoice:invoice,p_amount:amount});},
+    async reverseAllocation(request,id,reason){requireOperations();requireFinanceRelease();return rpc('incargo_reverse_allocation',{p_request:request,p_allocation:id,p_reason:reason});},
     async createTrip(input){requireOperations();const payload={route_label:textValue(input.route_label,100,'Ruta'),scheduled_date:input.scheduled_date,vehicle_plate:textValue(input.vehicle_plate,20,'Placa').toUpperCase(),driver_user_id:input.driver_user_id||null};if(!/^\d{4}-\d{2}-\d{2}$/.test(payload.scheduled_date))throw Error('Fecha no válida.');await createRecord('incargo_trips',payload,input.request_id);await reload();},
     async assignTrip(id,driver){requireOperations();if(!trips.some(t=>t.id===id))throw Error('Viaje no disponible.');await rest('incargo_trips','id=eq.'+encodeURIComponent(id),{method:'PATCH',body:{driver_user_id:driver||null}});await reload();},
     async createDelivery(input){requireOperations();if(!trips.some(t=>t.id===input.trip_id))throw Error('Selecciona un viaje disponible.');const payload={trip_id:input.trip_id,customer_name:textValue(input.customer_name,120,'Cliente'),destination_text:input.destination_text||null,invoice_reference:input.invoice_reference||null,remittance_reference:input.remittance_reference||null,...(cargo?.enabled?cargo.parse(input):{})};for(const [key,max] of [['destination_text',200],['invoice_reference',80],['remittance_reference',80]])if(payload[key]?.length>max)throw Error('Referencia demasiado larga.');await createRecord('incargo_deliveries',payload,input.request_id);await reload();},

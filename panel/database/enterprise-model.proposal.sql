@@ -26,7 +26,9 @@ create index audit_entity on incargo_enterprise.audit(entity_id,occurred_at);
 do $$declare r record;begin for r in select tablename from pg_tables where schemaname='incargo_enterprise' loop execute format('alter table incargo_enterprise.%I enable row level security',r.tablename);end loop;end$$;
 revoke all on all tables in schema incargo_enterprise from public,anon,authenticated;
 create function incargo_enterprise.require_operations() returns void language plpgsql security definer set search_path='' as $$begin if auth.uid() is null or not incargo_private.is_operations() then raise exception 'operations access required' using errcode='42501';end if;end$$;
-create function incargo_enterprise.require_finance() returns void language plpgsql security definer set search_path='' as $$begin perform incargo_enterprise.require_operations();if not exists(select 1 from incargo_enterprise.finance_operators where user_id=auth.uid()) then raise exception 'finance access required' using errcode='42501';end if;end$$;
+-- Deliberate release hold. No setting, environment variable or membership enables finance.
+create function incargo_enterprise.finance_release_enabled() returns boolean language sql immutable set search_path='' as $$select false$$;
+create function incargo_enterprise.require_finance() returns void language plpgsql security definer set search_path='' as $$begin perform incargo_enterprise.require_operations();if not incargo_enterprise.finance_release_enabled() then raise exception 'finance release not activated' using errcode='42501';end if;if not exists(select 1 from incargo_enterprise.finance_operators where user_id=auth.uid()) then raise exception 'finance access required' using errcode='42501';end if;end$$;
 create function incargo_enterprise.lines_total(p_lines jsonb) returns numeric language plpgsql immutable set search_path='' as $$declare l jsonb;n numeric:=0;q numeric;price numeric;tax numeric;begin
  if jsonb_typeof(p_lines)<>'array' or jsonb_array_length(p_lines) not between 1 and 100 then raise exception 'invalid lines';end if;
  for l in select value from jsonb_array_elements(p_lines) loop

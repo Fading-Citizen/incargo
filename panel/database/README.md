@@ -12,6 +12,10 @@ Orden de revisión:
 
 El orden exacto reproducible se mantiene en `run-local-tests.sh`; las pruebas no convierten estas propuestas en migraciones productivas.
 
+## Retención explícita de facturación
+
+`finance_release_enabled()` devuelve false en el modelo propuesto y no recibe variables/settings. `require_finance()` la comprueba antes de cualquier lectura/mutación financiera; capabilities también respeta el bloqueo. Aplicar las propuestas de activación no habilita finanzas ni inscribe usuarios. El cliente contiene además su propio bloqueo de release. El test SQL cambia la función exclusivamente en el contenedor desechable después de verificar la denegación; esa sustitución NO forma parte de ninguna propuesta.
+
 ## Decisiones pendientes de Lenu
 
 - Sistema emisor y alcance administrativo frente a integración fiscal: sólo se registra un documento ya emitido y sus importes, no se calcula normativa ni se emite/cobra.
@@ -42,3 +46,9 @@ bash panel/database/run-local-tests.sh
 ```
 
 El script usa únicamente el socket Docker local, crea y elimina su contenedor. Rechaza reemplazar un contenedor existente. Prueba permisos, duplicados, saldos, reversos, concurrencia y navegador conectado a Postgres local mediante un adaptador de prueba, incluyendo recarga de página. No es un servidor incluido en producción ni una simulación de persistencia del navegador.
+
+## Alternativa exclusivamente comercial para revisión
+
+`commercial-activation.proposal.sql` permite revisar pedidos/cotizaciones por separado: sólo concede los entrypoints comerciales al rol autenticado, cada uno protegido por `require_operations()`. No concede ejecución financiera y anuncia finance=false. No se ejecutó en producción. `check-commercial-scope.py` comprueba en una transacción local revertida que cotizar/aceptar/cancelar funciona sin grants financieros, y que notas financieras siguen bloqueadas.
+
+Decisión concreta pendiente: autorizar a los usuarios operations actuales a crear/revisar/aceptar cotizaciones, crear/vincular pedidos y cancelar sólo sin ejecución/facturas/costos; confirmar relación de pedidos con entregas. Esa aprobación no activa facturación.

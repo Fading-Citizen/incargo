@@ -69,3 +69,9 @@ Decisiones indispensables: sistema actual de facturación y responsable financie
 - [Inventario y transición externa](external-process-transition.md): contratos identificados desde código, riesgos de no-cors/identidad por fila, plan de recepción verificable, deduplicación y conciliación de evidencias. Sin llamar proveedores ni modificar sus datos.
 
 Activación pendiente de respuestas previas y revisión de permisos. Trabajo independiente concluido en esta rama; ningún resultado aislado se presenta como función ya activada en producción.
+
+## Publicación operacional, finanzas retenidas por instrucción expresa
+
+Lenu indicó el 30 de octubre que el sistema de facturación debe integrarse sin activarse hasta recibir los datos y una nueva indicación. Se conserva implementación aislada, se añade navegación pendiente y un bloqueo literal tanto en la capa de operaciones como en el contrato SQL. No hay activación por variables ni permisos financieros nuevos.
+
+Puede publicarse el código operativo que usa contratos existentes. Activar pedidos/cotizaciones todavía requiere confirmar el alcance del rol operations para crear/revisar/aceptar/cancelar, así como la relación pedido-entregas. Son decisiones separadas de la facturación retenida. Los modelos de costos/proveedores/documentación siguen cerrados; la transición de fuentes externas conserva sus dependencias documentadas.

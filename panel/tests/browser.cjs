@@ -114,6 +114,8 @@ const assert = require("node:assert/strict"),
         };
       else if (url.pathname === "/auth/v1/user")
         result = { id: "test-user", email: "test@example.invalid" };
+      else if (url.pathname.endsWith("incargo_business_capabilities"))
+        result = { commercial: false, finance: true, lifecycle: true }; // Server claim cannot override release hold.
       else if (url.pathname.endsWith("incargo_memberships"))
         result = url.searchParams.has("user_id")
           ? [{ role }]
@@ -239,7 +241,7 @@ const assert = require("node:assert/strict"),
       .getByRole("button", { name: "Reintentar consulta", exact: true })
       .click();
     await page.locator(".shipment-card").first().waitFor();
-    assert.equal(await page.getByText("Error 503",{exact:true}).count(),0);
+    assert.equal(await page.getByText("Error 503", { exact: true }).count(), 0);
     await page.emulateMedia({ colorScheme: "dark" });
     assert.equal(
       await page
@@ -297,6 +299,75 @@ const assert = require("node:assert/strict"),
         () => document.documentElement.scrollWidth > innerWidth,
       ),
       false,
+    );
+    await page
+      .getByRole("button", { name: "Facturación y cartera", exact: true })
+      .click();
+    await page
+      .getByText("Pendiente de configuración · no activado", { exact: true })
+      .waitFor();
+    assert.equal(
+      await page
+        .getByRole("button", { name: "Registrar factura externa", exact: true })
+        .count(),
+      0,
+    );
+    const beforeBlocked = writes.length;
+    const blocked = await page.evaluate(async () => {
+      const api = window.IncargoOperations;
+      const actions = [
+        () => api.financeBoard(),
+        () => api.receiptBoard(),
+        () => api.invoiceDetail("test"),
+        () => api.registerInvoice("test", {}),
+        () => api.recordReceipt("test", {}),
+        () => api.applyReceipt("test", "test", "test", 1),
+        () => api.reverseAllocation("test", "test", "test"),
+        () => api.administrativeNotes("invoice", "test"),
+        () =>
+          api.addAdministrativeNote("test", "receipt", "test", "test", "test"),
+      ];
+      return Promise.all(
+        actions.map(async (action) => {
+          try {
+            await action();
+            return "UNBLOCKED";
+          } catch (e) {
+            return e.message;
+          }
+        }),
+      );
+    });
+    assert(
+      blocked.every((message) =>
+        message.includes("autorización de activación"),
+      ),
+    );
+    assert.equal(
+      writes.length,
+      beforeBlocked,
+      "release hold must block network dispatch, not just hide controls",
+    );
+    await page.screenshot({
+      path: "/tmp/incargo-finance-held-mobile.png",
+      fullPage: true,
+    });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.screenshot({
+      path: "/tmp/incargo-finance-held-desktop.png",
+      fullPage: true,
+    });
+    await page
+      .getByRole("button", { name: "Pedidos y cotizaciones", exact: true })
+      .click();
+    await page
+      .getByText("Preparado · pendiente de habilitación", { exact: true })
+      .waitFor();
+    assert.equal(
+      await page
+        .getByRole("button", { name: "Guardar cotización", exact: true })
+        .count(),
+      0,
     );
     await page.locator("#logout").click();
     assert.equal(await page.locator("#incargo-panel-root").textContent(), "");

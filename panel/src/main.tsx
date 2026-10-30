@@ -111,14 +111,10 @@ function EnterprisePanel() {
     return () => document.body.classList.remove("enterprise-ready");
   }, []);
   const navigation = [
-    ...(capabilities.commercial
-      ? [["commercial", "Pedidos y cotizaciones", "comercial"]]
-      : []),
+    ["commercial", "Pedidos y cotizaciones", "comercial"],
     ...sections,
     ["fleet", "Vehículos y conductores", "operaciones"],
-    ...(capabilities.finance
-      ? [["finance", "Facturación y cartera", "payments"]]
-      : []),
+    ["finance", "Facturación y cartera", "payments"],
   ];
   const chosen = state.deliveries.find((d) => d.id === selected);
   function navigate(id: string) {
@@ -216,16 +212,47 @@ function EnterprisePanel() {
             ) : view === "customers" ? (
               <Accounts deliveries={state.deliveries} />
             ) : view === "commercial" ? (
-              <Commercial
-                accounts={state.accounts || []}
-                deliveries={state.deliveries}
-                lifecycle={capabilities.lifecycle}
-              />
+              capabilities.commercial ? (
+                <Commercial
+                  accounts={state.accounts || []}
+                  deliveries={state.deliveries}
+                  lifecycle={capabilities.lifecycle}
+                />
+              ) : (
+                <PanelSection
+                  title="Pedidos y cotizaciones"
+                  description="Preparado · pendiente de habilitación"
+                >
+                  <PanelNotice>
+                    El módulo está integrado. Su activación requiere revisar los
+                    permisos comerciales y la relación de pedidos con viajes y
+                    entregas. Los envíos actuales continúan disponibles en
+                    Envíos activos.
+                  </PanelNotice>
+                </PanelSection>
+              )
             ) : view === "finance" ? (
-              <Finance
-                accounts={state.accounts || []}
-                lifecycle={capabilities.lifecycle}
-              />
+              capabilities.finance ? (
+                <Finance
+                  accounts={state.accounts || []}
+                  lifecycle={capabilities.lifecycle}
+                />
+              ) : (
+                <PanelSection
+                  title="Facturación y cartera"
+                  description="Pendiente de configuración · no activado"
+                >
+                  <PanelNotice>
+                    Incargo debe proporcionar los datos de facturación. La
+                    activación requiere una nueva indicación expresa; completar
+                    datos no habilitará el módulo automáticamente.
+                  </PanelNotice>
+                  <p>
+                    La emisión, el registro de facturas y abonos, las
+                    aplicaciones y los cobros permanecen deshabilitados.
+                  </p>
+                </PanelSection>
+              )
             ) : view === "fleet" ? (
               <FleetAssignments state={state} />
             ) : view === "reports" ? (

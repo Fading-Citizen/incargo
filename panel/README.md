@@ -1,4 +1,4 @@
-# Incargo — núcleo empresarial en revisión
+# Incargo — operación integrada y contratos empresariales preparados
 
 Este trabajo **no declara completo el sistema de la empresa**. Corrige la entrega `f47aeae`, que sólo añadía primitivas y consultas sobre formularios legacy. El alcance y las brechas están en [la auditoría del sistema](audit/2026-10-30-system-gap-matrix.md).
 
@@ -25,7 +25,7 @@ Este trabajo **no declara completo el sistema de la empresa**. Corrige la entreg
 
 Cliente, activación, seguimiento y landing mantienen sus rutas y archivos. No se cambia la raíz de Vercel ni se configura hosting. El panel usa componentes React extraídos/adaptados de la fuente Next; no se confunde un cambio de framework con el desarrollo de entidades y contratos.
 
-Los módulos comerciales/financieros sólo aparecen cuando el servidor devuelve capacidades habilitadas. Un RPC aún no instalado no se sustituye por fixtures o almacenamiento del navegador. La consulta financiera además requiere autorización específica; operaciones no implica finanzas.
+Pedidos/cotizaciones y facturación permanecen visibles en la navegación operativa. Si los contratos comerciales aún no están habilitados, se muestra su estado pendiente sin controles de escritura. Facturación está retenida por instrucción expresa: la capa de operaciones bloquea consultas y mutaciones financieras antes de llamar al servidor, incluso si éste anuncia capacidad financiera. La propuesta SQL tiene un bloqueo independiente. Ni configuración, variables ni inscripción de usuarios activan finanzas. Su futura activación requiere nueva instrucción y un cambio deliberado revisado. No hay fixtures en producción.
 
 ## Fuente Xtreme
 
@@ -39,7 +39,7 @@ Fuente sólo lectura: `EFO-Latam/xtmpanel`, main `564ded98c7b447d5a50b1554616efe
 
 ## Contratos nuevos y decisiones pendientes
 
-[Diseño, SQL propuesto y controles](database/README.md). Los scripts `.proposal.sql` no son migraciones ejecutadas. Ningún permiso o usuario financiero se habilitó en Supabase real.
+[Diseño, SQL propuesto y controles](database/README.md). Los scripts `.proposal.sql` no son migraciones ejecutadas. Ningún permiso o usuario financiero se habilitó en Supabase real. Los scripts de activación propuestos tampoco levantan el bloqueo financiero.
 
 Pendientes ya consultados: sistema actual de facturación, responsables autorizados y cardinalidad pedido–entregas/viajes. La transición de procesos externos está en [el inventario de contratos y plan de conciliación](audit/external-process-transition.md). También se documenta el efecto de una reasignación posterior de cuenta y las limitaciones del primer núcleo financiero. Una revisión explícita de estos contratos precede a su activación.
 
@@ -74,3 +74,9 @@ Capturas bajo `qa/enterprise-*` y `qa/business-*` usan exclusivamente fixtures l
 La prueba de navegador ahora cubre revisión → aceptación de versión vigente → nota → cancelación previa a despacho → recarga. Pruebas transaccionales comprueban que dos revisiones no bifurcan una cotización, revisión y aceptación no coexisten, y cancelación y factura no pueden confirmar simultáneamente. El núcleo financiero anterior mantiene pruebas de saldos y reversos. Se verifica que notas de factura requieren finanzas y no alteran importes.
 
 Las tablas propuestas de recursos permanecen cerradas incluso después de activar los otros contratos en el entorno de prueba. No hay catálogo de vehículos importado, pagos a proveedores, documentos fiscales ni integración productiva de fuentes externas.
+
+## Publicación operativa con facturación retenida — 30 octubre
+
+El lote publicable usa exclusivamente contratos existentes: envíos/Kanban, viajes/asignación, expedientes/comprobantes, cuentas/accesos y consulta de vehículos/conductores. No aplica scripts SQL ni modifica proveedores, autenticación, rutas públicas o portal cliente. Nuevos pedidos/cotizaciones permanecen pendientes de permisos y cardinalidad; no dependen de activar facturación.
+
+La validación de release comprueba nueve entradas financieras bloqueadas sin llamadas de red y navegación pendiente en móvil/desktop. La prueba SQL comprueba que inscribir un usuario financiero no evita el bloqueo. Para probar la implementación preservada, únicamente el adaptador HTTP de loopback y la base desechable sustituyen el literal del bloqueo: no existe override en configuración de producción ni endpoint de activación.

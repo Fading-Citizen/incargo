@@ -19,6 +19,12 @@ select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111'
 do $$begin begin perform incargo_enterprise.finance_board();raise exception 'operations inferred finance privileges';exception when insufficient_privilege then null;end;begin perform 1 from incargo_enterprise.quotes;raise exception 'direct table read allowed';exception when insufficient_privilege then null;end;end$$;
 reset role;
 insert into incargo_enterprise.finance_operators(user_id) values('11111111-1111-4111-8111-111111111111');
+-- Prove enrollment cannot bypass the production release hold.
+set role authenticated;
+do $$begin begin perform incargo_enterprise.finance_board();raise exception 'finance release hold bypassed';exception when insufficient_privilege then null;end;end$$;
+reset role;
+-- TEST ONLY in disposable Docker: explicitly exercise the preserved financial implementation.
+create or replace function incargo_enterprise.finance_release_enabled() returns boolean language sql immutable set search_path='' as $$select true$$;
 set role authenticated;
 do $$declare q uuid;o uuid;i uuid;r uuid;allocation uuid;req uuid:=gen_random_uuid();payload jsonb;money jsonb;board jsonb;failed boolean;begin
  payload:='{"account_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","currency":"COP","origin":"Test origin","destination":"Test destination","description":"Test service","lines":[{"description":"User-entered test service","quantity":2,"unit_price":50,"tax_amount":0}]}'::jsonb;

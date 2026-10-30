@@ -11,3 +11,5 @@ Ver los comandos reproducibles y límites en ../README.md y ../database/README.m
 Segundo lote: revisión de cotización, aceptación de versión vigente, nota administrativa y cancelación previa a ejecución con recarga. `lifecycle-revision-mobile.png` muestra el editor aislado de revisión; `fleet-mobile.png` usa únicamente viajes y accesos sintéticos del contrato operativo existente. Se inspeccionaron los píxeles y se verificó el ancho móvil.
 
 Las pruebas SQL también rechazan cancelación con costos y acceso a notas financieras sin autorización financiera. Los modelos de proveedores/vehículos/documentos no tienen grants ni RPC.
+
+Release retenido: `finance-held-mobile.png` y `finance-held-desktop.png` muestran el estado no activado. El test operativo anuncia intencionalmente finance=true desde el servidor mock y comprueba que nueve entradas financieras no despachan ninguna solicitud. El test SQL verifica denegación aun con inscripción financiera local. Las capturas anteriores de facturas son exclusivamente del entorno aislado de prueba, no de producción.

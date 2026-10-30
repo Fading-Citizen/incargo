@@ -128,6 +128,18 @@ const signatures = {
             ? "image/png"
             : "text/html",
     );
+    if (file === path.join(root, "incargo-app.js")) {
+      const source = fs.readFileSync(file, "utf8");
+      assert(source.includes("const FINANCE_RELEASE_ENABLED = false;"));
+      // Test-only HTTP adapter, bound to loopback; never alters the release asset.
+      res.end(
+        source.replace(
+          "const FINANCE_RELEASE_ENABLED = false;",
+          "const FINANCE_RELEASE_ENABLED = true;",
+        ),
+      );
+      return;
+    }
     fs.createReadStream(file).pipe(res);
   });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));

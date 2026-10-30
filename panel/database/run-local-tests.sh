@@ -20,3 +20,4 @@ for script in incargo-app/tests/policy-bootstrap.sql incargo-app/migration.sql i
 done
 python3 panel/database/concurrency.test.py
 node panel/tests/business-browser.cjs
+python3 panel/database/check-commercial-scope.py
