@@ -77,6 +77,7 @@ export interface OperationsApi {
   ): Promise<string>;
 
   refresh(): Promise<void>;
+  refreshMonitor(): Promise<void>;
   createTrip(input: Omit<Trip, "id"> & { request_id: string }): Promise<void>;
   assignTrip(id: string, driver: string): Promise<void>;
   createDelivery(

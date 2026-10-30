@@ -176,10 +176,10 @@
   submitClientAdmin('client-delivery-form','incargo_client_assign_delivery',data=>({p_account:data.get('account'),p_delivery:data.get('delivery')}));
   submitClientAdmin('client-unlink-user-form','incargo_client_unlink_user',data=>({p_user:data.get('user')}));
   submitClientAdmin('client-unassign-delivery-form','incargo_client_unassign_delivery',data=>({p_delivery:data.get('delivery')}));
-  async function reload({signal}={}){
+  async function reload({signal,quiet=false}={}){
     const active=session,attempt=generation,epoch=++reloadEpoch;
     const current=()=>{check(active,attempt);if(epoch!==reloadEpoch)throw stale();};
-    publishPanel('loading');
+    if(!quiet)publishPanel('loading');
     try{
       const nextTrips=await rest('incargo_trips','select=id,route_label,scheduled_date,vehicle_plate,driver_user_id&order=scheduled_date.desc',{signal});current();
       const nextDeliveries=await rest('incargo_deliveries','select=id,trip_id,customer_name,destination_text,invoice_reference,remittance_reference,status'+cargoSelect()+'&order=created_at.desc',{signal});current();
@@ -188,7 +188,7 @@
       if(role==='operations'){
         const picker=$('driver-select');picker.replaceChildren();const empty=node('option','Sin asignar');empty.value='';picker.append(empty);
         drivers.forEach(d=>{const option=node('option',d.user_id);option.value=d.user_id;picker.append(option);});
-        renderTrips();renderOpsDeliveries();await refreshClientAdmin();current();publishPanel('ready');
+        renderTrips();renderOpsDeliveries();if(!quiet)await refreshClientAdmin();current();publishPanel('ready');
       }else{renderDriver();publishPanel('signed-out');}
     }catch(error){if(!error?.stale&&epoch===reloadEpoch)publishPanel('error');throw error;}
   }
@@ -294,6 +294,7 @@
     await request('/rest/v1/'+table,{method:'POST',body:{id:requestId,...payload}});
   }
   globalThis.IncargoOperations=Object.freeze({
+    async refreshMonitor(){requireOperations();const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),15000);try{await reload({quiet:true,signal:controller.signal});}finally{clearTimeout(timeout);}},
     async refresh(){requireOperations();await reload();notice('Datos actualizados.');},
     async businessCapabilities(){requireOperations();try{const capabilities=await rpc('incargo_business_capabilities',{});return {...capabilities,finance:FINANCE_RELEASE_ENABLED&&capabilities.finance===true};}catch(error){if(error?.status===404||error?.code==='PGRST202')return {commercial:false,finance:false};throw error;}},
     async quoteBoard(){requireOperations();return rpc('incargo_quote_board',{});},

@@ -169,6 +169,9 @@ export default function ShipmentKanban({
   onOpen: (id: string) => void;
   onNew: () => void;
 }) {
+  const [listView, setListView] = useState(
+    () => window.matchMedia("(max-width:750px)").matches,
+  );
   const [query, setQuery] = useState(""),
     [trip, setTrip] = useState(""),
     [includeDelivered, setIncludeDelivered] = useState(false),
@@ -226,6 +229,9 @@ export default function ShipmentKanban({
         <PanelAction onClick={onNew}>+ Nueva entrega</PanelAction>
       </div>
       <div className="board-toolbar">
+        <PanelAction tone="neutral" onClick={() => setListView((v) => !v)}>
+          {listView ? "Vista de tablero" : "Vista de lista"}
+        </PanelAction>
         <PanelField label="Buscar envío">
           <input
             value={query}
@@ -276,7 +282,7 @@ export default function ShipmentKanban({
       )}
       <DndContext sensors={sensors} onDragEnd={move}>
         <div
-          className="shipment-board"
+          className={"shipment-board" + (listView ? " shipment-list" : "")}
           tabIndex={0}
           role="region"
           aria-label="Kanban de envíos"

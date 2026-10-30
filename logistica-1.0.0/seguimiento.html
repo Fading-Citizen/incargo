@@ -1,1 +1,67 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><title>Incargo · Seguimiento</title><link rel="stylesheet" href="incargo-app.css"><script src="incargo-tracking.js" defer></script></head><body><header><a class="brand" href="/">◈ INCARGO</a><span>SEGUIMIENTO</span></header><main class="tracking"><h1>Tu entrega</h1><p id="notice" role="status" aria-live="polite">Consultando estado…</p><article id="result" class="card" hidden></article></main></body></html>
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Incargo · Seguimiento de tu entrega</title>
+    <link rel="stylesheet" href="incargo-app.css" />
+    <link rel="stylesheet" href="incargo-tracking.css" />
+    <script src="incargo-tracking.js" defer></script>
+  </head>
+  <body class="tracking-page">
+    <header>
+      <a class="brand" href="/"
+        ><img src="img/Logo.png" alt="Incargo" width="150" /></a
+      ><a href="cliente.html">Mis envíos →</a>
+    </header>
+    <main class="tracking">
+      <div class="tracking-intro">
+        <p class="tracking-eyebrow">INCARGO / SEGUIMIENTO</p>
+        <h1>Cada hito de tu entrega,<br />en un solo lugar.</h1>
+        <p>
+          Consulta el estado registrado y el comprobante disponible mediante el
+          enlace que compartió Incargo contigo.
+        </p>
+      </div>
+      <section id="tracking-entry" class="card" hidden>
+        <h2>Abre tu enlace de seguimiento</h2>
+        <form id="tracking-link-form">
+          <label for="tracking-link">Enlace recibido de Incargo</label
+          ><input
+            id="tracking-link"
+            name="link"
+            type="url"
+            required
+            placeholder="https://www.incargo.co/seguimiento.html#token=…"
+            autocomplete="off"
+          /><button type="submit">Consultar entrega</button>
+        </form>
+        <p>
+          No tienes que escribir datos de la carga. Si no tienes un enlace,
+          entra a <a href="cliente.html">Mis envíos</a> o contacta al equipo.
+        </p>
+      </section>
+      <div class="tracking-controls" id="tracking-controls" hidden>
+        <button id="tracking-refresh" type="button">Actualizar estado</button
+        ><label
+          ><input id="tracking-auto" type="checkbox" checked /> Consultar cada
+          minuto</label
+        >
+      </div>
+      <p id="notice" role="status" aria-live="polite">Consultando estado…</p>
+      <p id="tracking-freshness" class="tracking-freshness"></p>
+      <article id="result" class="card" hidden></article>
+      <aside class="tracking-explainer">
+        <strong>Actualizaciones de la operación</strong>
+        <p>
+          Esta vista muestra hitos registrados por Incargo. No es un localizador
+          GPS; no muestra la posición de un vehículo. La consulta automática se
+          pausa cuando la pestaña está oculta o no hay conexión.
+        </p>
+      </aside>
+      <a class="tracking-back" href="/">← Volver a Incargo</a>
+    </main>
+  </body>
+</html>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import {
   PanelAction,
@@ -17,6 +17,7 @@ import DeliveryFile from "./modules/DeliveryFile";
 import Accounts from "./modules/Accounts";
 import FleetAssignments from "./modules/FleetAssignments";
 import Commercial from "./modules/Commercial";
+import RouteMap from "./modules/RouteMap";
 import Finance from "./modules/Finance";
 const sections = [
   ["shipments", "Envíos activos", "movements"],
@@ -77,6 +78,11 @@ function Reports({ state }: { state: Snapshot }) {
   );
 }
 function EnterprisePanel() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [monitoring, setMonitoring] = useState(false);
+  const [offline, setOffline] = useState(!navigator.onLine);
+  const monitorBusy = useRef(false);
   const state = useOperations(),
     [view, setView] = useState("shipments"),
     [selected, setSelected] = useState<string | null>(null),
@@ -111,14 +117,50 @@ function EnterprisePanel() {
     return () => document.body.classList.remove("enterprise-ready");
   }, []);
   const navigation = [
-    ["commercial", "Pedidos y cotizaciones", "comercial"],
     ...sections,
+    ["map", "Mapa y seguimiento", "servicio-movil"],
+    ["commercial", "Pedidos y cotizaciones", "comercial"],
     ["fleet", "Vehículos y conductores", "operaciones"],
     ["finance", "Facturación y cartera", "payments"],
   ];
+  useEffect(() => {
+    const update = () => setOffline(!navigator.onLine);
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
+  useEffect(() => {
+    if (!autoRefresh || view !== "map" || selected) return;
+    let active = true;
+    const timer = window.setInterval(async () => {
+      if (document.hidden || !navigator.onLine || monitorBusy.current) return;
+      monitorBusy.current = true;
+      setMonitoring(true);
+      try {
+        await api().refreshMonitor();
+        if (active) setRefreshError("");
+      } catch (e) {
+        if (active) setRefreshError((e as Error).message);
+      } finally {
+        monitorBusy.current = false;
+        setMonitoring(false);
+      }
+    }, 60000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [autoRefresh, view, selected]);
   const chosen = state.deliveries.find((d) => d.id === selected);
   function navigate(id: string) {
     setView(id);
+    setMenuOpen(false);
+    requestAnimationFrame(() =>
+      document.getElementById("panel-workspace")?.focus(),
+    );
     setSelected(null);
     setNewDelivery(false);
   }
@@ -132,20 +174,68 @@ function EnterprisePanel() {
   }
   return (
     <div className="efo-app enterprise-shell">
-      <aside className="enterprise-sidebar">
+      <a className="panel-skip" href="#panel-workspace">
+        Ir al contenido del módulo
+      </a>
+      <aside
+        className={"enterprise-sidebar" + (menuOpen ? " nav-open" : "")}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            setMenuOpen(false);
+            document
+              .querySelector<HTMLButtonElement>(".mobile-nav-toggle")
+              ?.focus();
+          }
+        }}
+      >
+        <button
+          type="button"
+          className="mobile-nav-toggle"
+          aria-label="Cambiar módulo"
+          aria-expanded={menuOpen}
+          aria-controls="panel-modules"
+          onClick={() => setMenuOpen((v) => !v)}
+        >
+          <span>
+            <small>MÓDULO ACTUAL</small>
+            {navigation.find(([id]) => id === view)?.[1]}
+          </span>
+          <span aria-hidden="true">{menuOpen ? "Cerrar ×" : "Menú ☰"}</span>
+        </button>
         <div className="enterprise-sidebar-title">
           INCARGO<span>Gestión de transporte</span>
         </div>
-        <nav aria-label="Módulos del panel">
-          {navigation.map(([id, label, icon]) => (
-            <button
-              key={id}
-              onClick={() => navigate(id)}
-              aria-current={view === id ? "page" : undefined}
-            >
-              <PanelNavigationIcon name={icon} />
-              <span>{label}</span>
-            </button>
+        <nav id="panel-modules" aria-label="Módulos del panel">
+          {[
+            { label: "Operación", ids: ["shipments", "map", "trips", "fleet"] },
+            { label: "Gestión", ids: ["customers", "documents", "reports"] },
+            {
+              label: "Comercial y administración",
+              ids: ["commercial", "finance"],
+            },
+          ].map((group) => (
+            <div className="nav-group" key={group.label}>
+              <p>{group.label}</p>
+              {group.ids
+                .map((key) => navigation.find(([id]) => id === key)!)
+                .map(([id, label, icon]) => (
+                  <button
+                    key={id}
+                    aria-label={label}
+                    onClick={() => navigate(id)}
+                    aria-current={view === id ? "page" : undefined}
+                  >
+                    <PanelNavigationIcon name={icon} />
+                    <span>{label}</span>
+                    {id === "commercial" && !capabilities.commercial && (
+                      <small aria-hidden="true">Pendiente</small>
+                    )}
+                    {id === "finance" && !capabilities.finance && (
+                      <small aria-hidden="true">Inactivo</small>
+                    )}
+                  </button>
+                ))}
+            </div>
           ))}
         </nav>
         <p>
@@ -154,16 +244,28 @@ function EnterprisePanel() {
           Datos de tu sesión autorizada
         </p>
       </aside>
-      <div className="enterprise-workspace">
+      <div
+        className="enterprise-workspace"
+        id="panel-workspace"
+        tabIndex={-1}
+        aria-label={navigation.find(([id]) => id === view)?.[1]}
+      >
         <div className="enterprise-context">
           <span>{navigation.find(([id]) => id === view)?.[1]}</span>
           <small>
             {state.updatedAt
-              ? "Consulta " +
-                new Date(state.updatedAt).toLocaleTimeString("es-CO")
-              : "Cargando datos…"}
+              ? "Consulta " + new Date(state.updatedAt).toLocaleString("es-CO")
+              : state.status === "error"
+                ? "Consulta sin confirmar"
+                : "Consultando datos…"}
           </small>
         </div>
+        {offline && (
+          <PanelNotice tone="warning">
+            Sin conexión. No se están consultando novedades; la hora mostrada
+            corresponde a la última consulta correcta.
+          </PanelNotice>
+        )}
         {refreshError && (
           <PanelNotice tone="danger">{refreshError}</PanelNotice>
         )}
@@ -253,6 +355,14 @@ function EnterprisePanel() {
                   </p>
                 </PanelSection>
               )
+            ) : view === "map" ? (
+              <RouteMap
+                state={state}
+                onOpen={setSelected}
+                autoRefresh={autoRefresh}
+                onAutoRefresh={setAutoRefresh}
+                refreshing={monitoring}
+              />
             ) : view === "fleet" ? (
               <FleetAssignments state={state} />
             ) : view === "reports" ? (

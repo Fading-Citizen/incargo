@@ -80,3 +80,9 @@ Las tablas propuestas de recursos permanecen cerradas incluso después de activa
 El lote publicable usa exclusivamente contratos existentes: envíos/Kanban, viajes/asignación, expedientes/comprobantes, cuentas/accesos y consulta de vehículos/conductores. No aplica scripts SQL ni modifica proveedores, autenticación, rutas públicas o portal cliente. Nuevos pedidos/cotizaciones permanecen pendientes de permisos y cardinalidad; no dependen de activar facturación.
 
 La validación de release comprueba nueve entradas financieras bloqueadas sin llamadas de red y navegación pendiente en móvil/desktop. La prueba SQL comprueba que inscribir un usuario financiero no evita el bloqueo. Para probar la implementación preservada, únicamente el adaptador HTTP de loopback y la base desechable sustituyen el literal del bloqueo: no existe override en configuración de producción ni endpoint de activación.
+
+## Navegación y seguimiento geográfico
+
+[Auditoría, privacidad, fuentes cartográficas y límites](audit/maps-and-tracking.md). El panel incorpora navegación agrupada, selector móvil, lista/tablero y mapa de referencia local de recorridos. La actualización cada minuto usa contratos existentes: no existe GPS conectado ni se activó Realtime. El seguimiento público conserva su alcance por token, añade refresco/pausa y diferencia hora de consulta de último hito. Portada y acceso al tracking renovados, sin cambiar proveedores.
+
+Prueba pública reproducible: `npm run test:public` desde `panel`. Las demás verificaciones operativas y financieras aisladas se mantienen; facturación continúa inactiva.

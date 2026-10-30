@@ -75,3 +75,7 @@ Activación pendiente de respuestas previas y revisión de permisos. Trabajo ind
 Lenu indicó el 30 de octubre que el sistema de facturación debe integrarse sin activarse hasta recibir los datos y una nueva indicación. Se conserva implementación aislada, se añade navegación pendiente y un bloqueo literal tanto en la capa de operaciones como en el contrato SQL. No hay activación por variables ni permisos financieros nuevos.
 
 Puede publicarse el código operativo que usa contratos existentes. Activar pedidos/cotizaciones todavía requiere confirmar el alcance del rol operations para crear/revisar/aceptar/cancelar, así como la relación pedido-entregas. Son decisiones separadas de la facturación retenida. Los modelos de costos/proveedores/documentación siguen cerrados; la transición de fuentes externas conserva sus dependencias documentadas.
+
+## Navegación y mapa de referencia
+
+UI operativa reagrupada con selector móvil y mapa local, usando recorridos ya autorizados. Hitos actualizables cada minuto; no hay tablas GPS ni publicaciones Realtime de Incargo según metadata de producción consultada. El mapa se limita a operaciones y no amplía el payload del enlace público. El alcance completo, licencias y requisitos de una futura fuente GPS están en [maps-and-tracking.md](maps-and-tracking.md). No resuelve ni oculta las brechas comerciales/financieras anteriores.

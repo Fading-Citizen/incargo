@@ -31,7 +31,10 @@ export default function DeliveryFile({
         if (active) setDetail(data);
       })
       .catch((e) => {
-        if (active) setError(e.message);
+        if (active) {
+          setDetail(null);
+          setError(e.message);
+        }
       });
     return () => {
       active = false;
@@ -111,7 +114,14 @@ export default function DeliveryFile({
             <ol className="event-timeline">
               {detail.events.map((e) => (
                 <li key={e.id}>
-                  <PanelStatus>{e.event_type}</PanelStatus>
+                  <PanelStatus>
+                    {{
+                      created: "Envío registrado",
+                      in_transit: "En ruta",
+                      exception: "Novedad",
+                      delivered: "Entregada",
+                    }[e.event_type] || "Evento registrado"}
+                  </PanelStatus>
                   <time>{new Date(e.occurred_at).toLocaleString("es-CO")}</time>
                   <p>{e.note}</p>
                 </li>
@@ -124,7 +134,13 @@ export default function DeliveryFile({
       </div>
       <div className="enterprise-columns">
         <PanelSection title="Comprobante de entrega">
-          {detail?.proof ? (
+          {!detail ? (
+            <p>
+              {error
+                ? "No se pudo comprobar el soporte."
+                : "Consultando comprobante…"}
+            </p>
+          ) : detail.proof ? (
             <>
               <p>
                 Recibió: <strong>{detail.proof.receiver_name}</strong>

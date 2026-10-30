@@ -9,7 +9,8 @@
     "test": "tsx --test tests/*.test.ts",
     "lint": "eslint src",
     "test:browser": "node tests/browser.cjs",
-    "test:database": "bash database/run-local-tests.sh"
+    "test:database": "bash database/run-local-tests.sh",
+    "test:public": "node tests/public-tracking-browser.cjs"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",

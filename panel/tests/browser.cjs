@@ -55,6 +55,7 @@ const assert = require("node:assert/strict"),
     page.on("pageerror", (e) => errors.push(e.message));
     let role = "operations",
       fail = false;
+    let deliveryReads = 0;
     const trips = [
       {
         id: "t1",
@@ -128,9 +129,10 @@ const assert = require("node:assert/strict"),
             contentType: "application/json",
           });
         result = trips;
-      } else if (url.pathname.endsWith("incargo_deliveries"))
+      } else if (url.pathname.endsWith("incargo_deliveries")) {
+        deliveryReads++;
         result = deliveries;
-      else if (url.pathname.endsWith("incargo_start_delivery")) {
+      } else if (url.pathname.endsWith("incargo_start_delivery")) {
         deliveries.find(
           (d) => d.id === route.request().postDataJSON().p_delivery,
         ).status = "in_transit";
@@ -148,6 +150,18 @@ const assert = require("node:assert/strict"),
       });
     });
     const base = "http://127.0.0.1:" + server.address().port;
+    async function navigate(name) {
+      const toggle = page.getByRole("button", {
+        name: "Cambiar módulo",
+        exact: true,
+      });
+      if (
+        (await toggle.isVisible()) &&
+        (await toggle.getAttribute("aria-expanded")) === "false"
+      )
+        await toggle.click();
+      await page.getByRole("button", { name, exact: true }).click();
+    }
     await page.goto(base + "/operaciones.html");
     assert(await page.locator("#workspace").isHidden());
     async function login() {
@@ -198,9 +212,7 @@ const assert = require("node:assert/strict"),
       .getByRole("heading", { name: "Historial de la entrega" })
       .waitFor();
     await page.getByRole("button", { name: "Volver al Kanban" }).click();
-    await page
-      .getByRole("button", { name: "Clientes y accesos", exact: true })
-      .click();
+    await navigate("Clientes y accesos");
     await page
       .getByRole("heading", { name: "Cuenta de prueba", exact: true })
       .waitFor();
@@ -214,24 +226,20 @@ const assert = require("node:assert/strict"),
         .count(),
       0,
     );
-    await page
-      .getByRole("button", { name: "Viajes y asignaciones", exact: true })
-      .click();
+    await navigate("Viajes y asignaciones");
     await page
       .getByRole("heading", { name: "Crear viaje", exact: true })
       .waitFor();
     assert(
       await page.locator(".enterprise-workspace form").first().isVisible(),
     );
-    await page.getByRole("button", { name: "Documentos", exact: true }).click();
+    await navigate("Documentos");
     await page
       .getByRole("button", { name: "Abrir expediente", exact: true })
       .first()
       .click();
     await page.getByRole("heading", { name: "Carga y recorrido" }).waitFor();
-    await page
-      .getByRole("button", { name: "Envíos activos", exact: true })
-      .click();
+    await navigate("Envíos activos");
     fail = true;
     await page.locator("#ops-refresh").click();
     await page.getByText(/No pudimos actualizar la operación/).waitFor();
@@ -250,6 +258,72 @@ const assert = require("node:assert/strict"),
         .evaluate((e) => getComputedStyle(e).backgroundColor),
       "rgb(255, 255, 255)",
     );
+    await navigate("Mapa y seguimiento");
+    await page
+      .getByRole("heading", { name: "Mapa de recorridos", exact: true })
+      .waitFor();
+    assert(
+      await page
+        .getByRole("img", { name: /Referencia entre Bogota y Medellín/ })
+        .isVisible(),
+    );
+    await page.screenshot({
+      path: "/tmp/incargo-route-map-desktop.png",
+      fullPage: true,
+    });
+    await page.clock.install();
+    await page.getByLabel("Actualizar estados cada minuto").check();
+    const readsBefore = deliveryReads;
+    deliveries[0].status = "exception";
+    await page.clock.fastForward(60000);
+    await page.waitForFunction(
+      () =>
+        document.querySelector(".route-choice[aria-pressed=true] small")
+          ?.textContent === "Con novedad",
+    );
+    assert(deliveryReads > readsBefore);
+    const stableReads = deliveryReads;
+    await page.evaluate(() =>
+      Object.defineProperty(document, "hidden", {
+        configurable: true,
+        get: () => true,
+      }),
+    );
+    await page.clock.fastForward(60000);
+    assert.equal(deliveryReads, stableReads);
+    await page.evaluate(() =>
+      Object.defineProperty(document, "hidden", {
+        configurable: true,
+        get: () => false,
+      }),
+    );
+    await page.getByLabel("Actualizar estados cada minuto").uncheck();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({
+      path: "/tmp/incargo-route-map-mobile.png",
+      fullPage: true,
+    });
+    await page
+      .getByRole("button", { name: "Cambiar módulo", exact: true })
+      .click();
+    assert.equal(
+      await page
+        .getByRole("button", { name: "Facturación y cartera", exact: true })
+        .isVisible(),
+      true,
+    );
+    await page.screenshot({
+      path: "/tmp/incargo-navigation-mobile.png",
+      fullPage: true,
+    });
+    await page.keyboard.press("Escape");
+    assert.equal(
+      await page
+        .getByRole("button", { name: "Cambiar módulo", exact: true })
+        .getAttribute("aria-expanded"),
+      "false",
+    );
+    await navigate("Envíos activos");
     await page.setViewportSize({ width: 390, height: 844 });
     assert.equal(
       await page.evaluate(
@@ -277,9 +351,7 @@ const assert = require("node:assert/strict"),
       path: "/tmp/incargo-enterprise-form-mobile.png",
       fullPage: true,
     });
-    await page
-      .getByRole("button", { name: "Vehículos y conductores", exact: true })
-      .click();
+    await navigate("Vehículos y conductores");
     await page
       .getByRole("heading", { name: "Vehículos y conductores", exact: true })
       .waitFor();
@@ -300,9 +372,7 @@ const assert = require("node:assert/strict"),
       ),
       false,
     );
-    await page
-      .getByRole("button", { name: "Facturación y cartera", exact: true })
-      .click();
+    await navigate("Facturación y cartera");
     await page
       .getByText("Pendiente de configuración · no activado", { exact: true })
       .waitFor();
@@ -357,9 +427,7 @@ const assert = require("node:assert/strict"),
       path: "/tmp/incargo-finance-held-desktop.png",
       fullPage: true,
     });
-    await page
-      .getByRole("button", { name: "Pedidos y cotizaciones", exact: true })
-      .click();
+    await navigate("Pedidos y cotizaciones");
     await page
       .getByText("Preparado · pendiente de habilitación", { exact: true })
       .waitFor();
