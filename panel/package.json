@@ -7,22 +7,26 @@
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "test:browser": "node tests/browser.cjs",
+    "test:database": "bash database/run-local-tests.sh"
   },
   "dependencies": {
+    "@dnd-kit/core": "6.3.1",
+    "@dnd-kit/utilities": "3.2.2",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "4.1.18",
     "@types/react": "19.2.13",
     "@types/react-dom": "19.2.3",
-    "typescript": "5.9.3",
     "esbuild": "0.25.12",
-    "tsx": "4.21.0",
-    "playwright": "1.59.1",
     "eslint": "9.39.1",
-    "typescript-eslint": "8.48.1",
-    "@tailwindcss/cli": "4.1.18",
-    "tailwindcss": "4.1.18"
+    "playwright": "1.59.1",
+    "tailwindcss": "4.1.18",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.48.1"
   }
 }

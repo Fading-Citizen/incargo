@@ -2,7 +2,7 @@
   'use strict';
   const $=id=>document.getElementById(id);
   let retained,expiryTimer,generation=0;let config, session, role, trips=[], deliveries=[], drivers=[], selectedId=null;
-  let confirmationAttempt=null,confirmationBusy=false,reloadEpoch=0;
+  let confirmationAttempt=null,confirmationBusy=false,reloadEpoch=0,clientAccounts=[];
   const cargo=globalThis.IncargoCargo;
   if(cargo?.enabled){$('cargo-inputs').hidden=false;$('cargo-inputs').disabled=false;}
   const cargoSelect=()=>cargo?.enabled?',origin_text,cargo_description,package_count,gross_weight_kg':'';
@@ -13,9 +13,9 @@
   const fail=error=>{if(error?.stale)return;notice(error?.message||'No se pudo completar la operación.',true);};
   const stale=()=>Object.assign(Error('Solicitud anterior descartada.'),{stale:true});
   // Publish only already-authorized operational records, never credentials or session objects.
-  const publishPanel=status=>globalThis.IncargoPanel?.update({status,deliveries:status==='ready'&&role==='operations'?deliveries:[],trips:status==='ready'&&role==='operations'?trips:[],updatedAt:status==='ready'?new Date().toISOString():undefined});
+  const publishPanel=status=>globalThis.IncargoPanel?.update({status,deliveries:status==='ready'&&role==='operations'?deliveries:[],trips:status==='ready'&&role==='operations'?trips:[],drivers:status==='ready'&&role==='operations'?drivers:[],accounts:status==='ready'&&role==='operations'?clientAccounts:[],updatedAt:status==='ready'?new Date().toISOString():undefined});
   function clear(){
-    reloadEpoch++;publishPanel('signed-out');
+    reloadEpoch++;clientAccounts=[];publishPanel('signed-out');
     accessRequests?.reset();
     if(cargo?.enabled)$('delivery-form').reset();
     generation++;departures.clear();departureInFlight=false;confirmationAttempt=null;confirmationBusy=false;$('confirm-form').reset();$('issue-form').reset();confirmationControls();retained?.clear();clearTimeout(expiryTimer);session=null;role=null;trips=[];deliveries=[];drivers=[];selectedId=null;
@@ -29,7 +29,7 @@
     if(!active||active.expires_at*1000<=Date.now()){clear();notice('Tu sesión terminó. Ingresa nuevamente.',true);throw stale();}
   }
   function retain(){return retained??=IncargoSession.create({context:'operations',config});}
-  async function request(path,{method='GET',body,storage=false,signal}={}){
+  async function request(path,{method='GET',body,storage=false,signal,binary=false}={}){
     const active=session,attempt=generation;const checkCurrent=()=>{check(active,attempt);if(signal?.aborted)throw Error('La solicitud agotó el tiempo de espera.');};checkCurrent();
     try{
     const headers={apikey:config.publishableKey,Authorization:`Bearer ${active.access_token}`};
@@ -45,6 +45,7 @@
     checkCurrent();
     if([401,403].includes(response.status)){clear();notice('Tu sesión terminó o tu acceso cambió. Ingresa nuevamente.',true);throw stale();}
     if(!response.ok){const data=await response.json().catch(()=>({}));checkCurrent();throw Object.assign(Error(data.message||data.error_description||data.error||`Error ${response.status}`),{status:response.status,code:data.code});}
+    if(binary){const blob=await response.blob();checkCurrent();return blob;}
     const text=await response.text();checkCurrent();return text?JSON.parse(text):null;
     }catch(error){checkCurrent();throw error;}
   }
@@ -118,7 +119,7 @@
       // Refresh only the delivery list: avoid unrelated account/link administration.
       const rows=await confirmationRequest('/rest/v1/incargo_deliveries?select=id,trip_id,customer_name,destination_text,invoice_reference,remittance_reference,status'+cargoSelect()+'&order=created_at.desc',{});
       check(active,attemptGeneration);if(!Array.isArray(rows))throw Error('No pudimos actualizar las entregas.');
-      deliveries=rows;departures.delete(deliveryId);renderOpsDeliveries();publishPanel('ready');notice('Salida registrada. Estado de las entregas actualizado.');
+      deliveries=rows;departures.delete(deliveryId);renderOpsDeliveries();publishPanel('ready');notice('Salida registrada. Estado de las entregas actualizado.');return true;
     }catch(error){
       if(error?.stale||active!==session||attemptGeneration!==generation)return;
       if(error?.code==='PGRST202'||error?.status===404){
@@ -143,7 +144,7 @@
   }
   async function loadClientAdmin(){
     const active=session,attempt=generation;
-    const accounts=await rpc('incargo_client_admin_accounts',{});
+    const accounts=await rpc('incargo_client_admin_accounts',{});clientAccounts=accounts;
     if(accessRequests)await accessRequests.load(accounts);
     check(active,attempt);
     document.querySelectorAll('.client-account-select').forEach(select=>{select.replaceChildren();for(const account of accounts){const option=node('option',account.display_name);option.value=account.account_id;select.append(option);}});
@@ -153,6 +154,7 @@
     adminStatus(accounts.length?'Cuentas disponibles para asignación.':'Aún no hay cuentas comerciales. Crea una cuenta tras verificar su identidad.');
   }
   async function refreshClientAdmin(){
+    clientAccounts=[];
     try{await loadClientAdmin();}
     catch(error){
       if(error?.stale)return;
@@ -278,6 +280,47 @@
   };
   globalThis.addEventListener?.('beforeunload',event=>{
     if(confirmationAttempt&&!confirmationAttempt.confirmed){event.preventDefault();event.returnValue='';}
+  });
+  // Capability-scoped application API. Credentials and raw request remain private.
+  const requireOperations=()=>{if(role!=='operations')throw Error('Acceso operativo requerido.');check(session,generation);};
+  const textValue=(value,max,label)=>{const text=String(value??'').trim();if(!text||text.length>max)throw Error(label+' no válido.');return text;};
+  async function createRecord(table,payload,requestId){
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId||''))throw Error('Identificador del intento no válido.');
+    const existing=await rest(table,'select='+Object.keys(payload).join(',')+'&id=eq.'+encodeURIComponent(requestId));
+    if(existing.length){if(Object.keys(payload).some(key=>String(existing[0][key]??'')!==String(payload[key]??'')))throw Error('Este intento ya tiene datos distintos guardados. Actualiza y verifica el registro antes de continuar.');return;}
+    await request('/rest/v1/'+table,{method:'POST',body:{id:requestId,...payload}});
+  }
+  globalThis.IncargoOperations=Object.freeze({
+    refresh:()=>{requireOperations();return reload();},
+    async businessCapabilities(){requireOperations();try{return await rpc('incargo_business_capabilities',{});}catch(error){if(error?.status===404||error?.code==='PGRST202')return {commercial:false,finance:false};throw error;}},
+    async quoteBoard(){requireOperations();return rpc('incargo_quote_board',{});},
+    async orderBoard(){requireOperations();return rpc('incargo_order_board',{});},
+    async receiptBoard(){requireOperations();return rpc('incargo_receipt_board',{});},
+    async financeBoard(){requireOperations();return rpc('incargo_finance_board',{});},
+    async invoiceDetail(id){requireOperations();return rpc('incargo_invoice_detail',{p_id:id});},
+    async createQuote(request,data){requireOperations();return rpc('incargo_create_quote',{p_request:request,p_data:data});},
+    async acceptQuote(request,id,reference){requireOperations();return rpc('incargo_accept_quote',{p_request:request,p_quote:id,p_reference:reference});},
+    async linkOrderDelivery(request,order,delivery){requireOperations();return rpc('incargo_link_order_delivery',{p_request:request,p_order:order,p_delivery:delivery});},
+    async registerInvoice(request,data){requireOperations();return rpc('incargo_register_admin_invoice',{p_request:request,p_data:data});},
+    async recordReceipt(request,data){requireOperations();return rpc('incargo_record_receipt',{p_request:request,p_data:data});},
+    async applyReceipt(request,receipt,invoice,amount){requireOperations();return rpc('incargo_apply_receipt',{p_request:request,p_receipt:receipt,p_invoice:invoice,p_amount:amount});},
+    async reverseAllocation(request,id,reason){requireOperations();return rpc('incargo_reverse_allocation',{p_request:request,p_allocation:id,p_reason:reason});},
+    async createTrip(input){requireOperations();const payload={route_label:textValue(input.route_label,100,'Ruta'),scheduled_date:input.scheduled_date,vehicle_plate:textValue(input.vehicle_plate,20,'Placa').toUpperCase(),driver_user_id:input.driver_user_id||null};if(!/^\d{4}-\d{2}-\d{2}$/.test(payload.scheduled_date))throw Error('Fecha no válida.');await createRecord('incargo_trips',payload,input.request_id);await reload();},
+    async assignTrip(id,driver){requireOperations();if(!trips.some(t=>t.id===id))throw Error('Viaje no disponible.');await rest('incargo_trips','id=eq.'+encodeURIComponent(id),{method:'PATCH',body:{driver_user_id:driver||null}});await reload();},
+    async createDelivery(input){requireOperations();if(!trips.some(t=>t.id===input.trip_id))throw Error('Selecciona un viaje disponible.');const payload={trip_id:input.trip_id,customer_name:textValue(input.customer_name,120,'Cliente'),destination_text:input.destination_text||null,invoice_reference:input.invoice_reference||null,remittance_reference:input.remittance_reference||null,...(cargo?.enabled?cargo.parse(input):{})};for(const [key,max] of [['destination_text',200],['invoice_reference',80],['remittance_reference',80]])if(payload[key]?.length>max)throw Error('Referencia demasiado larga.');await createRecord('incargo_deliveries',payload,input.request_id);await reload();},
+    async startDelivery(id){requireOperations();if(!deliveries.some(d=>d.id===id))throw Error('Entrega no disponible.');if(!await startDeparture(id))throw Error('No se confirmó la salida. Revisa el estado antes de reintentar.');},
+    async detail(id){requireOperations();if(!deliveries.some(d=>d.id===id))throw Error('Entrega no disponible.');const events=await rest('incargo_delivery_events','select=id,event_type,note,occurred_at&delivery_id=eq.'+encodeURIComponent(id)+'&order=occurred_at.asc');const proofs=await rest('incargo_delivery_proofs','select=receiver_name,observation,captured_at&delivery_id=eq.'+encodeURIComponent(id));const links=await rpc('incargo_list_tracking_links',{p_delivery:id});return {events,proof:proofs[0]||null,links};},
+    async proof(id){requireOperations();const rows=await rest('incargo_delivery_proofs','select=object_path&delivery_id=eq.'+encodeURIComponent(id));if(!rows[0]?.object_path)throw Error('No hay comprobante disponible.');return request('/storage/v1/object/authenticated/incargo-proofs/'+rows[0].object_path.split('/').map(encodeURIComponent).join('/'),{binary:true});},
+    async tracking(id){requireOperations();const token=await rpc('incargo_create_tracking_link',{p_delivery:id,p_hours:72});return 'https://www.incargo.co/seguimiento.html#token='+encodeURIComponent(token);},
+    async revokeTracking(id){requireOperations();await rpc('incargo_revoke_tracking_link_by_id',{p_id:id});},
+    async accounts(){requireOperations();return rpc('incargo_client_admin_accounts',{});},
+    async requests(){requireOperations();return rpc('incargo_pending_client_access_requests',{});},
+    async createAccount(name){requireOperations();const result=await rpc('incargo_client_create_account',{p_display_name:textValue(name,120,'Cuenta')});await reload();return result;},
+    async linkUser(account,user){requireOperations();return rpc('incargo_client_link_user',{p_account:account,p_user:user});},
+    async assignClientDelivery(account,delivery){requireOperations();return rpc('incargo_client_assign_delivery',{p_account:account,p_delivery:delivery});},
+    async unlinkUser(user){requireOperations();return rpc('incargo_client_unlink_user',{p_user:user});},
+    async unassignClientDelivery(delivery){requireOperations();return rpc('incargo_client_unassign_delivery',{p_delivery:delivery});},
+    async approveRequest(user,account,updatedAt){requireOperations();return rpc('incargo_approve_client_access_request',{p_user:user,p_account:account,p_updated_at:updatedAt});}
   });
   const restoreAttempt=generation;
   void (async()=>{try{await init();if(generation!==restoreAttempt)return;const next=await retain().restore();if(generation===restoreAttempt&&next)await showSession(next,restoreAttempt);}catch(error){if(generation===restoreAttempt)fail(error);}})();

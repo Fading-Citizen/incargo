@@ -1,0 +1,24 @@
+-- REVIEW ONLY. Do not apply without explicit approval of new RPC scope and finance operators.
+-- This exposes new business functions; it does NOT enroll any user into finance.
+begin;
+create function incargo_enterprise.quote_board() returns jsonb language plpgsql stable security definer set search_path='' as $$declare result jsonb;begin perform incargo_enterprise.require_operations();select coalesce(jsonb_agg(to_jsonb(q) order by q.created_at desc,q.id),'[]'::jsonb) into result from incargo_enterprise.quotes q;return result;end$$;
+create function incargo_enterprise.capabilities() returns jsonb language plpgsql stable security definer set search_path='' as $$begin perform incargo_enterprise.require_operations();return jsonb_build_object('commercial',true,'finance',exists(select 1 from incargo_enterprise.finance_operators where user_id=auth.uid()));end$$;
+revoke all on function incargo_enterprise.quote_board(),incargo_enterprise.capabilities() from public,anon,authenticated;
+grant usage on schema incargo_enterprise to authenticated;
+-- Helpers and all tables remain inaccessible. Only reviewed domain entrypoints are executable.
+grant execute on function incargo_enterprise.create_quote(uuid,jsonb),incargo_enterprise.accept_quote(uuid,uuid,text),incargo_enterprise.link_delivery(uuid,uuid,uuid),incargo_enterprise.register_invoice(uuid,jsonb),incargo_enterprise.record_receipt(uuid,jsonb),incargo_enterprise.apply_receipt(uuid,uuid,uuid,numeric),incargo_enterprise.reverse_allocation(uuid,uuid,text),incargo_enterprise.order_board(),incargo_enterprise.finance_board(),incargo_enterprise.invoice_detail(uuid),incargo_enterprise.quote_board(),incargo_enterprise.capabilities() to authenticated;
+create function public.incargo_business_capabilities() returns jsonb language sql stable security invoker set search_path='' as $$select incargo_enterprise.capabilities()$$;
+create function public.incargo_quote_board() returns jsonb language sql stable security invoker set search_path='' as $$select incargo_enterprise.quote_board()$$;
+create function public.incargo_order_board() returns jsonb language sql stable security invoker set search_path='' as $$select incargo_enterprise.order_board()$$;
+create function public.incargo_finance_board() returns jsonb language sql stable security invoker set search_path='' as $$select incargo_enterprise.finance_board()$$;
+create function public.incargo_invoice_detail(p_id uuid) returns jsonb language sql stable security invoker set search_path='' as $$select incargo_enterprise.invoice_detail(p_id)$$;
+create function public.incargo_create_quote(p_request uuid,p_data jsonb) returns uuid language sql security invoker set search_path='' as $$select incargo_enterprise.create_quote(p_request,p_data)$$;
+create function public.incargo_accept_quote(p_request uuid,p_quote uuid,p_reference text) returns uuid language sql security invoker set search_path='' as $$select incargo_enterprise.accept_quote(p_request,p_quote,p_reference)$$;
+create function public.incargo_link_order_delivery(p_request uuid,p_order uuid,p_delivery uuid) returns uuid language sql security invoker set search_path='' as $$select incargo_enterprise.link_delivery(p_request,p_order,p_delivery)$$;
+create function public.incargo_register_admin_invoice(p_request uuid,p_data jsonb) returns uuid language sql security invoker set search_path='' as $$select incargo_enterprise.register_invoice(p_request,p_data)$$;
+create function public.incargo_record_receipt(p_request uuid,p_data jsonb) returns uuid language sql security invoker set search_path='' as $$select incargo_enterprise.record_receipt(p_request,p_data)$$;
+create function public.incargo_apply_receipt(p_request uuid,p_receipt uuid,p_invoice uuid,p_amount numeric) returns uuid language sql security invoker set search_path='' as $$select incargo_enterprise.apply_receipt(p_request,p_receipt,p_invoice,p_amount)$$;
+create function public.incargo_reverse_allocation(p_request uuid,p_allocation uuid,p_reason text) returns uuid language sql security invoker set search_path='' as $$select incargo_enterprise.reverse_allocation(p_request,p_allocation,p_reason)$$;
+-- All default PUBLIC and anon execute grants are explicitly removed.
+do $$declare p record;begin for p in select oid::regprocedure as signature from pg_proc where pronamespace='public'::regnamespace and proname in ('incargo_business_capabilities','incargo_quote_board','incargo_order_board','incargo_finance_board','incargo_invoice_detail','incargo_create_quote','incargo_accept_quote','incargo_link_order_delivery','incargo_register_admin_invoice','incargo_record_receipt','incargo_apply_receipt','incargo_reverse_allocation') loop execute format('revoke all on function %s from public,anon,authenticated',p.signature);execute format('grant execute on function %s to authenticated',p.signature);end loop;end$$;
+commit;
