@@ -2,7 +2,7 @@
   'use strict';
   const $=id=>document.getElementById(id);
   let retained,expiryTimer,generation=0;let config, session, role, trips=[], deliveries=[], drivers=[], selectedId=null;
-  let confirmationAttempt=null,confirmationBusy=false;
+  let confirmationAttempt=null,confirmationBusy=false,reloadEpoch=0;
   const cargo=globalThis.IncargoCargo;
   if(cargo?.enabled){$('cargo-inputs').hidden=false;$('cargo-inputs').disabled=false;}
   const cargoSelect=()=>cargo?.enabled?',origin_text,cargo_description,package_count,gross_weight_kg':'';
@@ -12,7 +12,10 @@
   const notice=(message,error=false)=>{const n=$('notice');n.textContent=message;n.className=error?'error':'success';};
   const fail=error=>{if(error?.stale)return;notice(error?.message||'No se pudo completar la operación.',true);};
   const stale=()=>Object.assign(Error('Solicitud anterior descartada.'),{stale:true});
+  // Publish only already-authorized operational records, never credentials or session objects.
+  const publishPanel=status=>globalThis.IncargoPanel?.update({status,deliveries:status==='ready'&&role==='operations'?deliveries:[],trips:status==='ready'&&role==='operations'?trips:[],updatedAt:status==='ready'?new Date().toISOString():undefined});
   function clear(){
+    reloadEpoch++;publishPanel('signed-out');
     accessRequests?.reset();
     if(cargo?.enabled)$('delivery-form').reset();
     generation++;departures.clear();departureInFlight=false;confirmationAttempt=null;confirmationBusy=false;$('confirm-form').reset();$('issue-form').reset();confirmationControls();retained?.clear();clearTimeout(expiryTimer);session=null;role=null;trips=[];deliveries=[];drivers=[];selectedId=null;
@@ -115,7 +118,7 @@
       // Refresh only the delivery list: avoid unrelated account/link administration.
       const rows=await confirmationRequest('/rest/v1/incargo_deliveries?select=id,trip_id,customer_name,destination_text,invoice_reference,remittance_reference,status'+cargoSelect()+'&order=created_at.desc',{});
       check(active,attemptGeneration);if(!Array.isArray(rows))throw Error('No pudimos actualizar las entregas.');
-      deliveries=rows;departures.delete(deliveryId);renderOpsDeliveries();notice('Salida registrada. Estado de las entregas actualizado.');
+      deliveries=rows;departures.delete(deliveryId);renderOpsDeliveries();publishPanel('ready');notice('Salida registrada. Estado de las entregas actualizado.');
     }catch(error){
       if(error?.stale||active!==session||attemptGeneration!==generation)return;
       if(error?.code==='PGRST202'||error?.status===404){
@@ -128,7 +131,7 @@
     }
   }
 
-  function renderOpsDeliveries(){const area=$('ops-deliveries');area.replaceChildren();if(!deliveries.length)area.append(node('p','Todavía no hay entregas.','muted'));deliveries.forEach(d=>{const item=node('div','','item delivery-card');item.setAttribute('data-status',d.status);item.setAttribute('data-search',[d.customer_name,d.invoice_reference,d.remittance_reference,d.destination_text].filter(Boolean).join(' '));item.append(node('strong',d.customer_name),node('span',labels[d.status]||'Estado no disponible','status-badge status-'+(Object.hasOwn(labels,d.status)?d.status:'unknown')),node('small',`${d.remittance_reference||'Sin remesa'} · ${d.invoice_reference||'Sin factura'}`));const detail=node('details','','delivery-detail');detail.append(node('summary','Ver detalles'),deliveryContext(d));item.append(detail);const button=node('button','Crear enlace limitado','secondary');button.type='button';button.onclick=async()=>{button.disabled=true;try{const token=await rpc('incargo_create_tracking_link',{p_delivery:d.id,p_hours:72});const link=`https://www.incargo.co/seguimiento.html#token=${token}`;const output=node('p',link,'muted');output.style.overflowWrap='anywhere';detail.append(output);detail.open=true;await renderLinks(d.id,detail);notice('Enlace creado. Cópialo y compártelo por el canal autorizado; no se envió ningún mensaje.');}catch(error){fail(error);}finally{button.disabled=false;}};const departure=departureButton(d);if(departure)item.append(departure);item.append(button);area.append(item);renderLinks(d.id,detail).catch(fail);});}
+  function renderOpsDeliveries(){const area=$('ops-deliveries');area.replaceChildren();if(!deliveries.length)area.append(node('p','Todavía no hay entregas.','muted'));deliveries.forEach(d=>{const item=node('div','','item delivery-card');item.setAttribute('data-status',d.status);item.setAttribute('data-delivery-id',d.id);item.setAttribute('data-search',[d.customer_name,d.invoice_reference,d.remittance_reference,d.destination_text].filter(Boolean).join(' '));item.append(node('strong',d.customer_name),node('span',labels[d.status]||'Estado no disponible','status-badge status-'+(Object.hasOwn(labels,d.status)?d.status:'unknown')),node('small',`${d.remittance_reference||'Sin remesa'} · ${d.invoice_reference||'Sin factura'}`));const detail=node('details','','delivery-detail');detail.append(node('summary','Ver detalles'),deliveryContext(d));item.append(detail);const button=node('button','Crear enlace limitado','secondary');button.type='button';button.onclick=async()=>{button.disabled=true;try{const token=await rpc('incargo_create_tracking_link',{p_delivery:d.id,p_hours:72});const link=`https://www.incargo.co/seguimiento.html#token=${token}`;const output=node('p',link,'muted');output.style.overflowWrap='anywhere';detail.append(output);detail.open=true;await renderLinks(d.id,detail);notice('Enlace creado. Cópialo y compártelo por el canal autorizado; no se envió ningún mensaje.');}catch(error){fail(error);}finally{button.disabled=false;}};const departure=departureButton(d);if(departure)item.append(departure);item.append(button);area.append(item);renderLinks(d.id,detail).catch(fail);});}
   async function renderLinks(deliveryId,item){const old=item.querySelector('.links');if(old)old.remove();const links=await rpc('incargo_list_tracking_links',{p_delivery:deliveryId});const area=node('div','','links');(links||[]).forEach(link=>{if(link.revoked_at)return;const row=node('div','Vence: '+new Date(link.expires_at).toLocaleString('es-CO'),'item');const revoke=node('button','Revocar enlace','secondary');revoke.type='button';revoke.onclick=async()=>{revoke.disabled=true;try{await rpc('incargo_revoke_tracking_link_by_id',{p_id:link.id});await renderLinks(deliveryId,item);notice('Enlace revocado.');}catch(error){fail(error);}finally{revoke.disabled=false;}};row.append(revoke);area.append(row);});item.append(area);}
   function renderDriver(){
     const tripArea=$('driver-trips');tripArea.replaceChildren();if(!trips.length)tripArea.append(node('p','No tienes viajes asignados.','muted'));trips.forEach(t=>tripArea.append(node('p',`${t.route_label} · ${t.scheduled_date} · ${t.vehicle_plate}`)));
@@ -168,7 +171,22 @@
   submitClientAdmin('client-delivery-form','incargo_client_assign_delivery',data=>({p_account:data.get('account'),p_delivery:data.get('delivery')}));
   submitClientAdmin('client-unlink-user-form','incargo_client_unlink_user',data=>({p_user:data.get('user')}));
   submitClientAdmin('client-unassign-delivery-form','incargo_client_unassign_delivery',data=>({p_delivery:data.get('delivery')}));
-  async function reload({signal}={}){trips=await rest('incargo_trips','select=id,route_label,scheduled_date,vehicle_plate,driver_user_id&order=scheduled_date.desc',{signal});deliveries=await rest('incargo_deliveries','select=id,trip_id,customer_name,destination_text,invoice_reference,remittance_reference,status'+cargoSelect()+'&order=created_at.desc',{signal});if(role==='operations'){drivers=await rest('incargo_memberships','select=user_id&role=eq.driver',{signal});const picker=$('driver-select');picker.replaceChildren();const empty=node('option','Sin asignar');empty.value='';picker.append(empty);drivers.forEach(d=>{const option=node('option',d.user_id);option.value=d.user_id;picker.append(option);});renderTrips();renderOpsDeliveries();await refreshClientAdmin();}else renderDriver();}
+  async function reload({signal}={}){
+    const active=session,attempt=generation,epoch=++reloadEpoch;
+    const current=()=>{check(active,attempt);if(epoch!==reloadEpoch)throw stale();};
+    publishPanel('loading');
+    try{
+      const nextTrips=await rest('incargo_trips','select=id,route_label,scheduled_date,vehicle_plate,driver_user_id&order=scheduled_date.desc',{signal});current();
+      const nextDeliveries=await rest('incargo_deliveries','select=id,trip_id,customer_name,destination_text,invoice_reference,remittance_reference,status'+cargoSelect()+'&order=created_at.desc',{signal});current();
+      const nextDrivers=role==='operations'?await rest('incargo_memberships','select=user_id&role=eq.driver',{signal}):[];current();
+      trips=nextTrips;deliveries=nextDeliveries;drivers=nextDrivers;
+      if(role==='operations'){
+        const picker=$('driver-select');picker.replaceChildren();const empty=node('option','Sin asignar');empty.value='';picker.append(empty);
+        drivers.forEach(d=>{const option=node('option',d.user_id);option.value=d.user_id;picker.append(option);});
+        renderTrips();renderOpsDeliveries();await refreshClientAdmin();current();publishPanel('ready');
+      }else{renderDriver();publishPanel('signed-out');}
+    }catch(error){if(!error?.stale&&epoch===reloadEpoch)publishPanel('error');throw error;}
+  }
   async function init(){
     const response=await fetch('/api/incargo-config',{cache:'no-store'});
     if(!response.ok)throw Error('La conexión no está configurada. Contacta a Incargo.');
@@ -180,7 +198,7 @@
     $('login').hidden=true;$('workspace').hidden=false;$('ops').hidden=role!=='operations';$('driver').hidden=role!=='driver';
     $('role-title').textContent=role==='operations'?'Operaciones':'Mis viajes';renderProfile();closeProfile();
     clearTimeout(expiryTimer);expiryTimer=setTimeout(()=>{if(session===next){clear();notice('Tu sesión terminó. Ingresa nuevamente.',true);}},Math.min(2147483647,Math.max(0,next.expires_at*1000-Date.now())));
-    await reload();check(next,attempt);notice('Sesión activa en esta pestaña.');
+    await reload();check(next,attempt);if(role==='operations'&&globalThis.IncargoPanel)document.querySelector('[data-panel="ops-dashboard-panel"]')?.click?.();notice('Sesión activa en esta pestaña.');
   }
   $('login-form').onsubmit=async event=>{
     event.preventDefault();const form=event.currentTarget,button=form.querySelector('button');clear();const attempt=generation;button.disabled=true;
@@ -194,6 +212,7 @@
       form.reset();await showSession(next,attempt);
     }catch(error){if(attempt===generation)fail(error);}finally{if(attempt===generation)button.disabled=false;}
   };
+  if($('ops-refresh'))$('ops-refresh').onclick=async()=>{const button=$('ops-refresh');button.disabled=true;try{await reload();notice('Datos actualizados.');}catch(error){fail(error);}finally{button.disabled=false;}};
   $('logout').onclick=()=>{clear();$('login-form').querySelector('button').disabled=false;notice('Sesión cerrada en esta pestaña.');};
   $('trip-form').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget;const button=form.querySelector('button');button.disabled=true;try{const data=new FormData(form);if(!String(data.get('route')).trim()||!String(data.get('vehicle')).trim())throw Error('Completa ruta y placa.');await request('/rest/v1/incargo_trips',{method:'POST',body:{route_label:String(data.get('route')).trim(),scheduled_date:data.get('date'),vehicle_plate:String(data.get('vehicle')).trim().toUpperCase(),driver_user_id:data.get('driver')||null}});form.reset();await reload();notice('Viaje creado.');}catch(error){fail(error);}finally{button.disabled=false;}};
   $('delivery-form').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget;const button=form.querySelector('button');if(button.disabled)return;button.disabled=true;try{const data=new FormData(form);if(!String(data.get('customer')).trim())throw Error('Escribe el cliente.');await request('/rest/v1/incargo_deliveries',{method:'POST',body:{trip_id:data.get('trip'),customer_name:String(data.get('customer')).trim(),destination_text:data.get('destination')||null,invoice_reference:data.get('invoice')||null,remittance_reference:data.get('remittance')||null,...(cargo?.enabled?cargo.parse(Object.fromEntries(data)): {})}});form.reset();await reload();notice('Entrega agregada.');}catch(error){fail(error);}finally{button.disabled=false;}};
