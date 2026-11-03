@@ -86,6 +86,11 @@ begin
  -- Serialize same-actor request IDs even when callers target different documents.
  perform pg_advisory_xact_lock(hashtextextended(actor::text||':'||p_request::text,0));
  select * into d from incargo_admin.documents where id=p_document for update;
+ -- A queued writer may outlive a permission revocation while awaiting locks.
+ if not exists(select 1 from public.incargo_memberships where user_id=actor and role='operations')
+ or not exists(select 1 from incargo_admin.document_access where document_id=p_document and user_id=actor and can_edit) then
+  raise exception 'Access denied' using errcode='42501';
+ end if;
  if not found or not d.source_verified or d.kind<>'inspection' then raise exception 'Verified inspection required'; end if;
  select * into previous from incargo_admin.revisions where actor_id=actor and request_id=p_request;
  if found then
