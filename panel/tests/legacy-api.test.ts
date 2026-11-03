@@ -7,7 +7,6 @@ const {
 } = require("../../logistica-1.0.0/api/incargo-legacy-admin.js");
 const env = {
   INCARGO_LEGACY_READ_ENABLED: "true",
-  INCARGO_LEGACY_ADMIN_USER_IDS: "operator-1",
   SUPABASE_URL: "https://project.supabase.co",
   SUPABASE_PUBLISHABLE_KEY: "synthetic-key",
 };
@@ -23,6 +22,9 @@ async function call({
   authStatus = 200,
   redirect = "",
   fail = false,
+  input = undefined,
+  versions = [],
+  rpcCode = "",
 }: {
   method?: string;
   token?: string;
@@ -35,6 +37,9 @@ async function call({
   authStatus?: number;
   redirect?: string;
   fail?: boolean;
+  input?: any;
+  versions?: any[];
+  rpcCode?: string;
 } = {}) {
   const calls: { url: string; options: RequestInit }[] = [];
   let code = 0,
@@ -45,6 +50,21 @@ async function call({
     if (fail) throw Error("network");
     if (url.endsWith("/auth/v1/user"))
       return new Response(JSON.stringify({ id: user }), { status: authStatus });
+    if (url.includes("/rest/v1/rpc/")) {
+      if (rpcCode)
+        return new Response(JSON.stringify({ code: rpcCode }), { status: 400 });
+      if (url.endsWith("incargo_legacy_versions"))
+        return new Response(JSON.stringify(versions));
+      const value = JSON.parse(String(options.body));
+      return new Response(
+        JSON.stringify({
+          hash: value.p_hash,
+          revision: 1,
+          request: value.p_request,
+          replayed: !!versions.length,
+        }),
+      );
+    }
     if (url.includes("/rest/v1/"))
       return new Response(JSON.stringify([{ role }]));
     return redirect
@@ -68,14 +88,16 @@ async function call({
     env: settings,
     fetchImpl,
     now: () => new Date("2026-11-03T12:00:00Z"),
-  })({ method, headers: { authorization: token }, query: { kind } }, res);
+  })(
+    { method, headers: { authorization: token }, query: { kind }, body: input },
+    res,
+  );
   return { code, body, calls, headers };
 }
 test("default closed and no credential means no source reads", async () => {
   for (const options of [
     { token: "" },
     { settings: { ...env, INCARGO_LEGACY_READ_ENABLED: "false" } },
-    { settings: { ...env, INCARGO_LEGACY_ADMIN_USER_IDS: "" } },
   ]) {
     const result = await call(options);
     assert([401, 503].includes(result.code));
@@ -83,7 +105,7 @@ test("default closed and no credential means no source reads", async () => {
   }
 });
 test("write methods and unknown kinds never reach the provider", async () => {
-  for (const method of ["POST", "PATCH", "PUT", "DELETE"]) {
+  for (const method of ["PATCH", "PUT", "DELETE"]) {
     const r = await call({ method });
     assert.equal(r.code, 405);
     assert.equal(r.calls.length, 0);
@@ -92,10 +114,9 @@ test("write methods and unknown kinds never reach the provider", async () => {
   assert.equal(r.code, 400);
   assert.equal(r.calls.length, 0);
 });
-test("identity and current role are checked every time and isolate unapproved operators, clients and drivers", async () => {
+test("identity and current role are checked every time and isolate clients and drivers", async () => {
   for (const options of [
     { authStatus: 401 },
-    { user: "other-operator" },
     { role: "driver" },
     { role: "client" },
     { role: "" },
@@ -112,13 +133,13 @@ test("reads preserve original rows, emit snapshot hashes and do not forward cred
   const a = await call({ source }),
     b = await call({ source });
   assert.equal(a.code, 200);
-  assert.equal(a.body.readOnly, true);
+  assert.equal(a.body.readOnly, false);
   assert.equal(a.body.records[0].data.licencia, "0012");
   assert.equal(a.body.records[0].data.firma, "[TRUNC]");
   assert.equal(a.body.snapshot, b.body.snapshot);
   assert.equal(a.body.records[0].hash, b.body.records[0].hash);
-  assert.equal(a.calls.length, 3);
-  assert.equal(b.calls.length, 3);
+  assert.equal(a.calls.length, 5);
+  assert.equal(b.calls.length, 5);
   const google = a.calls.find((c) => c.url.includes("script.google.com"))!;
   assert.deepEqual(google.options.headers, { Accept: "application/json" });
   assert.equal(google.options.redirect, "manual");
@@ -130,7 +151,7 @@ test("affiliations use their own endpoint and no record data is cached across re
     b = await call({ kind: "affiliations", source: "[]" });
   assert.equal(a.body.records.length, 1);
   assert.deepEqual(b.body.records, []);
-  assert(b.calls[2].url.endsWith("action=vinculaciones"));
+  assert(b.calls[3].url.endsWith("action=vinculaciones"));
 });
 test("source failure, unexpected response, oversize and redirects fail closed without partial results", async () => {
   for (const options of [
@@ -154,4 +175,64 @@ test("configuration cannot send bearer credentials to an arbitrary host", async 
   });
   assert.equal(r.code, 503);
   assert.equal(r.calls.length, 0);
+});
+
+test("future operations members are authorized without UUID allowlists", async () => {
+  const result = await call({ user: "future-operator" });
+  assert.equal(result.code, 200);
+});
+
+test("only archived originals can be edited; browser cannot invent source provenance", async () => {
+  const input = {
+    hash: "a".repeat(64),
+    expected: 0,
+    request: "20000000-0000-4000-8000-000000000001",
+    patch: { ciudad: "Corrected" },
+    reason: "Typo",
+    original: "forged",
+  };
+  const absent = await call({ method: "POST", input });
+  assert.equal(absent.code, 409);
+  assert(!absent.calls.some((c) => c.url.endsWith("incargo_legacy_correct")));
+  const retry = await call({
+    method: "POST",
+    input,
+    versions: [{ hash: input.hash, revision: 1 }],
+    sourceStatus: 500,
+  });
+  assert.equal(retry.code, 200);
+  assert(!retry.calls.some((c) => c.url.includes("google")));
+  const rpc = retry.calls.find((c) =>
+    c.url.endsWith("incargo_legacy_correct"),
+  )!;
+  const payload = JSON.parse(String(rpc.options.body));
+  assert.equal(payload.p_original, null);
+  assert.equal(payload.p_snapshot, null);
+  assert.equal(payload.p_request, input.request);
+});
+test("versions overlay matching hashes; changed source keeps historical originals separately", async () => {
+  const source = '[{"ciudad":"Original"}]';
+  const read = await call({ source });
+  const hash = read.body.records[0].hash;
+  const versions = [{ hash, revision: 2, data: { ciudad: "Corrected" } }];
+  const merged = await call({ source, versions });
+  assert.equal(merged.body.records[0].data.ciudad, "Corrected");
+  assert.equal(merged.body.records[0].revision, 2);
+  const drift = await call({
+    source: '[{"ciudad":"Changed source"}]',
+    versions,
+  });
+  assert.equal(drift.body.records.length, 2);
+  assert.equal(drift.body.records[1].archived, true);
+});
+test("RPC revocation/conflict errors do not disclose records or claim success", async () => {
+  for (const [rpcCode, status] of [
+    ["42501", 403],
+    ["40001", 409],
+    ["23505", 409],
+  ] as const) {
+    const r = await call({ rpcCode });
+    assert.equal(r.code, status);
+    assert.equal(r.body.records, undefined);
+  }
 });

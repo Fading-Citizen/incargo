@@ -100,23 +100,31 @@ const assert = require("node:assert/strict"),
       },
     ];
     let legacyMode = "disabled", legacyReads = 0;
+    const legacySaves=[];
     const legacyRows = [
-      {id:"synthetic:0",hash:"hash0",data:{_rowNumber:1,fecha:"2026-11-03",ts:"2026-11-03T01:00:00Z",placa:"TEST-01",conductor:"Persona sintética",ciudad:"Bogotá",licencia:"00123",items:JSON.stringify([{label:"Luces",scale:"BUENO/MALO",value:"MALO",obs:"Revisar"},{label:"Nivel",value:"BAJO"}]),firma:"data:image/png;base64,broken[TRUNC]",fotos:"https://invalid.test/private-image.png"}},
-      {id:"synthetic:1",hash:"hash1",data:{_rowNumber:2,fecha:"2026-11-02",placa:"TEST-02",conductor:"<script>alert(1)</script>",ciudad:"Cali",items:"not-json"}},
+      {id:"synthetic:0",hash:"a".repeat(64),data:{_rowNumber:1,fecha:"2026-11-03",ts:"2026-11-03T01:00:00Z",placa:"TEST-01",conductor:"Persona sintética",ciudad:"Bogotá",licencia:"00123",items:JSON.stringify([{label:"Luces",scale:"BUENO/MALO",value:"MALO",obs:"Revisar"},{label:"Nivel",value:"BAJO"}]),firma:"data:image/png;base64,broken[TRUNC]",fotos:"https://invalid.test/private-image.png"}},
+      {id:"synthetic:1",hash:"b".repeat(64),data:{_rowNumber:2,fecha:"2026-11-02",placa:"TEST-02",conductor:"<script>alert(1)</script>",ciudad:"Cali",items:"not-json"}},
     ];
     await page.context().addInitScript(() => { window.print = () => {}; });
     await page.route("**/*", async (route) => {
       const url = new URL(route.request().url());
       if (url.hostname === "127.0.0.1" && url.pathname === "/api/incargo-legacy-admin") {
         legacyReads++;
-        assert.equal(route.request().method(),"GET");
+        if(route.request().method()==="POST"){
+          const input=route.request().postDataJSON();legacySaves.push(input);
+          if(legacySaves.length===1)return route.fulfill({status:502,contentType:"application/json",body:JSON.stringify({error:"Resultado no confirmado. Reintenta el mismo intento."})});
+          assert.deepEqual(input,legacySaves[0]);
+          return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({hash:input.hash,request:input.request,revision:1,replayed:true})});
+        }
+        if(url.searchParams.has("revision"))return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({hash:legacyRows[0].hash,revision:1,data:{...legacyRows[0].data,ciudad:"Medellín"}})});
+        if(url.searchParams.has("hash"))return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({versions:[{original:legacyRows[0].data,history:[{revision:1,reason:"Rectificación sintética para prueba",createdAt:"2026-11-03T12:00:00Z",actorId:"synthetic-operator",data:{...legacyRows[0].data,ciudad:"Medellín"}}]}]})});
         assert.equal(route.request().headers().authorization,"Bearer test-only");
         if (legacyMode === "disabled") return route.fulfill({status:503,contentType:"application/json",body:JSON.stringify({error:"Inspecciones y vinculaciones pendientes de habilitación de acceso."})});
         if (legacyMode === "denied") return route.fulfill({status:403,contentType:"application/json",body:JSON.stringify({error:"Tu cuenta no tiene acceso a estos expedientes."})});
         if (legacyMode === "error") return route.fulfill({status:502,contentType:"application/json",body:JSON.stringify({error:"Fuente no disponible; reintenta."})});
         const kind = url.searchParams.get("kind");
-        const records = legacyMode === "empty" ? [] : kind === "inspections" ? legacyRows : [{id:"affiliation:0",hash:"affhash",data:{_rowNumber:2,ts:"2026-11-03T12:00:00Z",nombreCompleto:"Vinculado sintético",numeroIdentificacion:"0007",aceptaContrato:"SI",versionContrato:"histórica-no-verificada",firmaB64:""}}];
-        return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({kind,records,source:"synthetic-test",snapshot:"test-snapshot",capturedAt:"2026-11-03T12:00:00Z",readOnly:true})});
+        const records = legacyMode === "empty" ? [] : kind === "inspections" ? legacyRows : [{id:"affiliation:0",hash:"c".repeat(64),data:{_rowNumber:2,ts:"2026-11-03T12:00:00Z",nombreCompleto:"Vinculado sintético",numeroIdentificacion:"0007",aceptaContrato:"SI",versionContrato:"histórica-no-verificada",firmaB64:""}}];
+        return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({kind,records,source:"synthetic-test",snapshot:"test-snapshot",capturedAt:"2026-11-03T12:00:00Z",readOnly:false})});
       }
       if (url.hostname === "127.0.0.1") return route.continue();
       if (url.hostname !== "mock.supabase.co")
@@ -224,9 +232,20 @@ const assert = require("node:assert/strict"),
     const proposalDownload = page.waitForEvent("download");
     await page.getByRole("button",{name:"Descargar propuesta sin guardar",exact:true}).click();
     const proposal=JSON.parse(fs.readFileSync(await (await proposalDownload).path(),"utf8"));
-    assert.equal(proposal.status,"not_saved");assert.equal(proposal.fields.ciudad,"Medellín");assert.equal(proposal.original.ciudad,"Bogotá");assert.equal(proposal.original.licencia,"00123");
+    assert.equal(proposal.status,"not_saved");assert.equal(proposal.fields.ciudad,"Medellín");assert.equal(proposal.basePayload.ciudad,"Bogotá");assert.equal(proposal.basePayload.licencia,"00123");
     assert.equal(legacyRows[0].data.ciudad,"Bogotá");
+    await page.getByRole("button",{name:"Guardar nueva versión",exact:true}).click();
+    await page.getByText("Resultado no confirmado. Reintenta el mismo intento.",{exact:true}).waitFor();
+    assert(await page.getByLabel("Ciudad",{exact:true}).isDisabled());
+    await page.getByRole("button",{name:"Reintentar mismo guardado",exact:true}).click();
+    await page.getByText("Versión 1 guardada y confirmada por el servidor. El original permanece intacto.",{exact:true}).waitFor();
+    assert.equal(legacySaves.length,2);assert.equal(legacySaves[0].expected,0);
     await page.getByRole("button",{name:"Cancelar borrador",exact:true}).click();
+    await page.getByRole("button",{name:"Consultar historial y original",exact:true}).click();
+    await page.getByRole("button",{name:"Descargar original e índice de versiones",exact:true}).waitFor();
+    const versionDownload=page.waitForEvent("download");
+    await page.getByRole("button",{name:"Descargar versión 1",exact:true}).click();
+    const version=JSON.parse(fs.readFileSync(await (await versionDownload).path(),"utf8"));assert.equal(version.revision,1);assert.equal(version.data.ciudad,"Medellín");
     await page.getByRole("button",{name:"Volver a expedientes",exact:true}).click();
     assert.equal(await page.getByLabel("Buscar expedientes",{exact:true}).inputValue(),"TEST-01");
     assert.equal(await page.getByLabel("Estado de expediente",{exact:true}).inputValue(),"bad");
@@ -243,7 +262,7 @@ const assert = require("node:assert/strict"),
     assert.equal(await page.locator(".legacy-admin tbody tr").count(),1);
     await page.getByRole("button",{name:"Ver expediente",exact:true}).click();
     await page.getByText("histórica-no-verificada",{exact:true}).waitFor();
-    assert.equal(await page.getByRole("button",{name:"Preparar corrección",exact:true}).count(),0);
+    assert.equal(await page.getByRole("button",{name:"Preparar corrección",exact:true}).count(),1);
     const printPopup=page.waitForEvent("popup");
     await page.getByRole("button",{name:"Imprimir copia / guardar PDF",exact:true}).click();
     const copy=await printPopup;await copy.waitForLoadState();

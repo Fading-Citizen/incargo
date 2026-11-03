@@ -197,3 +197,12 @@ test('legacy bridge: driver cannot dispatch, invalid response is not treated as 
  const h=harness('operations');await h.login();h.hook(url=>url.startsWith('/api/incargo-legacy-admin?')?h.response({records:[]}):null);
  await assert.rejects(h.operations().legacyAdmin('inspections'),/Respuesta de expedientes no válida/);
 });
+
+for(const action of ['save','history'])test('legacy '+action+': late reply is discarded after logout',async()=>{
+ const h=harness('operations');await h.login();let release;
+ h.hook(url=>url.startsWith('/api/incargo-legacy-admin?')?new Promise(resolve=>release=resolve):null);
+ const input={hash:'a'.repeat(64),expected:0,request:'20000000-0000-4000-8000-000000000001',patch:{ciudad:'Synthetic'},reason:'Test'};
+ const pending=(action==='save'?h.operations().legacyCorrect('inspections',input):h.operations().legacyHistory('inspections',input.hash)).then(()=>'EXPOSED',e=>e.message);
+ await tick();h.logout();h.hook(null);h.user('B');await h.login();release(h.response(action==='save'?{hash:input.hash,request:input.request,revision:1}:{versions:[]}));
+ assert.equal(await pending,'Solicitud anterior descartada.');
+});

@@ -21,7 +21,23 @@ export type DeliveryDetail = {
   links: { id: string; expires_at: string; revoked_at?: string }[];
 };
 export interface OperationsApi {
-  legacyAdmin(kind: import("./lib/legacy-admin").LegacyKind, signal?: AbortSignal): Promise<import("./lib/legacy-admin").LegacySnapshot>;
+  legacyCorrect(
+    kind: import("./lib/legacy-admin").LegacyKind,
+    input: import("./lib/legacy-admin").LegacyCorrection,
+  ): Promise<{ hash: string; revision: number; request: string }>;
+  legacyHistory(
+    kind: import("./lib/legacy-admin").LegacyKind,
+    hash: string,
+    revision: number,
+  ): Promise<{ hash: string; revision: number; data: Record<string, unknown> }>;
+  legacyHistory(
+    kind: import("./lib/legacy-admin").LegacyKind,
+    hash: string,
+  ): Promise<{ versions: import("./lib/legacy-admin").LegacyHistory[] }>;
+  legacyAdmin(
+    kind: import("./lib/legacy-admin").LegacyKind,
+    signal?: AbortSignal,
+  ): Promise<import("./lib/legacy-admin").LegacySnapshot>;
   businessCapabilities(): Promise<{
     commercial: boolean;
     finance: boolean;

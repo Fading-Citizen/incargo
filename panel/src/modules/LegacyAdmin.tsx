@@ -10,6 +10,9 @@ import {
 } from "../components/PanelPrimitives";
 import {
   checklist,
+  affiliationFields,
+  type LegacyCorrection,
+  type LegacyHistory,
   correctionProposal,
   dateKey,
   download,
@@ -78,14 +81,18 @@ function Correction({
   record,
   snapshot,
   onClose,
+  onSaved,
 }: {
   record: LegacyRecord;
   snapshot: LegacySnapshot;
   onClose: () => void;
+  onSaved: () => void;
 }) {
+  const editableFields =
+    snapshot.kind === "inspections" ? inspectionFields : affiliationFields;
   const [fields, setFields] = useState<Record<string, string>>(
     Object.fromEntries(
-      inspectionFields.map(([key]) => [key, text(record.data[key])]),
+      editableFields.map(([key]) => [key, text(record.data[key])]),
     ),
   );
   const [reason, setReason] = useState("");
@@ -95,6 +102,57 @@ function Correction({
   const [busy, setBusy] = useState(false);
   const [exported, setExported] = useState(false);
   const fileBusy = useRef(false);
+  const pending = useRef<LegacyCorrection | null>(null);
+  const [receipt, setReceipt] = useState<number | null>(null);
+  const [attempted, setAttempted] = useState(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  async function save() {
+    if (fileBusy.current || receipt !== null) return;
+    fileBusy.current = true;
+    setBusy(true);
+    setError("");
+    try {
+      if (!pending.current) {
+        if (!reason.trim()) throw Error("Indica el motivo de la corrección.");
+        const patch = Object.fromEntries(
+          Object.entries(fields).filter(
+            ([key, value]) => value !== text(record.data[key]),
+          ),
+        );
+        if (replacementPhotos) patch.fotos = replacementPhotos.join("|");
+        if (signature) patch.firma = signature;
+        if (!Object.keys(patch).length)
+          throw Error("No hay cambios para guardar.");
+        const input = {
+          hash: record.hash,
+          expected: record.revision || 0,
+          request: crypto.randomUUID(),
+          patch,
+          reason: reason.trim(),
+        };
+        if (new TextEncoder().encode(JSON.stringify(input)).length > 2900000)
+          throw Error(
+            "Las evidencias superan el límite total de 2,9 MB codificados. Selecciona archivos más pequeños; no se comprimen ni truncan.",
+          );
+        pending.current = input;
+        setAttempted(true);
+      }
+      const result = await api().legacyCorrect(snapshot.kind, pending.current);
+      if (mounted.current) setReceipt(result.revision);
+    } catch (e) {
+      if (mounted.current) setError((e as Error).message);
+    } finally {
+      fileBusy.current = false;
+      if (mounted.current) setBusy(false);
+    }
+  }
+
   async function loadImages(
     files: FileList | null,
     target: "photos" | "signature",
@@ -146,16 +204,19 @@ function Correction({
   return (
     <PanelSection
       title="Preparar corrección"
-      description="Borrador local: no se guarda ni se envía a la hoja. El archivo exportado contiene datos personales y conserva el original."
+      description="Cada guardado crea una versión. El origen y las evidencias anteriores se conservan sin cambios."
     >
       <PanelNotice tone="warning">
-        El guardado definitivo requiere acceso aprobado, control de versiones y
-        confirmación del servidor. No se sobrescriben fotos ni firmas.
+        La corrección documental no concede consentimiento ni autoriza una
+        firma. La aceptación contractual y su versión histórica se conservan sin
+        alterar.
       </PanelNotice>
       <div className="enterprise-form-grid">
-        {inspectionFields.map(([key, label]) => (
+        {editableFields.map(([key, label]) => (
           <PanelField label={label} key={key}>
             <input
+              disabled={busy || attempted}
+              maxLength={2000}
               value={fields[key]}
               onChange={(event) => {
                 setFields({ ...fields, [key]: event.target.value });
@@ -167,6 +228,8 @@ function Correction({
       </div>
       <PanelField label="Motivo de la corrección" required>
         <textarea
+          disabled={busy || attempted}
+          maxLength={2000}
           value={reason}
           onChange={(event) => {
             setReason(event.target.value);
@@ -174,23 +237,31 @@ function Correction({
           }}
         />
       </PanelField>
-      <PanelField label="Proponer reemplazo de fotos">
-        <input
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          multiple
-          disabled={busy}
-          onChange={(event) => void loadImages(event.target.files, "photos")}
-        />
-      </PanelField>
-      <PanelField label="Proponer reemplazo de firma">
-        <input
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          disabled={busy}
-          onChange={(event) => void loadImages(event.target.files, "signature")}
-        />
-      </PanelField>
+      {snapshot.kind === "inspections" && (
+        <>
+          <PanelField label="Proponer reemplazo de fotos">
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              multiple
+              disabled={busy || attempted}
+              onChange={(event) =>
+                void loadImages(event.target.files, "photos")
+              }
+            />
+          </PanelField>
+          <PanelField label="Proponer reemplazo de firma">
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              disabled={busy || attempted}
+              onChange={(event) =>
+                void loadImages(event.target.files, "signature")
+              }
+            />
+          </PanelField>
+        </>
+      )}
       {replacementPhotos?.map((value, index) => (
         <Evidence
           key={index}
@@ -206,13 +277,43 @@ function Correction({
           el origen.
         </PanelNotice>
       )}
+      {receipt !== null && (
+        <PanelNotice>
+          Versión {receipt} guardada y confirmada por el servidor. El original
+          permanece intacto.
+        </PanelNotice>
+      )}
+      {attempted && receipt === null && (
+        <PanelNotice tone="warning">
+          Intento {pending.current?.request}. Los datos permanecen fijos para
+          reintentar sin duplicar. Si sales, consulta el historial antes de
+          realizar otra corrección.
+        </PanelNotice>
+      )}
       <div className="legacy-actions">
-        <PanelAction disabled={busy} onClick={exportProposal}>
+        <PanelAction
+          disabled={
+            busy ||
+            receipt !== null ||
+            record.ambiguous ||
+            record.unarchived ||
+            snapshot.readOnly
+          }
+          onClick={() => void save()}
+        >
+          {attempted ? "Reintentar mismo guardado" : "Guardar nueva versión"}
+        </PanelAction>
+        {receipt !== null && (
+          <PanelAction onClick={onSaved}>
+            Ver expediente actualizado
+          </PanelAction>
+        )}
+        <PanelAction disabled={busy || attempted} onClick={exportProposal}>
           Descargar propuesta sin guardar
         </PanelAction>
         <PanelAction
           tone="neutral"
-          disabled={busy}
+          disabled={busy || attempted}
           onClick={() => {
             setPhotos(null);
             setSignature(null);
@@ -221,11 +322,101 @@ function Correction({
         >
           Conservar evidencias originales
         </PanelAction>
-        <PanelAction tone="neutral" onClick={onClose}>
+        <PanelAction tone="neutral" disabled={busy} onClick={onClose}>
           Cancelar borrador
         </PanelAction>
       </div>
     </PanelSection>
+  );
+}
+function History({ kind, record }: { kind: LegacyKind; record: LegacyRecord }) {
+  const [history, setHistory] = useState<LegacyHistory | null>(null),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false);
+  const live = useRef(true);
+  useEffect(() => {
+    live.current = true;
+    return () => {
+      live.current = false;
+    };
+  }, []);
+  async function exportVersion(revision: number) {
+    setBusy(true);
+    setError("");
+    try {
+      const result = await api().legacyHistory(kind, record.hash, revision);
+      if (live.current)
+        download(
+          JSON.stringify(result, null, 2),
+          `expediente-version-${revision}.json`,
+          "application/json",
+        );
+    } catch (e) {
+      if (live.current) setError((e as Error).message);
+    } finally {
+      if (live.current) setBusy(false);
+    }
+  }
+  async function load() {
+    setBusy(true);
+    setError("");
+    try {
+      const r = await api().legacyHistory(kind, record.hash);
+      if (live.current)
+        setHistory(r.versions[0] || { original: record.data, history: [] });
+    } catch (e) {
+      if (live.current) setError((e as Error).message);
+    } finally {
+      if (live.current) setBusy(false);
+    }
+  }
+  return (
+    <div>
+      <PanelAction tone="neutral" disabled={busy} onClick={() => void load()}>
+        Consultar historial y original
+      </PanelAction>
+      {error && <PanelNotice tone="danger">{error}</PanelNotice>}
+      {history && (
+        <>
+          <PanelAction
+            tone="neutral"
+            onClick={() =>
+              download(
+                JSON.stringify(history, null, 2),
+                "historial-expediente.json",
+                "application/json",
+              )
+            }
+          >
+            Descargar original e índice de versiones
+          </PanelAction>
+          <p>
+            El archivo contiene datos personales y evidencias. Cada versión se
+            descarga por separado; no se verifica autenticidad de firmas.
+          </p>
+          {history.history.length === 0 ? (
+            <p>Sin correcciones registradas.</p>
+          ) : (
+            <ol>
+              {history.history.map((v) => (
+                <li key={v.revision}>
+                  Versión {v.revision} ·{" "}
+                  {new Date(v.createdAt).toLocaleString("es-CO")} · {v.reason} ·
+                  Usuario {v.actorId}
+                  <PanelAction
+                    tone="neutral"
+                    disabled={busy}
+                    onClick={() => void exportVersion(v.revision)}
+                  >
+                    Descargar versión {v.revision}
+                  </PanelAction>
+                </li>
+              ))}
+            </ol>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 export default function LegacyAdmin() {
@@ -341,10 +532,10 @@ export default function LegacyAdmin() {
       {snapshot && (
         <>
           <PanelNotice>
-            Consulta de solo lectura ·{" "}
+            Fuente consultada ·{" "}
             {new Date(snapshot.capturedAt).toLocaleString("es-CO")} ·{" "}
-            {records.length} registros del origen. No se han migrado datos ni
-            habilitado edición.
+            {records.length} expedientes. Las correcciones se guardan en el
+            sistema nuevo; la hoja original no se modifica.
           </PanelNotice>
           {chosen ? (
             <>
@@ -363,6 +554,7 @@ export default function LegacyAdmin() {
                   record={chosen}
                   snapshot={snapshot}
                   onClose={() => setEditing(false)}
+                  onSaved={() => setReload((value) => value + 1)}
                 />
               ) : (
                 <PanelSection title="Detalle del expediente">
@@ -373,15 +565,40 @@ export default function LegacyAdmin() {
                     >
                       Imprimir copia / guardar PDF
                     </PanelAction>
-                    {kind === "inspections" && (
+                    {
                       <PanelAction
                         tone="neutral"
+                        disabled={
+                          chosen.ambiguous ||
+                          chosen.unarchived ||
+                          snapshot.readOnly
+                        }
                         onClick={() => setEditing(true)}
                       >
                         Preparar corrección
                       </PanelAction>
-                    )}
+                    }
                   </div>
+                  <PanelNotice>
+                    Versión {chosen.revision || 0} ·{" "}
+                    {chosen.archived
+                      ? "El contenido original ya no coincide con el origen actual; se conserva este expediente histórico por separado."
+                      : "Vinculado al contenido original por SHA-256."}
+                  </PanelNotice>
+                  {chosen.unarchived && (
+                    <PanelNotice tone="warning">
+                      Este contenido nuevo de la fuente aún no tiene una copia
+                      íntegra archivada. La sincronización administrativa debe
+                      conservarlo antes de editar.
+                    </PanelNotice>
+                  )}
+                  {chosen.ambiguous && (
+                    <PanelNotice tone="warning">
+                      Hay duplicados idénticos en el origen. La edición requiere
+                      reconciliarlos.
+                    </PanelNotice>
+                  )}
+                  <History key={chosen.id} kind={kind} record={chosen} />
                   <dl className="detail-grid">
                     {Object.entries(chosen.data)
                       .filter(

@@ -108,7 +108,7 @@ test("correction export preserves full original and is never a persisted mutatio
   );
   assert.equal(proposal.status, "not_saved");
   assert.equal(proposal.fields.ciudad, "Cali");
-  assert.equal(proposal.original.ciudad, "Bogotá");
+  assert.equal(proposal.basePayload.ciudad, "Bogotá");
   assert.equal(proposal.fields.licencia, "0012");
   assert.equal(proposal.replacementPhotos, null);
   assert.equal(JSON.stringify(record), before);

@@ -2,6 +2,10 @@ export type LegacyKind = "inspections" | "affiliations";
 export type LegacyRecord = {
   id: string;
   hash: string;
+  revision?: number;
+  archived?: boolean;
+  ambiguous?: boolean;
+  unarchived?: boolean;
   data: Record<string, unknown>;
 };
 export type LegacySnapshot = {
@@ -10,7 +14,7 @@ export type LegacySnapshot = {
   snapshot: string;
   source: string;
   records: LegacyRecord[];
-  readOnly: true;
+  readOnly: boolean;
 };
 export const inspectionFields = [
   ["fecha", "Fecha"],
@@ -219,7 +223,7 @@ export function correctionProposal(
   )
     throw Error("Hay imágenes no válidas.");
   return {
-    schema: "incargo-correction-proposal-v1",
+    schema: "incargo-correction-proposal-v2",
     status: "not_saved",
     snapshot: snapshot.snapshot,
     source: snapshot.source,
@@ -228,13 +232,42 @@ export function correctionProposal(
     sourceRow: record.data._rowNumber,
     reason: reason.trim(),
     fields: Object.fromEntries(
-      inspectionFields.map(([key]) => [
-        key,
-        fields[key] ?? text(record.data[key]),
-      ]),
+      (snapshot.kind === "inspections"
+        ? inspectionFields
+        : affiliationFields
+      ).map(([key]) => [key, fields[key] ?? text(record.data[key])]),
     ),
     replacementPhotos,
     replacementSignature: signature,
-    original: record.data,
+    baseRevision: record.revision || 0,
+    basePayload: record.data,
   };
 }
+
+export const affiliationFields = [
+  ["correoRegistro", "Correo de registro"],
+  ["tipoVinculacion", "Tipo de vinculación"],
+  ["tipoVinculacionOtro", "Otro tipo"],
+  ["nombreCompleto", "Nombre completo"],
+  ["tipoIdentificacion", "Tipo de identificación"],
+  ["numeroIdentificacion", "Número de identificación"],
+  ["correoElectronico", "Correo electrónico"],
+] as const;
+export type LegacyCorrection = {
+  hash: string;
+  expected: number;
+  request: string;
+  patch: Record<string, string>;
+  reason: string;
+};
+export type LegacyVersion = {
+  revision: number;
+  reason: string;
+  createdAt: string;
+  actorId: string;
+  data: Record<string, unknown>;
+};
+export type LegacyHistory = {
+  original: Record<string, unknown>;
+  history: LegacyVersion[];
+};
