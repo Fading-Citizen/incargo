@@ -12,10 +12,12 @@ export default function DeliveryFile({
   delivery,
   trip,
   onClose,
+  backLabel = "Volver al Kanban",
 }: {
   delivery: Delivery;
   trip?: Trip;
   onClose: () => void;
+  backLabel?: string;
 }) {
   const [detail, setDetail] = useState<DeliveryDetail | null>(null),
     [error, setError] = useState(""),
@@ -68,7 +70,7 @@ export default function DeliveryFile({
           <p>{delivery.customer_name}</p>
         </div>
         <PanelAction tone="neutral" onClick={onClose}>
-          Volver al Kanban
+          {backLabel}
         </PanelAction>
       </div>
       {error && (

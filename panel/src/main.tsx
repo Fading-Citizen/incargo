@@ -10,7 +10,7 @@ import {
 import PanelNavigationIcon from "./components/PanelNavigationIcon";
 import { useOperations, panelStore } from "./store";
 import { api } from "./api";
-import { statuses, summarize, type Snapshot } from "./model";
+import { statuses } from "./model";
 import ShipmentKanban from "./modules/ShipmentKanban";
 import { NewDelivery, TripModule } from "./modules/OperationsForms";
 import DeliveryFile from "./modules/DeliveryFile";
@@ -19,6 +19,7 @@ import FleetAssignments from "./modules/FleetAssignments";
 import Commercial from "./modules/Commercial";
 import RouteMap from "./modules/RouteMap";
 import Finance from "./modules/Finance";
+import Reports from "./modules/Reports";
 const sections = [
   ["shipments", "Envíos activos", "movements"],
   ["trips", "Viajes y asignaciones", "servicio-movil"],
@@ -26,57 +27,6 @@ const sections = [
   ["documents", "Documentos", "contracts"],
   ["reports", "Control operativo", "gerencial"],
 ] as const;
-function Reports({ state }: { state: Snapshot }) {
-  const summary = summarize(state);
-  return (
-    <>
-      <div className="module-heading">
-        <div>
-          <p className="efo-eyebrow">GERENCIA / OPERACIÓN</p>
-          <h1>Control operativo</h1>
-          <p>Indicadores derivados de las entregas y viajes consultados.</p>
-        </div>
-      </div>
-      <div className="inc-metrics">
-        {statuses.map(([key, label]) => (
-          <div className={"inc-metric inc-metric-" + key} key={key}>
-            <span>{label}</span>
-            <strong>{summary.counts[key]}</strong>
-          </div>
-        ))}
-      </div>
-      <div className="enterprise-columns">
-        <PanelSection title="Preparación del despacho">
-          <p>
-            Viajes sin conductor: <strong>{summary.unassigned}</strong>
-          </p>
-          <p>
-            Entregas sin remesa ni factura referenciada:{" "}
-            <strong>{summary.missingReferences}</strong>
-          </p>
-        </PanelSection>
-        <PanelSection title="Carga registrada">
-          <p>
-            Bultos informados:{" "}
-            <strong>
-              {state.deliveries.reduce(
-                (sum, d) => sum + (d.package_count || 0),
-                0,
-              )}
-            </strong>
-          </p>
-          <p>
-            Entregas sin cantidad registrada:{" "}
-            <strong>
-              {state.deliveries.filter((d) => d.package_count == null).length}
-            </strong>
-          </p>
-          <p>Se distinguen datos faltantes de una carga igual a cero.</p>
-        </PanelSection>
-      </div>
-    </>
-  );
-}
 function EnterprisePanel() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
@@ -283,6 +233,7 @@ function EnterprisePanel() {
             {chosen ? (
               <DeliveryFile
                 key={chosen.id}
+                backLabel={view === "reports" ? "Volver al control operativo" : view === "shipments" ? "Volver al Kanban" : "Volver al módulo"}
                 delivery={chosen}
                 trip={state.trips.find((t) => t.id === chosen.trip_id)}
                 onClose={() => setSelected(null)}
@@ -366,7 +317,7 @@ function EnterprisePanel() {
             ) : view === "fleet" ? (
               <FleetAssignments state={state} />
             ) : view === "reports" ? (
-              <Reports state={state} />
+              <Reports state={state} onOpen={setSelected} onNavigate={navigate} />
             ) : (
               <>
                 <div className="module-heading">

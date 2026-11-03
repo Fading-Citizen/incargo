@@ -185,6 +185,38 @@ const assert = require("node:assert/strict"),
       path: "/tmp/incargo-enterprise-desktop.png",
       fullPage: true,
     });
+    await navigate("Control operativo");
+    await page.getByRole("heading", {name:"Mesa de seguimiento"}).waitFor();
+    assert.equal(await page.locator(".control-overview tbody tr").count(), 3);
+    assert((await page.locator(".control-overview tbody tr").first().textContent()).includes("Empresa de prueba Sur"));
+    await page.getByLabel("Buscar en el resumen", {exact:true}).fill("TEST-001");
+    assert.equal(await page.locator(".control-overview tbody tr").count(), 1);
+    await page.getByRole("button", {name:"Limpiar filtros",exact:true}).click();
+    await page.getByLabel("Prioridad o estado",{exact:true}).selectOption("references");
+    assert.equal(await page.locator(".control-overview tbody tr").count(), 1);
+    await page.getByRole("button", {name:"Limpiar filtros",exact:true}).click();
+    assert.equal(await page.locator(".control-load").textContent(), "—bultos informados");
+    await page.screenshot({path:"/tmp/incargo-control-desktop.png",fullPage:true});
+    await page.setViewportSize({width:390,height:844});
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth <= window.innerWidth));
+    await page.screenshot({path:"/tmp/incargo-control-mobile.png",fullPage:true});
+    await page.getByLabel("Buscar en el resumen",{exact:true}).fill("no-match");
+    await page.getByText("Sin coincidencias",{exact:true}).waitFor();
+    await page.getByRole("button",{name:"Limpiar filtros",exact:true}).click();
+    await page.getByRole("button",{name:"Abrir expediente",exact:true}).first().click();
+    await page.getByRole("heading",{name:"Historial de la entrega"}).waitFor();
+    await page.getByRole("button",{name:"Volver al control operativo"}).click();
+    await page.getByRole("heading",{name:"Mesa de seguimiento"}).waitFor();
+    await page.evaluate(() => window.IncargoPanel.update({status:"ready",deliveries:[],trips:[]}));
+    await page.getByText("Sin entregas consultadas",{exact:true}).waitFor();
+    assert.equal(await page.locator(".control-load").textContent(), "—bultos informados");
+    await page.locator("#refresh").count().then(async count => {
+      if (count) await page.locator("#refresh").click();
+      else await page.getByRole("button",{name:"Actualizar datos",exact:true}).click();
+    });
+    await page.locator(".control-overview tbody tr").first().waitFor();
+    await page.setViewportSize({width:1440,height:1000});
+    await navigate("Envíos activos");
     await page
       .getByRole("button", { name: "Registrar salida", exact: true })
       .click();
