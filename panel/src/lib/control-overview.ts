@@ -1,5 +1,8 @@
 import { type Delivery, type Snapshot } from "../model";
 export type ControlFilter = "all" | "exception" | "unassigned" | "references" | "pending" | "in_transit" | "delivered";
+export function displayReference(delivery: Delivery) {
+  return delivery.remittance_reference?.trim() || delivery.invoice_reference?.trim() || "Sin referencia";
+}
 export function needsReference(delivery: Delivery) {
   return !delivery.remittance_reference?.trim() && !delivery.invoice_reference?.trim();
 }

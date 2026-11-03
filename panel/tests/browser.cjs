@@ -207,6 +207,31 @@ const assert = require("node:assert/strict"),
     await page.getByRole("heading",{name:"Historial de la entrega"}).waitFor();
     await page.getByRole("button",{name:"Volver al control operativo"}).click();
     await page.getByRole("heading",{name:"Mesa de seguimiento"}).waitFor();
+    // Isolated fixtures exercise all three controls across a detail round-trip.
+    await page.evaluate(() => window.IncargoPanel.update({
+      status:"ready", trips:[], deliveries:Array.from({length:25},(_,index)=>({
+        id:`regression-${String(index).padStart(2,"0")}`, trip_id:"missing-trip",
+        customer_name:`Regression ${String(index).padStart(2,"0")}`, status:"pending",
+        remittance_reference:"   ", invoice_reference:index === 24 ? "  INV-25  " : "   "
+      }))
+    }));
+    await page.getByLabel("Buscar en el resumen",{exact:true}).fill("Regression");
+    await page.getByLabel("Prioridad o estado",{exact:true}).selectOption("pending");
+    await page.getByRole("button",{name:"Mostrar 20 más",exact:true}).click();
+    assert.equal(await page.locator(".control-overview tbody tr").count(),25);
+    await page.locator(".control-overview tbody tr").last().getByRole("button",{name:"Abrir expediente",exact:true}).click();
+    await page.getByRole("heading",{name:"Historial de la entrega"}).waitFor();
+    await page.getByRole("button",{name:"Volver al control operativo",exact:true}).click();
+    assert.equal(await page.getByLabel("Buscar en el resumen",{exact:true}).inputValue(),"Regression");
+    assert.equal(await page.getByLabel("Prioridad o estado",{exact:true}).inputValue(),"pending");
+    assert.equal(await page.locator(".control-overview tbody tr").count(),25);
+    assert.equal(await page.locator(".control-overview tbody tr").last().locator("td").first().locator("small").textContent(),"INV-25");
+    assert.equal(await page.locator(".control-overview tbody tr").first().locator("td").first().locator("small").textContent(),"Sin referencia");
+    await page.getByLabel("Prioridad o estado",{exact:true}).selectOption("references");
+    assert.equal(await page.locator(".control-overview tbody tr").count(),20);
+    await page.getByRole("button",{name:"Mostrar 20 más",exact:true}).click();
+    assert.equal(await page.locator(".control-overview tbody tr").count(),24);
+    await page.getByRole("button",{name:"Limpiar filtros",exact:true}).click();
     await page.evaluate(() => window.IncargoPanel.update({status:"ready",deliveries:[],trips:[]}));
     await page.getByText("Sin entregas consultadas",{exact:true}).waitFor();
     assert.equal(await page.locator(".control-load").textContent(), "—bultos informados");

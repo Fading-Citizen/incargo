@@ -1,17 +1,22 @@
-import { useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { PanelAction, PanelEmpty, PanelField, PanelSection, PanelStatus, PanelTableFrame } from "../components/PanelPrimitives";
 import { statuses, summarize, type Snapshot } from "../model";
-import { controlRows, type ControlFilter } from "../lib/control-overview";
+import { controlRows, displayReference, type ControlFilter } from "../lib/control-overview";
 const filters: [ControlFilter, string][] = [["all", "Todas las entregas"], ["exception", "Con novedad"], ["unassigned", "Viaje sin conductor"], ["references", "Sin referencias"], ["pending", "Pendientes"], ["in_transit", "En ruta"], ["delivered", "Entregadas"]];
-export default function Reports({ state, onOpen, onNavigate }: { state: Snapshot; onOpen: (id: string) => void; onNavigate: (id: string) => void }) {
-  const [filter, setFilter] = useState<ControlFilter>("all");
-  const [query, setQuery] = useState("");
-  const [limit, setLimit] = useState(20);
+export type ReportsViewState = { filter: ControlFilter; query: string; limit: number };
+export default function Reports({ state, onOpen, onNavigate, viewState, onViewStateChange }: {
+  state: Snapshot;
+  onOpen: (id: string) => void;
+  onNavigate: (id: string) => void;
+  viewState: ReportsViewState;
+  onViewStateChange: Dispatch<SetStateAction<ReportsViewState>>;
+}) {
+  const { filter, query, limit } = viewState;
   const summary = summarize(state);
   const rows = controlRows(state, filter, query);
   const trips = new Map(state.trips.map(trip => [trip.id, trip]));
   const knownPackages = state.deliveries.filter(d => d.package_count != null);
-  function choose(next: ControlFilter) { setFilter(next); setLimit(20); }
+  function choose(next: ControlFilter) { onViewStateChange(current => ({ ...current, filter: next, limit: 20 })); }
   return <div className="control-overview">
     <header className="control-hero">
       <div><p className="control-eyebrow">INCARGO / VISIÓN ADMINISTRATIVA</p><h1>Control operativo</h1><p>De la visión general al siguiente paso.</p><small>Resumen de los registros consultados por tu sesión; no representa necesariamente toda la operación.</small></div>
@@ -36,14 +41,14 @@ export default function Reports({ state, onOpen, onNavigate }: { state: Snapshot
     </div>
     <PanelSection title="Mesa de seguimiento" description="Novedades primero, luego pendientes, en ruta y otros estados. Abre un expediente para revisar sus detalles.">
       <div className="board-toolbar">
-        <PanelField label="Buscar en el resumen"><input type="search" value={query} placeholder="Cliente, referencia, ruta o placa" onChange={event => {setQuery(event.target.value); setLimit(20);}} /></PanelField>
+        <PanelField label="Buscar en el resumen"><input type="search" value={query} placeholder="Cliente, referencia, ruta o placa" onChange={event => {const query = event.target.value; onViewStateChange(current => ({ ...current, query, limit: 20 }));}} /></PanelField>
         <PanelField label="Prioridad o estado"><select aria-label="Prioridad o estado" value={filter} onChange={event => choose(event.target.value as ControlFilter)}>{filters.map(([key,label]) => <option key={key} value={key}>{label}</option>)}</select></PanelField>
-        <PanelAction tone="neutral" onClick={() => {choose("all"); setQuery("");}}>Limpiar filtros</PanelAction>
+        <PanelAction tone="neutral" onClick={() => {onViewStateChange({ filter: "all", query: "", limit: 20 });}}>Limpiar filtros</PanelAction>
       </div>
       <p className="control-muted" role="status">{rows.length} entregas coinciden · {Math.min(limit, rows.length)} visibles</p>
       {!rows.length ? <PanelEmpty title={state.deliveries.length ? "Sin coincidencias" : "Sin entregas consultadas"} description={state.deliveries.length ? "Prueba otra búsqueda o limpia los filtros." : "Cuando existan entregas accesibles a tu sesión aparecerán aquí. No se muestran datos de demostración."} /> : <>
-        <PanelTableFrame label="Seguimiento de entregas" className="financial-table"><table><thead><tr><th>Cliente / referencia</th><th>Viaje / destino</th><th>Estado</th><th>Acción</th></tr></thead><tbody>{rows.slice(0,limit).map(d => <tr key={d.id}><td data-label="Cliente"><span>{d.customer_name || "Sin cliente informado"}<small>{d.remittance_reference || d.invoice_reference || "Sin referencia"}</small></span></td><td data-label="Viaje"><span>{trips.get(d.trip_id)?.route_label || "Viaje no disponible"}<small>{d.destination_text || "Destino no informado"}</small></span></td><td data-label="Estado"><PanelStatus tone={d.status === "exception" ? "warning" : d.status === "delivered" ? "success" : "neutral"}>{statuses.find(([key]) => key === d.status)?.[1] || d.status}</PanelStatus></td><td data-label="Acción"><PanelAction tone="neutral" onClick={() => onOpen(d.id)}>Abrir expediente</PanelAction></td></tr>)}</tbody></table></PanelTableFrame>
-        {rows.length > limit && <PanelAction tone="neutral" onClick={() => setLimit(value => value + 20)}>Mostrar 20 más</PanelAction>}
+        <PanelTableFrame label="Seguimiento de entregas" className="financial-table"><table><thead><tr><th>Cliente / referencia</th><th>Viaje / destino</th><th>Estado</th><th>Acción</th></tr></thead><tbody>{rows.slice(0,limit).map(d => <tr key={d.id}><td data-label="Cliente"><span>{d.customer_name || "Sin cliente informado"}<small>{displayReference(d)}</small></span></td><td data-label="Viaje"><span>{trips.get(d.trip_id)?.route_label || "Viaje no disponible"}<small>{d.destination_text || "Destino no informado"}</small></span></td><td data-label="Estado"><PanelStatus tone={d.status === "exception" ? "warning" : d.status === "delivered" ? "success" : "neutral"}>{statuses.find(([key]) => key === d.status)?.[1] || d.status}</PanelStatus></td><td data-label="Acción"><PanelAction tone="neutral" onClick={() => onOpen(d.id)}>Abrir expediente</PanelAction></td></tr>)}</tbody></table></PanelTableFrame>
+        {rows.length > limit && <PanelAction tone="neutral" onClick={() => onViewStateChange(current => ({ ...current, limit: current.limit + 20 }))}>Mostrar 20 más</PanelAction>}
       </>}
     </PanelSection>
   </div>;
