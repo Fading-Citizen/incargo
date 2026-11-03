@@ -19,7 +19,7 @@ import FleetAssignments from "./modules/FleetAssignments";
 import Commercial from "./modules/Commercial";
 import RouteMap from "./modules/RouteMap";
 import Finance from "./modules/Finance";
-import Reports from "./modules/Reports";
+import Reports, { type ReportsViewState } from "./modules/Reports";
 const sections = [
   ["shipments", "Envíos activos", "movements"],
   ["trips", "Viajes y asignaciones", "servicio-movil"],
@@ -28,6 +28,10 @@ const sections = [
   ["reports", "Control operativo", "gerencial"],
 ] as const;
 function EnterprisePanel() {
+  // Keep the overview context while its delivery detail temporarily replaces it.
+  const [reportsView, setReportsView] = useState<ReportsViewState>({
+    filter: "all", query: "", limit: 20,
+  });
   const [menuOpen, setMenuOpen] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [monitoring, setMonitoring] = useState(false);
@@ -317,7 +321,7 @@ function EnterprisePanel() {
             ) : view === "fleet" ? (
               <FleetAssignments state={state} />
             ) : view === "reports" ? (
-              <Reports state={state} onOpen={setSelected} onNavigate={navigate} />
+              <Reports state={state} onOpen={setSelected} onNavigate={navigate} viewState={reportsView} onViewStateChange={setReportsView} />
             ) : (
               <>
                 <div className="module-heading">
