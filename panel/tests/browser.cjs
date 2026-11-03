@@ -99,8 +99,25 @@ const assert = require("node:assert/strict"),
         destination_text: "Medellín",
       },
     ];
+    let legacyMode = "disabled", legacyReads = 0;
+    const legacyRows = [
+      {id:"synthetic:0",hash:"hash0",data:{_rowNumber:1,fecha:"2026-11-03",ts:"2026-11-03T01:00:00Z",placa:"TEST-01",conductor:"Persona sintética",ciudad:"Bogotá",licencia:"00123",items:JSON.stringify([{label:"Luces",scale:"BUENO/MALO",value:"MALO",obs:"Revisar"},{label:"Nivel",value:"BAJO"}]),firma:"data:image/png;base64,broken[TRUNC]",fotos:"https://invalid.test/private-image.png"}},
+      {id:"synthetic:1",hash:"hash1",data:{_rowNumber:2,fecha:"2026-11-02",placa:"TEST-02",conductor:"<script>alert(1)</script>",ciudad:"Cali",items:"not-json"}},
+    ];
+    await page.context().addInitScript(() => { window.print = () => {}; });
     await page.route("**/*", async (route) => {
       const url = new URL(route.request().url());
+      if (url.hostname === "127.0.0.1" && url.pathname === "/api/incargo-legacy-admin") {
+        legacyReads++;
+        assert.equal(route.request().method(),"GET");
+        assert.equal(route.request().headers().authorization,"Bearer test-only");
+        if (legacyMode === "disabled") return route.fulfill({status:503,contentType:"application/json",body:JSON.stringify({error:"Inspecciones y vinculaciones pendientes de habilitación de acceso."})});
+        if (legacyMode === "denied") return route.fulfill({status:403,contentType:"application/json",body:JSON.stringify({error:"Tu cuenta no tiene acceso a estos expedientes."})});
+        if (legacyMode === "error") return route.fulfill({status:502,contentType:"application/json",body:JSON.stringify({error:"Fuente no disponible; reintenta."})});
+        const kind = url.searchParams.get("kind");
+        const records = legacyMode === "empty" ? [] : kind === "inspections" ? legacyRows : [{id:"affiliation:0",hash:"affhash",data:{_rowNumber:2,ts:"2026-11-03T12:00:00Z",nombreCompleto:"Vinculado sintético",numeroIdentificacion:"0007",aceptaContrato:"SI",versionContrato:"histórica-no-verificada",firmaB64:""}}];
+        return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({kind,records,source:"synthetic-test",snapshot:"test-snapshot",capturedAt:"2026-11-03T12:00:00Z",readOnly:true})});
+      }
       if (url.hostname === "127.0.0.1") return route.continue();
       if (url.hostname !== "mock.supabase.co")
         throw Error("Unexpected external request " + url.hostname);
@@ -185,6 +202,68 @@ const assert = require("node:assert/strict"),
       path: "/tmp/incargo-enterprise-desktop.png",
       fullPage: true,
     });
+    await navigate("Inspecciones y vinculaciones");
+    await page.getByText("Inspecciones y vinculaciones pendientes de habilitación de acceso.",{exact:true}).waitFor();
+    assert.equal(await page.locator(".legacy-admin tbody tr").count(),0);
+    legacyMode="ready";
+    await page.getByRole("button",{name:"Actualizar expedientes",exact:true}).click();
+    await page.locator(".legacy-admin tbody tr").first().waitFor();
+    assert.equal(await page.locator(".legacy-admin tbody tr").count(),2);
+    await page.getByLabel("Buscar expedientes",{exact:true}).fill("TEST-01");
+    await page.getByLabel("Estado de expediente",{exact:true}).selectOption("bad");
+    await page.getByRole("button",{name:"Ver expediente",exact:true}).click();
+    await page.getByRole("heading",{name:"Checklist original",exact:true}).waitFor();
+    await page.getByRole("cell",{name:"BAJO",exact:true}).waitFor();
+    await page.getByText("Firma del conductor · Truncada en el origen",{exact:true}).waitFor();
+    assert.equal(await page.locator('.legacy-evidence img').count(),0);
+    await page.getByRole("button",{name:"Preparar corrección",exact:true}).click();
+    await page.getByLabel("Ciudad",{exact:true}).fill("Medellín");
+    await page.getByRole("button",{name:"Descargar propuesta sin guardar",exact:true}).click();
+    await page.getByText("Explica el motivo de la corrección.",{exact:true}).waitFor();
+    await page.getByLabel("Motivo de la corrección").fill("Rectificación sintética para prueba");
+    const proposalDownload = page.waitForEvent("download");
+    await page.getByRole("button",{name:"Descargar propuesta sin guardar",exact:true}).click();
+    const proposal=JSON.parse(fs.readFileSync(await (await proposalDownload).path(),"utf8"));
+    assert.equal(proposal.status,"not_saved");assert.equal(proposal.fields.ciudad,"Medellín");assert.equal(proposal.original.ciudad,"Bogotá");assert.equal(proposal.original.licencia,"00123");
+    assert.equal(legacyRows[0].data.ciudad,"Bogotá");
+    await page.getByRole("button",{name:"Cancelar borrador",exact:true}).click();
+    await page.getByRole("button",{name:"Volver a expedientes",exact:true}).click();
+    assert.equal(await page.getByLabel("Buscar expedientes",{exact:true}).inputValue(),"TEST-01");
+    assert.equal(await page.getByLabel("Estado de expediente",{exact:true}).inputValue(),"bad");
+    const csvDownload=page.waitForEvent("download");
+    await page.getByRole("button",{name:"CSV filtrado",exact:true}).click();
+    const csv=fs.readFileSync(await (await csvDownload).path(),"utf8");assert(csv.includes("00123"));assert(!csv.includes("TEST-02"));
+    await page.getByRole("button",{name:"Limpiar búsqueda",exact:true}).click();
+    await page.screenshot({path:"/tmp/incargo-legacy-inspections-desktop.png",fullPage:true});
+    await page.setViewportSize({width:390,height:844});
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
+    await page.screenshot({path:"/tmp/incargo-legacy-inspections-mobile.png",fullPage:true});
+    await page.getByRole("button",{name:"Vinculaciones temporales",exact:true}).click();
+    await page.getByText("Vinculado sintético",{exact:true}).waitFor();
+    assert.equal(await page.locator(".legacy-admin tbody tr").count(),1);
+    await page.getByRole("button",{name:"Ver expediente",exact:true}).click();
+    await page.getByText("histórica-no-verificada",{exact:true}).waitFor();
+    assert.equal(await page.getByRole("button",{name:"Preparar corrección",exact:true}).count(),0);
+    const printPopup=page.waitForEvent("popup");
+    await page.getByRole("button",{name:"Imprimir copia / guardar PDF",exact:true}).click();
+    const copy=await printPopup;await copy.waitForLoadState();
+    assert((await copy.locator("body").textContent()).includes("No es un contrato histórico reconstruido"));
+    await copy.close();
+    await page.getByRole("button",{name:"Volver a expedientes",exact:true}).click();
+    legacyMode="error";
+    await page.getByRole("button",{name:"Actualizar expedientes",exact:true}).click();
+    await page.getByText("Fuente no disponible; reintenta.",{exact:true}).waitFor();
+    assert.equal(await page.locator(".legacy-admin tbody tr").count(),0);
+    legacyMode="empty";
+    await page.getByRole("button",{name:"Actualizar expedientes",exact:true}).click();
+    await page.getByText("No hay expedientes en la fuente consultada",{exact:true}).waitFor();
+    legacyMode="denied";
+    await page.getByRole("button",{name:"Actualizar expedientes",exact:true}).click();
+    await page.getByText("Tu cuenta no tiene acceso a estos expedientes.",{exact:true}).waitFor();
+    assert.equal(await page.locator(".legacy-admin tbody tr").count(),0);
+    legacyMode="ready";
+    assert(legacyReads>4);
+    await page.setViewportSize({width:1440,height:1000});
     await navigate("Control operativo");
     await page.getByRole("heading", {name:"Mesa de seguimiento"}).waitFor();
     assert.equal(await page.locator(".control-overview tbody tr").count(), 3);
@@ -501,6 +580,9 @@ const assert = require("node:assert/strict"),
     assert(await page.locator("#ops").isHidden());
     assert(await page.locator("#driver").isVisible());
     assert.equal(await page.locator("#incargo-panel-root").textContent(), "");
+    const beforeDriverLegacy=legacyReads;
+    const driverLegacy=await page.evaluate(async()=>{try{await window.IncargoOperations.legacyAdmin("inspections");return "UNBLOCKED";}catch(e){return e.message;}});
+    assert.equal(driverLegacy,"Acceso operativo requerido.");assert.equal(legacyReads,beforeDriverLegacy);
     assert.deepEqual(errors, []);
     console.log(
       "PASS: enterprise module integration, restricted Kanban transition with confirmation, canonical accounts, direct forms, delivery dossier, refresh failure/recovery, OS dark-mode contrast, mobile layout, logout and driver isolation. No production writes.",

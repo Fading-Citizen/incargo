@@ -294,6 +294,16 @@
     await request('/rest/v1/'+table,{method:'POST',body:{id:requestId,...payload}});
   }
   globalThis.IncargoOperations=Object.freeze({
+    async legacyAdmin(kind,signal){
+      requireOperations();if(!['inspections','affiliations'].includes(kind))throw Error('Tipo de expediente no válido.');
+      const active=session,attempt=generation;
+      const response=await fetch('/api/incargo-legacy-admin?kind='+encodeURIComponent(kind),{headers:{Authorization:`Bearer ${active.access_token}`},cache:'no-store',signal});
+      check(active,attempt);
+      const result=await response.json();check(active,attempt);
+      if(!response.ok)throw Error(result.error||'No se pudo consultar la fuente.');
+      if(result.kind!==kind||result.readOnly!==true||!Array.isArray(result.records)||result.records.some(record=>!record||typeof record.id!=='string'||typeof record.hash!=='string'||!record.data||typeof record.data!=='object'||Array.isArray(record.data))||typeof result.snapshot!=='string'||!Number.isFinite(Date.parse(result.capturedAt)))throw Error('Respuesta de expedientes no válida.');
+      return result;
+    },
     async refreshMonitor(){requireOperations();const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),15000);try{await reload({quiet:true,signal:controller.signal});}finally{clearTimeout(timeout);}},
     async refresh(){requireOperations();await reload();notice('Datos actualizados.');},
     async businessCapabilities(){requireOperations();try{const capabilities=await rpc('incargo_business_capabilities',{});return {...capabilities,finance:FINANCE_RELEASE_ENABLED&&capabilities.finance===true};}catch(error){if(error?.status===404||error?.code==='PGRST202')return {commercial:false,finance:false};throw error;}},

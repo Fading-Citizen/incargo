@@ -21,6 +21,7 @@ export type DeliveryDetail = {
   links: { id: string; expires_at: string; revoked_at?: string }[];
 };
 export interface OperationsApi {
+  legacyAdmin(kind: import("./lib/legacy-admin").LegacyKind, signal?: AbortSignal): Promise<import("./lib/legacy-admin").LegacySnapshot>;
   businessCapabilities(): Promise<{
     commercial: boolean;
     finance: boolean;

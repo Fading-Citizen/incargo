@@ -19,6 +19,7 @@ import FleetAssignments from "./modules/FleetAssignments";
 import Commercial from "./modules/Commercial";
 import RouteMap from "./modules/RouteMap";
 import Finance from "./modules/Finance";
+import LegacyAdmin from "./modules/LegacyAdmin";
 import Reports, { type ReportsViewState } from "./modules/Reports";
 const sections = [
   ["shipments", "Envíos activos", "movements"],
@@ -26,6 +27,7 @@ const sections = [
   ["customers", "Clientes y accesos", "users"],
   ["documents", "Documentos", "contracts"],
   ["reports", "Control operativo", "gerencial"],
+  ["legacy", "Inspecciones y vinculaciones", "contracts"],
 ] as const;
 function EnterprisePanel() {
   // Keep the overview context while its delivery detail temporarily replaces it.
@@ -162,7 +164,7 @@ function EnterprisePanel() {
         <nav id="panel-modules" aria-label="Módulos del panel">
           {[
             { label: "Operación", ids: ["shipments", "map", "trips", "fleet"] },
-            { label: "Gestión", ids: ["customers", "documents", "reports"] },
+            { label: "Gestión", ids: ["customers", "documents", "reports", "legacy"] },
             {
               label: "Comercial y administración",
               ids: ["commercial", "finance"],
@@ -320,6 +322,8 @@ function EnterprisePanel() {
               />
             ) : view === "fleet" ? (
               <FleetAssignments state={state} />
+            ) : view === "legacy" ? (
+              <LegacyAdmin />
             ) : view === "reports" ? (
               <Reports state={state} onOpen={setSelected} onNavigate={navigate} viewState={reportsView} onViewStateChange={setReportsView} />
             ) : (

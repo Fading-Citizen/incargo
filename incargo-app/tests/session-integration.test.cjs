@@ -26,7 +26,7 @@ function harness(context,{storage=new Map(),clock={now:1800000000000},user='A',c
  sandbox.IncargoCargo={...require('../../logistica-1.0.0/incargo-cargo.js'),enabled:cargoEnabled};
  vm.runInNewContext(source['incargo-session.js'],sandbox);vm.runInNewContext(source[context==='client'?'incargo-client.js':'incargo-app.js'],sandbox);
  const workspace=()=>get(context==='client'?'client-workspace':'workspace');
- return {get,storage,clock,calls,response,workspace,ready:tick,focused:()=>focused,hook:v=>hook=v,identity:v=>identity=v,role:v=>role=v,user:v=>authUser=v,
+ return {get,storage,clock,calls,response,workspace,operations:()=>sandbox.IncargoOperations,ready:tick,focused:()=>focused,hook:v=>hook=v,identity:v=>identity=v,role:v=>role=v,user:v=>authUser=v,
   login:async()=>{await tick();await get('login-form').onsubmit({preventDefault(){},currentTarget:get('login-form')});await tick();},
   logout:()=>get('logout').onclick(),refresh:()=>context==='client'?get('refresh').onclick():get('client-admin-retry').onclick(),
   expire:async()=>{clock.now=1800000060000;for(const [id,t] of timers)if(t.at<=clock.now){timers.delete(id);t.fn();}await tick();}};
@@ -181,4 +181,19 @@ test('operations cargo null payload and reloaded display do not invent quantitie
  h.hook((url,opts)=>{if(url.endsWith('/incargo_deliveries')&&opts.method==='POST'){body=JSON.parse(opts.body);return h.response(null);}if(url.includes('/incargo_deliveries?'))return h.response([{id:'fixture',trip_id:'fixture-trip',customer_name:'PRUEBA',status:'pending',origin_text:null,cargo_description:null,package_count:null,gross_weight_kg:null}]);});
  const form=h.get('delivery-form'),baseline=form.resets||0;await form.onsubmit({preventDefault(){},currentTarget:form});for(const key of ['origin_text','cargo_description','package_count','gross_weight_kg'])assert.equal(body[key],null);assert.equal(form.resets,baseline+1);assert.equal(h.get('ops-deliveries').children.length,1);
  const text=n=>[n.textContent,...n.children.map(text)].join(' ');assert.match(text(h.get('ops-deliveries')),/Sin origen registrado.*Sin descripción registrada.*Sin cantidad registrada.*Sin peso registrado/);
+});
+
+for(const outcome of [200,403])test('legacy bridge: late '+outcome+' after logout cannot expose the previous user snapshot',async()=>{
+ const h=harness('operations');await h.login();let release;
+ h.hook(url=>url.startsWith('/api/incargo-legacy-admin?')?new Promise(resolve=>release=resolve):null);
+ const pending=h.operations().legacyAdmin('inspections').then(()=> 'EXPOSED',error=>error.message);await tick();
+ h.logout();h.hook(null);h.user('B');await h.login();
+ release(h.response({kind:'inspections',readOnly:true,records:[{id:'private-A',hash:'hash',data:{conductor:'A'}}],snapshot:'hash',capturedAt:'2026-11-03T12:00:00Z'},outcome));
+ assert.equal(await pending,'Solicitud anterior descartada.');assert.equal(JSON.parse([...h.storage.values()][0]).user_id,'B');assert.equal(h.workspace().hidden,false);
+});
+test('legacy bridge: driver cannot dispatch, invalid response is not treated as empty data',async()=>{
+ const driver=harness('operations');driver.role('driver');await driver.login();const before=driver.calls.length;
+ await assert.rejects(driver.operations().legacyAdmin('inspections'),/Acceso operativo requerido/);assert.equal(driver.calls.length,before);
+ const h=harness('operations');await h.login();h.hook(url=>url.startsWith('/api/incargo-legacy-admin?')?h.response({records:[]}):null);
+ await assert.rejects(h.operations().legacyAdmin('inspections'),/Respuesta de expedientes no válida/);
 });
