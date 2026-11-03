@@ -9,14 +9,14 @@
     <meta content="Encuentra respuestas a las preguntas más frecuentes sobre los servicios de logística y transporte de INCARGO. Información sobre tarifas, tiempos de entrega, cobertura, seguimiento y más." name="description">
     <meta name="author" content="INCARGO">
     <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://incargo.com/faq.html">
+    <link rel="canonical" href="https://www.incargo.co/faq">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://incargo.com/faq.html">
+    <meta property="og:url" content="https://www.incargo.co/faq">
     <meta property="og:title" content="Preguntas Frecuentes - INCARGO">
     <meta property="og:description" content="Respuestas a preguntas frecuentes sobre servicios de logística y transporte.">
-    <meta property="og:image" content="https://incargo.com/img/Logo.png">
+    <meta property="og:image" content="https://www.incargo.co/img/Logo.png">
     <meta property="og:locale" content="es_CO">
     
     <!-- Twitter -->
@@ -38,15 +38,12 @@
     <!-- Google Web Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Roboto:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Icon Font Stylesheet -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
 
     <!-- Libraries Stylesheet -->
-    <link href="lib/animate/animate.min.css" rel="stylesheet">
-    <link href="lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
 
     <!-- Customized Bootstrap Stylesheet -->
     <link href="css/bootstrap.min.css" rel="stylesheet">
@@ -54,6 +51,7 @@
     <!-- Template Stylesheet -->
     <link href="css/style.css" rel="stylesheet">
     <link href="css/incargo-redesign.css" rel="stylesheet">
+    <link href="css/incargo-fixes.css" rel="stylesheet">
     <script>document.addEventListener("DOMContentLoaded", function () {
       var spinner = document.getElementById("spinner"); if (spinner) spinner.classList.remove("show");
       var toggle = document.querySelector(".navbar-toggler"), menu = document.getElementById("navbarCollapse");
@@ -76,7 +74,7 @@
     <!-- Navbar Start -->
     <nav class="navbar navbar-expand-lg bg-white navbar-light shadow border-top border-5 border-primary sticky-top p-0">
         <a href="index.html" class="navbar-brand bg-primary d-flex align-items-center px-4 px-lg-5">
-            <img src="img/Logo.png" alt="INCARGO" style="height: 50px; filter: brightness(0);">
+            <picture><source type="image/webp" srcset="img/Logo-400.webp"><img src="img/Logo.png" alt="INCARGO" style="height: 50px; filter: brightness(0);"></picture>
             <sup style="color: #000; font-size: 28px; margin-left: 0px; vertical-align: super; position: relative; top: -15px;">®</sup>
         </a>
         <button type="button" class="navbar-toggler me-4" aria-label="Abrir menú" aria-controls="navbarCollapse" aria-expanded="false" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
@@ -101,7 +99,7 @@
                 <a href="contact.html" class="nav-item nav-link">Contacto</a>
                 <a href="cliente.html" class="nav-item nav-link inc-access">Mis envíos <i class="fa fa-arrow-right" aria-hidden="true"></i></a>
             </div>
-            <h4 class="m-0 pe-lg-5 d-none d-lg-block"><i class="fa fa-headphones text-primary me-3"></i>+57 310 380 96 12</h4>
+            <h4 class="m-0 pe-lg-5 d-none d-lg-block"><i class="fa fa-headphones text-primary me-3" aria-hidden="true"></i>+57 310 380 96 12</h4>
         </div>
     </nav>
     <!-- Navbar End -->
@@ -111,8 +109,8 @@
     <!-- Page Header Start -->
     <div class="container-fluid page-header py-5" style="margin-bottom: 6rem;">
         <div class="container py-5">
-            <h1 class="display-3 text-white mb-3 animated slideInDown">Preguntas Frecuentes</h1>
-            <nav aria-label="breadcrumb animated slideInDown">
+            <h1 class="display-3 text-white mb-3">Preguntas Frecuentes</h1>
+            <nav aria-label="Ruta de navegación">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a class="text-white" href="index.html">Inicio</a></li>
                     <li class="breadcrumb-item text-white active" aria-current="page">FAQ</li>
@@ -127,24 +125,24 @@
     <div class="container-fluid overflow-hidden py-5 px-lg-0">
         <div class="container about py-5 px-lg-0">
             <div class="row g-5 mx-lg-0">
-                <div class="col-lg-6 ps-lg-0 wow fadeInLeft" data-wow-delay="0.1s" style="min-height: 400px;">
+                <div class="col-lg-6 ps-lg-0" style="min-height: 400px;">
                     <div class="position-relative h-100">
-                        <img class="position-absolute img-fluid w-100 h-100" src="img/6.jpg" style="object-fit: cover;" alt="">
+                        <picture><source type="image/webp" srcset="img/6-600.webp 600w, img/6-1200.webp 1200w" sizes="(max-width: 768px) 100vw, 600px"><img loading="lazy" decoding="async" class="position-absolute img-fluid w-100 h-100" src="img/6.jpg" style="object-fit: cover;" alt=""></picture>
                     </div>
                 </div>
-                <div class="col-lg-6 about-text wow fadeInUp" data-wow-delay="0.3s">
-                    <h6 class="text-secondary text-uppercase mb-3">Preguntas Frecuentes</h6>
+                <div class="col-lg-6 about-text">
+                    <p class="inc-eyebrow mb-3">Preguntas Frecuentes</p>
                     <h1 class="mb-5">Respuestas a tus Dudas sobre Logística</h1>
                     <p class="mb-5">En INCARGO queremos que tengas toda la información necesaria sobre nuestros servicios de transporte y logística. A continuación encontrarás las respuestas a las preguntas más comunes de nuestros clientes.</p>
                     <div class="row g-4 mb-5">
-                        <div class="col-sm-6 wow fadeIn" data-wow-delay="0.5s">
+                        <div class="col-sm-6">
                             <i class="fa fa-question-circle fa-3x text-primary mb-3"></i>
-                            <h5>¿Cómo cotizar?</h5>
+                            <h2 class="h5">¿Cómo cotizar?</h2>
                             <p class="m-0">Ingresa a nuestra sección de cotizaciones y completa el formulario con los detalles de tu envío.</p>
                         </div>
-                        <div class="col-sm-6 wow fadeIn" data-wow-delay="0.7s">
+                        <div class="col-sm-6">
                             <i class="fa fa-clock fa-3x text-primary mb-3"></i>
-                            <h5>Tiempos de Entrega</h5>
+                            <h2 class="h5">Tiempos de Entrega</h2>
                             <p class="m-0">Los tiempos varían según el destino. Consulta nuestra cobertura nacional para más detalles.</p>
                         </div>
                     </div>
@@ -160,15 +158,15 @@
     <div class="container-xxl py-5">
         <div class="container py-5">
             <div class="row g-5">
-                <div class="col-lg-6 wow fadeInUp" data-wow-delay="0.1s">
-                    <h6 class="text-secondary text-uppercase mb-3">Información Útil</h6>
+                <div class="col-lg-6">
+                    <p class="inc-eyebrow mb-3">Información Útil</p>
                     <h1 class="mb-5">Tu Socio Confiable en Logística Nacional</h1>
                     <p class="mb-5">Con presencia en todo el territorio colombiano y más de 5000 vehículos certificados, INCARGO garantiza entregas seguras y puntuales. Consulta nuestras preguntas frecuentes o contáctanos directamente para resolver tus dudas.</p>
                     <div class="d-flex align-items-center">
-                        <i class="fa fa-headphones fa-2x flex-shrink-0 bg-primary p-3 text-white"></i>
+                        <i class="fa fa-headphones fa-2x flex-shrink-0 bg-primary p-3 text-white" aria-hidden="true"></i>
                         <div class="ps-4">
-                            <h6>¿Necesitas ayuda?</h6>
-                            <h3 class="text-primary m-0">+57 310 380 96 12</h3>
+                            <p class="h6">¿Necesitas ayuda?</p>
+                            <p class="h3 text-primary m-0"><a class="text-reset text-decoration-none" href="tel:+573103809612">+57 310 380 96 12</a></p>
                         </div>
                     </div>
                 </div>
@@ -181,12 +179,12 @@
     <!-- FAQ Accordion Start -->
     <div class="container-xxl py-5">
         <div class="container py-5">
-            <div class="text-center wow fadeInUp" data-wow-delay="0.1s">
-                <h6 class="text-secondary text-uppercase">Preguntas Frecuentes</h6>
+            <div class="text-center">
+                <p class="inc-eyebrow">Preguntas Frecuentes</p>
                 <h1 class="mb-5">Encuentra Respuestas a tus Dudas</h1>
             </div>
             <div class="row g-5">
-                <div class="col-lg-6 wow fadeInUp" data-wow-delay="0.1s">
+                <div class="col-lg-6">
                     <div class="accordion" id="accordionFAQ1">
                         <div class="accordion-item mb-3">
                             <h2 class="accordion-header" id="heading1">
@@ -250,7 +248,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-lg-6 wow fadeInUp" data-wow-delay="0.3s">
+                <div class="col-lg-6">
                     <div class="accordion" id="accordionFAQ2">
                         <div class="accordion-item mb-3">
                             <h2 class="accordion-header" id="heading6">
@@ -324,7 +322,7 @@
     <div class="container-xxl py-5">
         <div class="container py-5">
             <div class="row g-5">
-                <div class="col-lg-12 text-center wow fadeInUp" data-wow-delay="0.1s">
+                <div class="col-lg-12 text-center">
                     <div class="bg-primary p-5 text-white">
                         <h2 class="text-white mb-4">¿No Encontraste tu Respuesta?</h2>
                         <p class="fs-5 mb-4">Nuestro equipo de atención al cliente está listo para resolver todas tus dudas sobre nuestros servicios de logística y transporte.</p>
@@ -333,8 +331,8 @@
                                 <div class="d-flex align-items-center justify-content-center mb-3">
                                     <i class="fa fa-phone-alt fa-3x me-3"></i>
                                     <div class="text-start">
-                                        <h6 class="text-white mb-1">Llámanos</h6>
-                                        <h5 class="text-white mb-0">+57 310 380 96 12</h5>
+                                        <p class="h6 text-white mb-1">Llámanos</p>
+                                        <h2 class="h5 text-white mb-0">+57 310 380 96 12</h2>
                                     </div>
                                 </div>
                             </div>
@@ -342,8 +340,8 @@
                                 <div class="d-flex align-items-center justify-content-center mb-3">
                                     <i class="fa fa-envelope fa-3x me-3"></i>
                                     <div class="text-start">
-                                        <h6 class="text-white mb-1">Escríbenos</h6>
-                                        <h5 class="text-white mb-0 fs-6">operaciones@incargo.co</h5>
+                                        <p class="h6 text-white mb-1">Escríbenos</p>
+                                        <h2 class="h5 text-white mb-0 fs-6">operaciones@incargo.co</h2>
                                     </div>
                                 </div>
                             </div>
@@ -359,11 +357,11 @@
 
     </main>
     <!-- Footer Start -->
-    <div class="container-fluid bg-dark text-light footer pt-5 wow fadeIn" data-wow-delay="0.1s" style="margin-top: 6rem;">
+    <div role="contentinfo" class="container-fluid bg-dark text-light footer pt-5" style="margin-top: 6rem;">
         <div class="container py-5">
             <div class="row g-5">
                 <div class="col-lg-3 col-md-6">
-                    <h4 class="text-light mb-4">Dirección</h4>
+                    <h2 class="h4 text-light mb-4">Dirección</h2>
                     <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>Calle 15 71-54, Medellín, Colombia</p>
                     <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>Calle 4c # 87-36, Cali - Valle del Cauca</p>
                     <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>Callé 8a # 32-25, Bogotá</p>
@@ -371,14 +369,14 @@
                     <p class="mb-2"><i class="fa fa-envelope me-3"></i>operaciones@incargo.co</p>
                     <p class="mb-2"><i class="fa fa-envelope me-3"></i>negocios@incargo.co</p>
                     <div class="d-flex pt-2">
-                        <a class="btn btn-outline-light btn-social" href=""><i class="fab fa-twitter"></i></a>
-                        <a class="btn btn-outline-light btn-social" href=""><i class="fab fa-facebook-f"></i></a>
-                        <a class="btn btn-outline-light btn-social" href=""><i class="fab fa-youtube"></i></a>
-                        <a class="btn btn-outline-light btn-social" href=""><i class="fab fa-linkedin-in"></i></a>
+                        <a aria-label="Twitter" class="btn btn-outline-light btn-social" href=""><i class="fab fa-twitter" aria-hidden="true"></i></a>
+                        <a aria-label="Facebook" class="btn btn-outline-light btn-social" href=""><i class="fab fa-facebook-f" aria-hidden="true"></i></a>
+                        <a aria-label="YouTube" class="btn btn-outline-light btn-social" href=""><i class="fab fa-youtube" aria-hidden="true"></i></a>
+                        <a aria-label="LinkedIn" class="btn btn-outline-light btn-social" href=""><i class="fab fa-linkedin-in" aria-hidden="true"></i></a>
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6">
-                    <h4 class="text-light mb-4">Servicios</h4>
+                    <h2 class="h4 text-light mb-4">Servicios</h2>
                     <a class="btn btn-link" href="">Transporte Nacional</a>
                     <a class="btn btn-link" href="">Carga de Mercancía</a>
                     <a class="btn btn-link" href="">Bodegaje</a>
@@ -386,7 +384,7 @@
                     <a class="btn btn-link" href="">Proyectos Logísticos</a>
                 </div>
                 <div class="col-lg-3 col-md-6">
-                    <h4 class="text-light mb-4">Enlaces Rápidos</h4>
+                    <h2 class="h4 text-light mb-4">Enlaces Rápidos</h2>
                     <a class="btn btn-link" href="about.html">Sobre Nosotros</a>
                     <a class="btn btn-link" href="contact.html">Contacto</a>
                     <a class="btn btn-link" href="service.html">Nuestros Servicios</a>
@@ -394,10 +392,10 @@
                     <a class="btn btn-link" href="faq.html">Soporte</a>
                 </div>
                 <div class="col-lg-3 col-md-6">
-                    <h4 class="text-light mb-4">Boletín</h4>
+                    <h2 class="h4 text-light mb-4">Boletín</h2>
                     <p>Suscríbete para recibir noticias y promociones de INCARGO.</p>
                     <div class="position-relative mx-auto" style="max-width: 400px;">
-                        <input class="form-control border-0 w-100 py-3 ps-4 pe-5" type="text" placeholder="Tu correo electrónico">
+                        <input aria-label="Correo para el boletín" class="form-control border-0 w-100 py-3 ps-4 pe-5" type="email" placeholder="Tu correo electrónico">
                         <button type="button" class="btn btn-primary py-2 position-absolute top-0 end-0 mt-2 me-2">SignUp</button>
                     </div>
                 </div>
@@ -420,22 +418,17 @@
 
 
     <!-- Back to Top -->
-    <a href="#" class="btn btn-lg btn-primary btn-lg-square rounded-0 back-to-top"><i class="bi bi-arrow-up"></i></a>
+    <aside class="inc-floaters" aria-label="Accesos rápidos"><a href="#" aria-label="Volver arriba" class="btn btn-lg btn-primary btn-lg-square rounded-0 back-to-top"><i class="fa fa-arrow-up" aria-hidden="true"></i></a></aside>
 
     <!-- WhatsApp Float Button -->
-    <a href="https://api.whatsapp.com/send?phone=573103809612&text=Hola%20INCARGO,%20quisiera%20información%20sobre%20sus%20servicios" class="whatsapp-float" target="_blank" rel="noopener noreferrer" title="Chatea con nosotros por WhatsApp">
+    <aside class="inc-floaters" aria-label="WhatsApp"><a href="https://api.whatsapp.com/send?phone=573103809612&text=Hola%20INCARGO,%20quisiera%20información%20sobre%20sus%20servicios" class="whatsapp-float" target="_blank" rel="noopener noreferrer" title="Chatea con nosotros por WhatsApp">
         <i class="fab fa-whatsapp"></i>
-    </a>
+    </a></aside>
 
 
     <!-- JavaScript Libraries -->
     <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="lib/wow/wow.min.js"></script>
-    <script src="lib/easing/easing.min.js"></script>
-    <script src="lib/waypoints/waypoints.min.js"></script>
-    <script src="lib/counterup/counterup.min.js"></script>
-    <script src="lib/owlcarousel/owl.carousel.min.js"></script>
 
     <!-- Template Javascript -->
     <script src="js/main.js"></script>
