@@ -23,4 +23,4 @@ La lectura real del Apps Script solo valida conteos/forma/huellas de respuesta d
 
 No hay sesión real del usuario disponible. Las pruebas de roles son locales/interceptadas y PostgreSQL aislado; no acreditan QA autenticado en producción. El API de lectura queda deshabilitado por defecto. El guardado del panel no está conectado a la propuesta SQL. La exportación de una propuesta no se muestra como guardado. Contratos históricos y certificados con firma permanecen pendientes de decisiones explícitas.
 
-El admin legacy sigue idéntico por hash. No se inspeccionó ni modificó la instalación excluida. Sin cambios financieros, importación de datos, push, despliegue ni publicación de este nuevo alcance.
+El admin legacy sigue idéntico por hash. No se inspeccionó ni modificó la instalación excluida. Sin cambios financieros, importación de datos ni despliegue/activación de este alcance en producción. La aclaración posterior autoriza push y preview; la rama se publica con el adaptador cerrado por defecto.

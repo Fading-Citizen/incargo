@@ -44,7 +44,7 @@ No hay borrado, aprobación de inspecciones, creación de usuarios, vinculación
 4. Vincular cada versión contractual al documento realmente aceptado; no usar el HTML actual para acreditar un contrato histórico.
 5. Autorizar firmante y condiciones de emisión de certificados. No reutilizar automáticamente una firma fija.
 
-La autorización de despliegue previa correspondía al dashboard y sus dos correcciones; este alcance nuevo no se despliega. Publicar una rama puede generar un preview automático de Vercel: se entregará un commit local hasta confirmar la publicación de nueva funcionalidad.
+La aclaración posterior autoriza publicar esta rama aunque el push genere un preview automático de Vercel. El adaptador sigue cerrado por defecto y no se activan permisos ni se integra esta funcionalidad en producción.
 
 ## Evidencia de origen obtenida en esta sesión
 
@@ -79,4 +79,15 @@ Consulta de metadatos a Supabase `gmjsqboyuvierfwruspv`: 8 tablas públicas `inc
 2. **Guardado (implementación + decisiones):** escoger si las correcciones autorizadas vivirán en Supabase manteniendo Sheets como histórico, o si se requiere sincronización con Apps Script. La propuesta `legacy-admin-revisions.proposal.sql` cubre el primer modelo y se valida localmente. Falta aprobar retención/permisos, conciliar un snapshot verificable, asignar IDs y ACL por documento, importar con manifest y conectar una API de escritura/UI con recibos. La autorización de migraciones no sustituye la confirmación de acceso persistente. Si se requiere editar Sheets, hay que añadir ID estable, revisión esperada, deduplicación, historial y acuse en Apps Script; no usar su POST actual por número de fila. No hay doble escritura implementada.
 3. **Firmas (decisión de negocio):** confirmar persona autorizada, condiciones para emitir y uso permitido de la imagen de firma. Después implementar emisión con autor/fecha/plantilla/versionado y revisión del expediente. Preparar copia sin aprobación ya está autorizado y terminado; reutilizar una firma como aprobación no se deduce de migrar la UI.
 4. **Contratos (fuente que falta):** aportar el manifiesto versión literal → documento inmutable/hash realmente presentado. Después implementar la composición del contrato desde esa versión; las firmas y aceptaciones se conservarán sin reconstruirlas. El texto actual de `/vinculacion` no acredita todas las versiones históricas.
-5. **Publicación (autorización de nuevo alcance):** confirmar el despliegue de esta funcionalidad nueva. No se hereda automáticamente la publicación del dashboard anterior. No hubo push, PR ni preview para este incremento porque el push dispara Vercel; el entregable es el commit local y sus evidencias.
+5. **Producción:** el push de la rama y su preview están autorizados expresamente. El siguiente paso de integración/activación en producción sigue separado de la publicación del código y no se ejecuta en este incremento.
+
+
+## Roles reales y decisión mínima de acceso (consulta posterior de solo lectura)
+
+La restricción `incargo_memberships_role_check` permite únicamente `operations` y `driver` (columna de texto). Estado observado: 2 memberships `operations`, 0 `driver`; 1 usuario distinto en `incargo_client_memberships`. Cliente es una vinculación de cuenta aparte, no un tercer valor de `incargo_memberships.role`. No existe rol de negocio `admin` en ese contrato.
+
+La política SELECT de `incargo_memberships` permite ver la fila propia o las filas cuando `incargo_private.is_operations()` confirma Operaciones. La nueva lectura no requiere cambiarla ni crear roles: verifica identidad y membership vigentes y, adicionalmente, una lista de usuarios explícita.
+
+**Única decisión mínima para activar lectura:** permitir a las dos cuentas actuales de Operaciones o solo a una de ellas (identificándola). Una vez confirmado, se resuelven sus UUID desde la base y se configura la lista explícita; una nueva cuenta de Operaciones futura no hereda automáticamente este acceso. Conductores y clientes quedan excluidos en ambas opciones. No se consultaron ni publicaron correos ni UUID personales en este informe. No se alteraron memberships, ACL, políticas ni variables.
+
+Esta decisión solo habilita consulta de todos los expedientes del origen seleccionado. No autoriza guardar, importar, firmar ni emitir contratos. Para guardar, sigue pendiente elegir la fuente editable y la política de retención/versiones, junto con el alcance de edición por expediente propuesto.
