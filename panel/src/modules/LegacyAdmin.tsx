@@ -432,6 +432,52 @@ export default function LegacyAdmin() {
   const [limit, setLimit] = useState(20),
     [reload, setReload] = useState(0),
     [printing, setPrinting] = useState(false);
+  const [syncing, setSyncing] = useState(false),
+    [syncMessage, setSyncMessage] = useState("");
+  const syncBusy = useRef(false);
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
+  async function syncSource() {
+    if (syncBusy.current) return;
+    syncBusy.current = true;
+    setSyncing(true);
+    setSyncMessage("");
+    try {
+      const result = await api().legacySync(kind);
+      if (active.current) {
+        setSyncMessage(
+          result.busy
+            ? "Hay una sincronización en curso. Se conserva la copia disponible."
+            : result.throttled
+              ? "Se consultó el origen hace menos de un minuto. Se conserva el estado de ese intento."
+              : result.ok
+                ? `Sincronización confirmada: ${result.added || 0} originales nuevos.`
+                : "El origen no pudo sincronizarse. Se conserva la última copia verificada.",
+        );
+        setReload((v) => v + 1);
+      }
+    } catch (e) {
+      if (active.current) {
+        setSyncMessage((e as Error).message);
+        setReload((v) => v + 1);
+      }
+    } finally {
+      syncBusy.current = false;
+      if (active.current) setSyncing(false);
+    }
+  }
+  useEffect(() => {
+    if (editing || selected || loading || syncing) return;
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") setReload((v) => v + 1);
+    }, 60000);
+    return () => clearInterval(id);
+  }, [editing, selected, loading, syncing]);
   const generation = useRef(0);
   const printingRef = useRef(false);
   useEffect(() => {
@@ -504,24 +550,34 @@ export default function LegacyAdmin() {
       <div className="legacy-actions" aria-label="Tipo de expediente">
         <PanelAction
           aria-pressed={kind === "inspections"}
+          disabled={syncing}
           onClick={() => changeKind("inspections")}
         >
           Inspecciones
         </PanelAction>
         <PanelAction
           aria-pressed={kind === "affiliations"}
+          disabled={syncing}
           onClick={() => changeKind("affiliations")}
         >
           Vinculaciones temporales
         </PanelAction>
         <PanelAction
           tone="neutral"
-          disabled={loading || editing}
+          disabled={loading || editing || syncing}
           onClick={() => setReload((value) => value + 1)}
         >
           Actualizar expedientes
         </PanelAction>
+        <PanelAction
+          tone="neutral"
+          disabled={loading || editing || syncing}
+          onClick={() => void syncSource()}
+        >
+          {syncing ? "Sincronizando origen…" : "Sincronizar origen"}
+        </PanelAction>
       </div>
+      {syncMessage && <PanelNotice>{syncMessage}</PanelNotice>}
       {loading && (
         <PanelNotice>Consultando expedientes autorizados…</PanelNotice>
       )}
@@ -531,11 +587,53 @@ export default function LegacyAdmin() {
       )}
       {snapshot && (
         <>
-          <PanelNotice>
-            Fuente consultada ·{" "}
-            {new Date(snapshot.capturedAt).toLocaleString("es-CO")} ·{" "}
-            {records.length} expedientes. Las correcciones se guardan en el
-            sistema nuevo; la hoja original no se modifica.
+          <PanelNotice
+            tone={
+              snapshot.sync?.error || snapshot.sync?.stale
+                ? "warning"
+                : undefined
+            }
+          >
+            Copia conservada en Supabase · {records.length} expedientes.
+            Consulta: {new Date(snapshot.capturedAt).toLocaleString("es-CO")}.
+            {snapshot.sync && (
+              <>
+                <br />
+                Última sincronización verificada:{" "}
+                {snapshot.sync.lastSuccess
+                  ? new Date(snapshot.sync.lastSuccess).toLocaleString("es-CO")
+                  : "todavía no disponible"}
+                . Automatizada cada {snapshot.sync.intervalMinutes} minutos.
+                {snapshot.sync.lastAttempt && (
+                  <>
+                    {" "}
+                    Último intento:{" "}
+                    {new Date(snapshot.sync.lastAttempt).toLocaleString(
+                      "es-CO",
+                    )}
+                    .
+                  </>
+                )}
+                {snapshot.sync.error && (
+                  <>
+                    {" "}
+                    El último intento falló ({snapshot.sync.error}); se muestra
+                    la última copia verificada, que puede no incluir solicitudes
+                    recientes.
+                  </>
+                )}
+                {snapshot.sync.stale && !snapshot.sync.error && (
+                  <>
+                    {" "}
+                    La copia tiene más de diez minutos o aún no se ha
+                    verificado; puede haber solicitudes pendientes.
+                  </>
+                )}
+              </>
+            )}
+            <br />
+            Las correcciones conservan originales e historial. La hoja legacy no
+            se modifica.
           </PanelNotice>
           {chosen ? (
             <>

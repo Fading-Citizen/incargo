@@ -34,6 +34,15 @@ export interface OperationsApi {
     kind: import("./lib/legacy-admin").LegacyKind,
     hash: string,
   ): Promise<{ versions: import("./lib/legacy-admin").LegacyHistory[] }>;
+  legacySync(
+    kind: import("./lib/legacy-admin").LegacyKind,
+  ): Promise<{
+    ok?: boolean;
+    error?: string;
+    added?: number;
+    busy?: boolean;
+    throttled?: boolean;
+  }>;
   legacyAdmin(
     kind: import("./lib/legacy-admin").LegacyKind,
     signal?: AbortSignal,

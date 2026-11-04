@@ -1,188 +1,149 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-const require = createRequire(import.meta.url);
-const {
-  createHandler,
-} = require("../../logistica-1.0.0/api/incargo-legacy-admin.js");
+const { createHandler } = createRequire(import.meta.url)(
+  "../../logistica-1.0.0/api/incargo-legacy-admin.js",
+);
 const env = {
   INCARGO_LEGACY_READ_ENABLED: "true",
   SUPABASE_URL: "https://project.supabase.co",
-  SUPABASE_PUBLISHABLE_KEY: "synthetic-key",
+  SUPABASE_PUBLISHABLE_KEY: "synthetic",
 };
 async function call({
   method = "GET",
-  token = "Bearer synthetic-token",
+  token = "Bearer synthetic",
   kind = "inspections",
-  settings = env,
-  user = "operator-1",
   role = "operations",
-  source = "[]",
-  sourceStatus = 200,
+  user = "future-operator",
   authStatus = 200,
-  redirect = "",
-  fail = false,
-  input = undefined,
-  versions = [],
   rpcCode = "",
-}: {
-  method?: string;
-  token?: string;
-  kind?: string;
-  settings?: typeof env;
-  user?: string;
-  role?: string;
-  source?: string;
-  sourceStatus?: number;
-  authStatus?: number;
-  redirect?: string;
-  fail?: boolean;
-  input?: any;
-  versions?: any[];
-  rpcCode?: string;
-} = {}) {
-  const calls: { url: string; options: RequestInit }[] = [];
+  input = undefined,
+  settings = env,
+  board = undefined,
+  fail = false,
+}: any = {}) {
+  const calls: any[] = [];
   let code = 0,
     body: any;
-  const headers: Record<string, string> = {};
-  const fetchImpl = async (url: string, options: RequestInit) => {
+  const headers: any = {};
+  const fetchImpl = async (url: string, options: any) => {
     calls.push({ url, options });
     if (fail) throw Error("network");
     if (url.endsWith("/auth/v1/user"))
       return new Response(JSON.stringify({ id: user }), { status: authStatus });
-    if (url.includes("/rest/v1/rpc/")) {
+    if (url.includes("/rpc/")) {
       if (rpcCode)
         return new Response(JSON.stringify({ code: rpcCode }), { status: 400 });
-      if (url.endsWith("incargo_legacy_versions"))
-        return new Response(JSON.stringify(versions));
-      const value = JSON.parse(String(options.body));
+      const p = JSON.parse(options.body);
+      if (url.endsWith("incargo_legacy_board"))
+        return new Response(
+          JSON.stringify(
+            board ?? {
+              kind,
+              capturedAt: "2026-11-04T12:00:00Z",
+              snapshot: "a".repeat(64),
+              source: "supabase-verified-legacy",
+              readOnly: false,
+              records: [
+                {
+                  id: "a".repeat(64),
+                  hash: "a".repeat(64),
+                  revision: 0,
+                  data: { ciudad: "Original", firma: "[TRUNC]" },
+                },
+              ],
+              sync: {
+                lastSuccess: "2026-11-04T11:00:00Z",
+                error: "SOURCE_TIMEOUT",
+                stale: true,
+              },
+            },
+          ),
+        );
+      if (url.endsWith("incargo_legacy_sync"))
+        return new Response(
+          JSON.stringify({ ok: false, error: "SOURCE_TIMEOUT", added: 0 }),
+        );
       return new Response(
-        JSON.stringify({
-          hash: value.p_hash,
-          revision: 1,
-          request: value.p_request,
-          replayed: !!versions.length,
-        }),
+        JSON.stringify({ hash: p.p_hash, revision: 1, request: p.p_request }),
       );
     }
-    if (url.includes("/rest/v1/"))
-      return new Response(JSON.stringify([{ role }]));
-    return redirect
-      ? new Response(null, { status: 302, headers: { location: redirect } })
-      : new Response(source, { status: sourceStatus });
+    return new Response(JSON.stringify([{ role }]));
   };
   const res = {
     setHeader(k: string, v: string) {
       headers[k] = v;
     },
-    status(value: number) {
-      code = value;
+    status(n: number) {
+      code = n;
       return this;
     },
-    json(value: any) {
-      body = value;
+    json(v: any) {
+      body = v;
       return this;
     },
   };
-  await createHandler({
-    env: settings,
-    fetchImpl,
-    now: () => new Date("2026-11-03T12:00:00Z"),
-  })(
+  await createHandler({ fetchImpl, env: settings })(
     { method, headers: { authorization: token }, query: { kind }, body: input },
     res,
   );
   return { code, body, calls, headers };
 }
-test("default closed and no credential means no source reads", async () => {
+test("no session/disabled module fails closed before data access", async () => {
   for (const options of [
     { token: "" },
     { settings: { ...env, INCARGO_LEGACY_READ_ENABLED: "false" } },
   ]) {
-    const result = await call(options);
-    assert([401, 503].includes(result.code));
-    assert.equal(result.calls.length, 0);
-  }
-});
-test("write methods and unknown kinds never reach the provider", async () => {
-  for (const method of ["PATCH", "PUT", "DELETE"]) {
-    const r = await call({ method });
-    assert.equal(r.code, 405);
+    const r = await call(options);
+    assert([401, 503].includes(r.code));
     assert.equal(r.calls.length, 0);
   }
-  const r = await call({ kind: "users" });
-  assert.equal(r.code, 400);
-  assert.equal(r.calls.length, 0);
 });
-test("identity and current role are checked every time and isolate clients and drivers", async () => {
-  for (const options of [
-    { authStatus: 401 },
-    { role: "driver" },
-    { role: "client" },
-    { role: "" },
-  ]) {
-    const r = await call(options);
-    assert([401, 403].includes(r.code));
-    assert(!r.calls.some((c) => c.url.includes("google")));
+test("operations membership is live and future users need no UUID allowlist", async () => {
+  assert.equal((await call({ user: "new-operator" })).code, 200);
+  for (const role of ["driver", "client", ""]) {
+    const r = await call({ role });
+    assert.equal(r.code, 403);
+    assert(!r.calls.some((c) => c.url.includes("/rpc/")));
   }
+  assert.equal((await call({ authStatus: 401 })).code, 401);
 });
-test("reads preserve original rows, emit snapshot hashes and do not forward credentials to Google", async () => {
-  const source = JSON.stringify([
-    { _rowNumber: 1, licencia: "0012", firma: "[TRUNC]", items: "bad" },
-  ]);
-  const a = await call({ source }),
-    b = await call({ source });
-  assert.equal(a.code, 200);
-  assert.equal(a.body.readOnly, false);
-  assert.equal(a.body.records[0].data.licencia, "0012");
-  assert.equal(a.body.records[0].data.firma, "[TRUNC]");
-  assert.equal(a.body.snapshot, b.body.snapshot);
-  assert.equal(a.body.records[0].hash, b.body.records[0].hash);
-  assert.equal(a.calls.length, 5);
-  assert.equal(b.calls.length, 5);
-  const google = a.calls.find((c) => c.url.includes("script.google.com"))!;
-  assert.deepEqual(google.options.headers, { Accept: "application/json" });
-  assert.equal(google.options.redirect, "manual");
-  assert.equal(a.headers["Cache-Control"], "private, no-store");
-  assert.equal(a.headers.Vary, "Authorization");
+test("source timeout still returns archived records with honest freshness metadata", async () => {
+  const r = await call();
+  assert.equal(r.code, 200);
+  assert.equal(r.body.records.length, 1);
+  assert.equal(r.body.records[0].data.firma, "[TRUNC]");
+  assert.equal(r.body.sync.error, "SOURCE_TIMEOUT");
+  assert.equal(r.body.sync.stale, true);
+  assert(r.calls.every((c) => c.url.startsWith(env.SUPABASE_URL)));
+  assert(r.calls.some((c) => c.url.endsWith("incargo_legacy_board")));
+  assert.equal(r.headers["Cache-Control"], "private, no-store");
+  assert.equal(r.headers.Vary, "Authorization");
 });
-test("affiliations use their own endpoint and no record data is cached across requests", async () => {
-  const a = await call({ source: '[{"placa":"TEST"}]' }),
-    b = await call({ kind: "affiliations", source: "[]" });
-  assert.equal(a.body.records.length, 1);
-  assert.deepEqual(b.body.records, []);
-  assert(b.calls[3].url.endsWith("action=vinculaciones"));
+test("database failure and invalid board never become a fake empty list", async () => {
+  assert.equal((await call({ fail: true })).code, 502);
+  assert.equal(
+    (await call({ board: { kind: "inspections", records: null } })).code,
+    502,
+  );
 });
-test("source failure, unexpected response, oversize and redirects fail closed without partial results", async () => {
-  for (const options of [
-    { sourceStatus: 500 },
-    { source: "not json" },
-    { source: '{"error":"upstream"}' },
-    { source: "[null]" },
-    { source: "x".repeat(3000001) },
-    { redirect: "https://attacker.test/" },
-    { fail: true },
-  ]) {
-    const r = await call(options);
-    assert.equal(r.code, 502);
-    assert.equal(r.body.records, undefined);
-    assert(!r.calls.some((c) => c.url.includes("attacker")));
-  }
-});
-test("configuration cannot send bearer credentials to an arbitrary host", async () => {
+test("sync is authenticated, fixed-kind and returns failure without inventing a successful receipt", async () => {
   const r = await call({
-    settings: { ...env, SUPABASE_URL: "https://attacker.test" },
+    method: "POST",
+    input: { action: "sync", url: "https://attacker.test" },
   });
-  assert.equal(r.code, 503);
-  assert.equal(r.calls.length, 0);
+  assert.equal(r.code, 200);
+  assert.equal(r.body.ok, false);
+  const rpc = r.calls.find((c) => c.url.endsWith("incargo_legacy_sync"));
+  assert.deepEqual(JSON.parse(rpc.options.body), { p_kind: "inspections" });
+  assert(!r.calls.some((c) => c.url.includes("attacker")));
+  assert.equal(
+    (await call({ method: "POST", input: { action: "sync" }, role: "driver" }))
+      .code,
+    403,
+  );
 });
-
-test("future operations members are authorized without UUID allowlists", async () => {
-  const result = await call({ user: "future-operator" });
-  assert.equal(result.code, 200);
-});
-
-test("only archived originals can be edited; browser cannot invent source provenance", async () => {
+test("correction uses immutable archived original and forwards only the expected correction contract", async () => {
   const input = {
     hash: "a".repeat(64),
     expected: 0,
@@ -191,48 +152,33 @@ test("only archived originals can be edited; browser cannot invent source proven
     reason: "Typo",
     original: "forged",
   };
-  const absent = await call({ method: "POST", input });
-  assert.equal(absent.code, 409);
-  assert(!absent.calls.some((c) => c.url.endsWith("incargo_legacy_correct")));
-  const retry = await call({
-    method: "POST",
-    input,
-    versions: [{ hash: input.hash, revision: 1 }],
-    sourceStatus: 500,
-  });
-  assert.equal(retry.code, 200);
-  assert(!retry.calls.some((c) => c.url.includes("google")));
-  const rpc = retry.calls.find((c) =>
-    c.url.endsWith("incargo_legacy_correct"),
-  )!;
-  const payload = JSON.parse(String(rpc.options.body));
-  assert.equal(payload.p_original, null);
-  assert.equal(payload.p_snapshot, null);
-  assert.equal(payload.p_request, input.request);
+  const r = await call({ method: "POST", input });
+  assert.equal(r.code, 200);
+  const p = JSON.parse(
+    r.calls.find((c) => c.url.endsWith("incargo_legacy_correct")).options.body,
+  );
+  assert.equal(p.p_original, null);
+  assert.equal(p.p_snapshot, null);
+  assert.equal(p.p_request, input.request);
 });
-test("versions overlay matching hashes; changed source keeps historical originals separately", async () => {
-  const source = '[{"ciudad":"Original"}]';
-  const read = await call({ source });
-  const hash = read.body.records[0].hash;
-  const versions = [{ hash, revision: 2, data: { ciudad: "Corrected" } }];
-  const merged = await call({ source, versions });
-  assert.equal(merged.body.records[0].data.ciudad, "Corrected");
-  assert.equal(merged.body.records[0].revision, 2);
-  const drift = await call({
-    source: '[{"ciudad":"Changed source"}]',
-    versions,
-  });
-  assert.equal(drift.body.records.length, 2);
-  assert.equal(drift.body.records[1].archived, true);
-});
-test("RPC revocation/conflict errors do not disclose records or claim success", async () => {
+test("revocation and revision conflict remain errors, with no records disclosed", async () => {
   for (const [rpcCode, status] of [
     ["42501", 403],
     ["40001", 409],
     ["23505", 409],
-  ] as const) {
+  ]) {
     const r = await call({ rpcCode });
     assert.equal(r.code, status);
     assert.equal(r.body.records, undefined);
   }
+});
+test("unapproved methods, kinds and credential destinations are rejected", async () => {
+  for (const method of ["DELETE", "PATCH", "PUT"])
+    assert.equal((await call({ method })).code, 405);
+  assert.equal((await call({ kind: "users" })).code, 400);
+  const r = await call({
+    settings: { ...env, SUPABASE_URL: "https://attacker.test" },
+  });
+  assert.equal(r.code, 503);
+  assert.equal(r.calls.length, 0);
 });

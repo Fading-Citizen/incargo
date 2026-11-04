@@ -1,12 +1,6 @@
 // Role-authorized legacy reads and append-only corrections. Source is never modified.
 // Never forwards an Incargo bearer token to the legacy provider.
-const { createHash } = require("node:crypto");
-const SOURCE =
-  "https://script.google.com/macros/s/AKfycbwTBTO-wMKFs9ogYH3qELSk8rx14WnWWy6mM6qIKu_dr0wsgWq-heR_Q1V9LvCKKoNp/exec";
 const MAX_BYTES = 3000000;
-function digest(value) {
-  return createHash("sha256").update(value).digest("hex");
-}
 async function readBounded(response) {
   if (!response.ok) throw Error("upstream");
   let size = 0;
@@ -18,11 +12,7 @@ async function readBounded(response) {
   }
   return Buffer.concat(chunks).toString("utf8");
 }
-function createHandler({
-  fetchImpl = fetch,
-  env = process.env,
-  now = () => new Date(),
-} = {}) {
+function createHandler({ fetchImpl = fetch, env = process.env } = {}) {
   return async function handler(request, response) {
     response.setHeader("Cache-Control", "private, no-store");
     response.setHeader("Vary", "Authorization");
@@ -137,23 +127,38 @@ function createHandler({
         const revision = Number(request.query.revision);
         if (!Number.isInteger(revision) || revision < 0)
           return response.status(400).json({ error: "Versión no válida." });
+        return response.status(200).json(
+          await rpc("incargo_legacy_revision", {
+            p_kind: kind,
+            p_hash: hash,
+            p_revision: revision,
+          }),
+        );
+      }
+      if (hash && request.method === "GET")
         return response
           .status(200)
-          .json(
-            await rpc("incargo_legacy_revision", {
+          .json({
+            versions: await rpc("incargo_legacy_versions", {
               p_kind: kind,
               p_hash: hash,
-              p_revision: revision,
             }),
-          );
+          });
+      if (request.method === "GET") {
+        const board = await rpc("incargo_legacy_board", { p_kind: kind });
+        if (
+          !board ||
+          board.kind !== kind ||
+          !Array.isArray(board.records) ||
+          !board.sync
+        )
+          throw Error("shape");
+        return response.status(200).json(board);
       }
-      let versions = await rpc("incargo_legacy_versions", {
-        p_kind: kind,
-        p_hash: hash || null,
-      });
-      if (!Array.isArray(versions)) throw Error("shape");
-      if (hash && request.method === "GET")
-        return response.status(200).json({ versions });
+      if (request.body?.action === "sync")
+        return response
+          .status(200)
+          .json(await rpc("incargo_legacy_sync", { p_kind: kind }));
       const input = request.body;
       if (
         request.method === "POST" &&
@@ -183,101 +188,7 @@ function createHandler({
         });
         return response.status(200).json(receipt);
       }
-      // Existing originals survive source changes/outages; retries use the same receipt.
-      if (
-        request.method === "POST" &&
-        versions.some((v) => v.hash === input.hash)
-      )
-        return await save(null, null);
-      if (request.method === "POST")
-        return response.status(409).json({
-          error:
-            "El original aún no está archivado. Sincroniza la copia íntegra antes de corregir.",
-        });
-      let target =
-        SOURCE +
-        "?action=" +
-        (kind === "inspections" ? "list" : "vinculaciones");
-      let upstream;
-      for (let redirects = 0; redirects < 4; redirects++) {
-        const destination = new URL(target);
-        if (
-          destination.protocol !== "https:" ||
-          !["script.google.com", "script.googleusercontent.com"].includes(
-            destination.hostname,
-          ) ||
-          destination.username ||
-          destination.password
-        )
-          throw Error("redirect");
-        upstream = await fetchImpl(target, {
-          headers: { Accept: "application/json" },
-          redirect: "manual",
-          signal: controller.signal,
-          cache: "no-store",
-        });
-        if (![301, 302, 303, 307, 308].includes(upstream.status)) break;
-        const next = upstream.headers.get("location");
-        await upstream.body?.cancel();
-        if (!next) throw Error("redirect");
-        target = new URL(next, target).href;
-      }
-      const raw = await readBounded(upstream);
-      const rows = JSON.parse(raw);
-      if (
-        !Array.isArray(rows) ||
-        rows.some(
-          (row) => !row || typeof row !== "object" || Array.isArray(row),
-        )
-      )
-        throw Error("shape");
-      versions = await rpc("incargo_legacy_versions", {
-        p_kind: kind,
-        p_hash: null,
-      });
-      if (!Array.isArray(versions)) throw Error("shape");
-      const snapshot = digest(raw);
-      const sourceRecords = rows.map((data, index) => ({
-        id: digest(JSON.stringify(data)),
-        hash: digest(JSON.stringify(data)),
-        data,
-        revision: 0,
-        sourceIndex: index,
-      }));
-      const result = {
-        kind,
-        capturedAt: now().toISOString(),
-        snapshot,
-        source: "legacy-apps-script",
-        readOnly: false,
-        records: sourceRecords
-          .map((record) => {
-            const version = versions.find((v) => v.hash === record.hash);
-            return {
-              ...record,
-              ...(version
-                ? { data: version.data, revision: version.revision }
-                : {}),
-              unarchived: !version,
-              ambiguous:
-                sourceRecords.filter((r) => r.hash === record.hash).length > 1,
-            };
-          })
-          .concat(
-            versions
-              .filter((v) => !sourceRecords.some((r) => r.hash === v.hash))
-              .map((v) => ({
-                id: v.hash,
-                hash: v.hash,
-                data: v.data,
-                revision: v.revision,
-                archived: true,
-              })),
-          ),
-      };
-      if (Buffer.byteLength(JSON.stringify(result)) > MAX_BYTES)
-        throw Error("size");
-      return response.status(200).json(result);
+      return await save(null, null);
     } catch (error) {
       if (error.status)
         return response.status(error.status).json({ error: error.message });

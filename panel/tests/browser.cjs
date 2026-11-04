@@ -99,7 +99,7 @@ const assert = require("node:assert/strict"),
         destination_text: "Medellín",
       },
     ];
-    let legacyMode = "disabled", legacyReads = 0;
+    let legacyMode = "disabled", legacyReads = 0, legacySyncFail=false;
     const legacySaves=[];
     const legacyRows = [
       {id:"synthetic:0",hash:"a".repeat(64),data:{_rowNumber:1,fecha:"2026-11-03",ts:"2026-11-03T01:00:00Z",placa:"TEST-01",conductor:"Persona sintética",ciudad:"Bogotá",licencia:"00123",items:JSON.stringify([{label:"Luces",scale:"BUENO/MALO",value:"MALO",obs:"Revisar"},{label:"Nivel",value:"BAJO"}]),firma:"data:image/png;base64,broken[TRUNC]",fotos:"https://invalid.test/private-image.png"}},
@@ -111,7 +111,9 @@ const assert = require("node:assert/strict"),
       if (url.hostname === "127.0.0.1" && url.pathname === "/api/incargo-legacy-admin") {
         legacyReads++;
         if(route.request().method()==="POST"){
-          const input=route.request().postDataJSON();legacySaves.push(input);
+          const input=route.request().postDataJSON();
+          if(input.action==='sync')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:!legacySyncFail,error:legacySyncFail?'SOURCE_TIMEOUT':null,added:0})});
+          legacySaves.push(input);
           if(legacySaves.length===1)return route.fulfill({status:502,contentType:"application/json",body:JSON.stringify({error:"Resultado no confirmado. Reintenta el mismo intento."})});
           assert.deepEqual(input,legacySaves[0]);
           return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({hash:input.hash,request:input.request,revision:1,replayed:true})});
@@ -124,7 +126,7 @@ const assert = require("node:assert/strict"),
         if (legacyMode === "error") return route.fulfill({status:502,contentType:"application/json",body:JSON.stringify({error:"Fuente no disponible; reintenta."})});
         const kind = url.searchParams.get("kind");
         const records = legacyMode === "empty" ? [] : kind === "inspections" ? legacyRows : [{id:"affiliation:0",hash:"c".repeat(64),data:{_rowNumber:2,ts:"2026-11-03T12:00:00Z",nombreCompleto:"Vinculado sintético",numeroIdentificacion:"0007",aceptaContrato:"SI",versionContrato:"histórica-no-verificada",firmaB64:""}}];
-        return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({kind,records,source:"synthetic-test",snapshot:"test-snapshot",capturedAt:"2026-11-03T12:00:00Z",readOnly:false})});
+        return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({kind,records,source:"synthetic-test",snapshot:"test-snapshot",capturedAt:"2026-11-03T12:00:00Z",readOnly:false,sync:{lastAttempt:"2026-11-04T12:00:00Z",lastSuccess:"2026-11-04T11:55:00Z",error:legacySyncFail?"SOURCE_TIMEOUT":null,stale:legacySyncFail,sourceRecords:records.length,added:0,intervalMinutes:5}})});
       }
       if (url.hostname === "127.0.0.1") return route.continue();
       if (url.hostname !== "mock.supabase.co")
@@ -217,6 +219,15 @@ const assert = require("node:assert/strict"),
     await page.getByRole("button",{name:"Actualizar expedientes",exact:true}).click();
     await page.locator(".legacy-admin tbody tr").first().waitFor();
     assert.equal(await page.locator(".legacy-admin tbody tr").count(),2);
+    legacySyncFail=true;
+    await page.getByRole('button',{name:'Sincronizar origen',exact:true}).click();
+    await page.getByText(/El último intento falló \(SOURCE_TIMEOUT\)/).waitFor();
+    assert.equal(await page.locator('.legacy-admin tbody tr').count(),2);
+    legacySyncFail=false;
+    await page.getByRole('button',{name:'Sincronizar origen',exact:true}).click();
+    await page.getByText('Sincronización confirmada: 0 originales nuevos.',{exact:true}).waitFor();
+    await page.locator('.legacy-admin tbody tr').first().waitFor();
+
     await page.getByLabel("Buscar expedientes",{exact:true}).fill("TEST-01");
     await page.getByLabel("Estado de expediente",{exact:true}).selectOption("bad");
     await page.getByRole("button",{name:"Ver expediente",exact:true}).click();
