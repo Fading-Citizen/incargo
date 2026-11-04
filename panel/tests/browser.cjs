@@ -99,7 +99,7 @@ const assert = require("node:assert/strict"),
         destination_text: "Medellín",
       },
     ];
-    let legacyMode = "disabled", legacyReads = 0, legacySyncFail=false;
+    let legacyMode = "disabled", legacyReads = 0, legacySyncFail=false, releaseLegacySync=null;
     const legacySaves=[];
     const legacyRows = [
       {id:"synthetic:0",hash:"a".repeat(64),data:{_rowNumber:1,fecha:"2026-11-03",ts:"2026-11-03T01:00:00Z",placa:"TEST-01",conductor:"Persona sintética",ciudad:"Bogotá",licencia:"00123",items:JSON.stringify([{label:"Luces",scale:"BUENO/MALO",value:"MALO",obs:"Revisar"},{label:"Nivel",value:"BAJO"}]),firma:"data:image/png;base64,broken[TRUNC]",fotos:"https://invalid.test/private-image.png"}},
@@ -112,7 +112,7 @@ const assert = require("node:assert/strict"),
         legacyReads++;
         if(route.request().method()==="POST"){
           const input=route.request().postDataJSON();
-          if(input.action==='sync')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:!legacySyncFail,error:legacySyncFail?'SOURCE_TIMEOUT':null,added:0})});
+          if(input.action==='sync'){if(releaseLegacySync)await new Promise(resolve=>{releaseLegacySync=resolve;});return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:!legacySyncFail,error:legacySyncFail?'SOURCE_TIMEOUT':null,added:0})});}
           legacySaves.push(input);
           if(legacySaves.length===1)return route.fulfill({status:502,contentType:"application/json",body:JSON.stringify({error:"Resultado no confirmado. Reintenta el mismo intento."})});
           assert.deepEqual(input,legacySaves[0]);
@@ -235,6 +235,14 @@ const assert = require("node:assert/strict"),
     await page.getByRole("cell",{name:"BAJO",exact:true}).waitFor();
     await page.getByText("Firma del conductor · Truncada en el origen",{exact:true}).waitFor();
     assert.equal(await page.locator('.legacy-evidence img').count(),0);
+    releaseLegacySync=()=>{};
+    await page.getByRole("button",{name:"Sincronizar origen",exact:true}).click();
+    await page.getByRole("button",{name:"Sincronizando origen…",exact:true}).waitFor();
+    assert.equal(await page.getByRole("button",{name:"Preparar corrección",exact:true}).isDisabled(),true);
+    await page.waitForTimeout(100);
+    releaseLegacySync();releaseLegacySync=null;
+    await page.locator('.legacy-admin tbody tr').first().waitFor();
+    await page.getByRole("button",{name:"Ver expediente",exact:true}).click();
     await page.getByRole("button",{name:"Preparar corrección",exact:true}).click();
     await page.getByLabel("Ciudad",{exact:true}).fill("Medellín");
     await page.getByRole("button",{name:"Descargar propuesta sin guardar",exact:true}).click();

@@ -667,6 +667,7 @@ export default function LegacyAdmin() {
                       <PanelAction
                         tone="neutral"
                         disabled={
+                          syncing ||
                           chosen.ambiguous ||
                           chosen.unarchived ||
                           snapshot.readOnly
