@@ -294,6 +294,32 @@
     await request('/rest/v1/'+table,{method:'POST',body:{id:requestId,...payload}});
   }
   globalThis.IncargoOperations=Object.freeze({
+    async legacyCorrect(kind,input){
+      requireOperations();if(!['inspections','affiliations'].includes(kind))throw Error('Tipo de expediente no válido.');
+      const active=session,attempt=generation;
+      const response=await fetch('/api/incargo-legacy-admin?kind='+encodeURIComponent(kind),{method:'POST',headers:{Authorization:`Bearer ${active.access_token}`,'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify(input)});
+      check(active,attempt);const result=await response.json();check(active,attempt);
+      if(!response.ok)throw Error(result.error||'Resultado no confirmado. Reintenta el mismo intento.');
+      if(result.hash!==input.hash||result.request!==input.request||!Number.isInteger(result.revision)||result.revision<1)throw Error('Confirmación no válida. Reintenta el mismo intento.');
+      return result;
+    },
+    async legacyHistory(kind,hash,revision){
+      requireOperations();if(!['inspections','affiliations'].includes(kind)||!/^[a-f0-9]{64}$/.test(hash))throw Error('Expediente no válido.');
+      const active=session,attempt=generation;
+      const response=await fetch('/api/incargo-legacy-admin?kind='+encodeURIComponent(kind)+'&hash='+hash+(revision===undefined?'':'&revision='+encodeURIComponent(revision)),{headers:{Authorization:`Bearer ${active.access_token}`},cache:'no-store'});
+      check(active,attempt);const result=await response.json();check(active,attempt);
+      if(!response.ok||(revision===undefined?!Array.isArray(result.versions):result.hash!==hash||result.revision!==revision||!result.data))throw Error(result.error||'Historial no disponible.');return result;
+    },
+    async legacyAdmin(kind,signal){
+      requireOperations();if(!['inspections','affiliations'].includes(kind))throw Error('Tipo de expediente no válido.');
+      const active=session,attempt=generation;
+      const response=await fetch('/api/incargo-legacy-admin?kind='+encodeURIComponent(kind),{headers:{Authorization:`Bearer ${active.access_token}`},cache:'no-store',signal});
+      check(active,attempt);
+      const result=await response.json();check(active,attempt);
+      if(!response.ok)throw Error(result.error||'No se pudo consultar la fuente.');
+      if(result.kind!==kind||typeof result.readOnly!=='boolean'||!Array.isArray(result.records)||result.records.some(record=>!record||typeof record.id!=='string'||typeof record.hash!=='string'||!record.data||typeof record.data!=='object'||Array.isArray(record.data))||typeof result.snapshot!=='string'||!Number.isFinite(Date.parse(result.capturedAt)))throw Error('Respuesta de expedientes no válida.');
+      return result;
+    },
     async refreshMonitor(){requireOperations();const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),15000);try{await reload({quiet:true,signal:controller.signal});}finally{clearTimeout(timeout);}},
     async refresh(){requireOperations();await reload();notice('Datos actualizados.');},
     async businessCapabilities(){requireOperations();try{const capabilities=await rpc('incargo_business_capabilities',{});return {...capabilities,finance:FINANCE_RELEASE_ENABLED&&capabilities.finance===true};}catch(error){if(error?.status===404||error?.code==='PGRST202')return {commercial:false,finance:false};throw error;}},
