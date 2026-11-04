@@ -1,5 +1,6 @@
 # Paridad del administrador legacy — inventario y estado de migración
 
+**Actualización 2026-11-04:** la importación real de 27 inspecciones y 8 vinculaciones está completada y verificada. Consulta [evidencia actual](../qa/legacy-import-20261104.md). Las referencias a aprobación/importación pendientes que siguen describen el corte histórico del 3 de noviembre.
 Fecha: 2026-11-03. Base nueva: `8026e356aa1991d4c990f0a84366016ec4068213`. `/admin` público y `logistica-1.0.0/admin.html` coinciden byte a byte: SHA-256 `fd6b9f2dd954d666c211801652581abf4e8dc38669d693f7a4fb2af580dbefd7`. No se modifica el legacy. No hay AGENTS.md ni `.agents/skills` del proyecto en este checkout; `/workspace/.agents` está vacío. La instalación excluida no se inspecciona.
 
 ## Origen, destino y límites

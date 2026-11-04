@@ -1,5 +1,6 @@
 # Validación de paridad legacy — 2026-11-03
 
+**Actualización 2026-11-04:** la importación real de 27 inspecciones y 8 vinculaciones está completada y verificada. Consulta [evidencia actual](../qa/legacy-import-20261104.md). Las referencias a aprobación/importación pendientes que siguen describen el corte histórico del 3 de noviembre.
 Inventario completo y estado real: [legacy-admin-parity.md](../audit/legacy-admin-parity.md).
 
 ## Pruebas
