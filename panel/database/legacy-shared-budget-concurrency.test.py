@@ -14,7 +14,10 @@ assert len(hashes) == 2
 before = int(checked('select count(*) from incargo_admin.revisions'))
 locker = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 locker.stdin.write("begin;select pg_advisory_xact_lock(hashtextextended('legacy-size:inspections',0));select 'locked';\n"); locker.stdin.flush()
-while locker.stdout.readline().strip() != 'locked': pass
+for line in locker.stdout:
+    if line.strip() == 'locked': break
+else:
+    raise AssertionError('Lock setup exited before readiness: ' + locker.stderr.read())
 def change(i):
     return query(f"begin;set local application_name='shared-budget-{i}';set role authenticated;select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000002',true);select public.incargo_legacy_correct('inspections','{hashes[i]}',null,null,0,'60000000-0000-0000-0000-00000000000{i}',jsonb_build_object('firma','data:image/png;base64,'||replace(encode(decode('89504e470d0a1a0a','hex')||convert_to(repeat('x',1100000),'UTF8'),'base64'),E'\\n','')),'shared budget regression');commit;")
 with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
