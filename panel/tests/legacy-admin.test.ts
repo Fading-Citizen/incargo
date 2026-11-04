@@ -147,3 +147,26 @@ test("print copies escape data, block external resources and never apply a super
   assert(html.includes("No certifica aprobación"));
   assert(html.includes("BAJO"));
 });
+
+test("printed provenance distinguishes saved versions from the immutable original in both document types", () => {
+  for (const kind of ["inspections", "affiliations"] as const) {
+    for (const detail of [true, false]) {
+      const originals = printDocument({ ...snapshot, kind }, [{ ...record, revision: 0 }], detail);
+      assert(originals.includes("Revisión reproducida: 0 (contenido original)"));
+      const copies = [1, 2].map((revision) => printDocument({ ...snapshot, kind }, [{ ...record, revision,
+        data: { ...record.data, ciudad: `Ciudad versión ${revision}`, nombreCompleto: `Nombre versión ${revision}` },
+      }], detail));
+      copies.forEach((html, index) => {
+        assert(html.includes(`Revisión reproducida: ${index + 1} (corrección guardada)`));
+        assert(html.includes(`SHA-256 del contenido original: ${record.hash}`));
+        assert(html.includes(`versión ${index + 1}`));
+        assert(!html.includes("Huella del registro:"));
+        assert(html.includes("No certifica aprobación"));
+      });
+      assert.notEqual(copies[0], copies[1]);
+      const unknown = printDocument({ ...snapshot, kind }, [{ ...record, revision: undefined }], detail);
+      assert(unknown.includes("Revisión reproducida: no informada"));
+      assert(!unknown.includes("Revisión reproducida: 0"));
+    }
+  }
+});

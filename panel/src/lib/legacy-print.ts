@@ -34,6 +34,11 @@ export function printDocument(
   const content = records
     .map((record) => {
       const d = record.data;
+      const revision = record.revision;
+      const version =
+        typeof revision === "number" && Number.isInteger(revision) && revision >= 0
+          ? `${revision} (${revision === 0 ? "contenido original" : "corrección guardada"})`
+          : "no informada; no se puede identificar la versión de esta copia";
       const keys =
         snapshot.kind === "inspections"
           ? inspectionFields
@@ -55,7 +60,7 @@ export function printDocument(
               .map((raw, index) => image(raw, `Foto ${index + 1}`))
               .join("")}${image(d.firma, "Firma del conductor")}`
           : ""
-      }${detail && snapshot.kind === "affiliations" ? image(d.firmaB64, "Firma registrada") : ""}<p>Huella del registro: ${escape(record.hash)}</p></section>`;
+      }${detail && snapshot.kind === "affiliations" ? image(d.firmaB64, "Firma registrada") : ""}<p>Revisión reproducida: ${escape(version)}</p><p>SHA-256 del contenido original: ${escape(record.hash)}</p></section>`;
     })
     .join("");
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>${title}</title><style>body{font:13px Arial;color:#142927;margin:30px}h1{border-bottom:3px solid #d5a817}table{border-collapse:collapse;width:100%;margin:16px 0}th,td{border:1px solid #bbb;padding:7px;text-align:left;overflow-wrap:anywhere}th{width:25%}section{break-after:page}section:last-child{break-after:auto}img{max-width:100%;max-height:280px}figure{break-inside:avoid}p{overflow-wrap:anywhere}</style></head><body><h1>${title}</h1><p>Copia informativa. No certifica aprobación, aptitud del vehículo, consentimiento ni autenticidad de firmas. No es un contrato histórico reconstruido.</p><p>Origen: ${escape(snapshot.source)} · Consulta: ${escape(snapshot.capturedAt)} · Registros: ${records.length}</p><p>Snapshot: ${escape(snapshot.snapshot)}</p>${content}</body></html>`;
