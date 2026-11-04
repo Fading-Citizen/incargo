@@ -15,6 +15,15 @@ export type LegacySnapshot = {
   source: string;
   records: LegacyRecord[];
   readOnly: boolean;
+  sync?: {
+    lastAttempt: string | null;
+    lastSuccess: string | null;
+    error: string | null;
+    sourceRecords: number;
+    added: number;
+    stale: boolean;
+    intervalMinutes: number;
+  };
 };
 export const inspectionFields = [
   ["fecha", "Fecha"],

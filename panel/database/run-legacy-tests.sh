@@ -16,4 +16,8 @@ for script in incargo-app/tests/policy-bootstrap.sql incargo-app/migration.sql p
  "${local_docker[@]}" exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < "$script" >/dev/null
 done
 python3 panel/database/legacy-operations-concurrency.test.py "$container"
+for script in panel/database/legacy-sync-transport.test.sql panel/database/migrations/*_legacy_incremental_sync.sql panel/database/legacy-sync.test.sql; do
+ "${local_docker[@]}" exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < "$script" >/dev/null
+done
+python3 panel/database/legacy-sync-concurrency.test.py "$container"
 echo 'PASS: local revision receipts, retry, conflict, original preservation, live operations role, revocation and default-closed privileges'

@@ -310,6 +310,13 @@
       check(active,attempt);const result=await response.json();check(active,attempt);
       if(!response.ok||(revision===undefined?!Array.isArray(result.versions):result.hash!==hash||result.revision!==revision||!result.data))throw Error(result.error||'Historial no disponible.');return result;
     },
+    async legacySync(kind){
+      requireOperations();if(!['inspections','affiliations'].includes(kind))throw Error('Tipo de expediente no válido.');
+      const active=session,attempt=generation;
+      const response=await fetch('/api/incargo-legacy-admin?kind='+encodeURIComponent(kind),{method:'POST',headers:{Authorization:`Bearer ${active.access_token}`,'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify({action:'sync'})});
+      check(active,attempt);const result=await response.json();check(active,attempt);
+      if(!response.ok)throw Error(result.error||'No se pudo confirmar la sincronización. Consulta su estado.');return result;
+    },
     async legacyAdmin(kind,signal){
       requireOperations();if(!['inspections','affiliations'].includes(kind))throw Error('Tipo de expediente no válido.');
       const active=session,attempt=generation;
