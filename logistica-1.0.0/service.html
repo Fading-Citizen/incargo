@@ -9,21 +9,21 @@
     <meta content="Servicios profesionales de logística y transporte de carga en Colombia. INCARGO ofrece distribución, almacenamiento, bodegaje y transporte terrestre con cobertura nacional y tecnología de punta." name="description">
     <meta name="author" content="INCARGO">
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-    <link rel="canonical" href="https://incargo.com/service.html">
+    <link rel="canonical" href="https://www.incargo.co/service">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://incargo.com/service.html">
+    <meta property="og:url" content="https://www.incargo.co/service">
     <meta property="og:title" content="Servicios de Logística y Transporte - INCARGO">
     <meta property="og:description" content="Servicios profesionales de logística y transporte de carga en Colombia con cobertura nacional y tecnología de punta.">
-    <meta property="og:image" content="https://incargo.com/img/Logo.png">
+    <meta property="og:image" content="https://www.incargo.co/img/Logo.png">
     <meta property="og:locale" content="es_CO">
     
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Servicios de Logística y Transporte - INCARGO">
     <meta name="twitter:description" content="Servicios profesionales de logística y transporte de carga en Colombia con cobertura nacional.">
-    <meta name="twitter:image" content="https://incargo.com/img/Logo.png">
+    <meta name="twitter:image" content="https://www.incargo.co/img/Logo.png">
     
     <!-- Structured Data JSON-LD -->
     <script type="application/ld+json">
@@ -48,15 +48,12 @@
     <!-- Google Web Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Roboto:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Icon Font Stylesheet -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
 
     <!-- Libraries Stylesheet -->
-    <link href="lib/animate/animate.min.css" rel="stylesheet">
-    <link href="lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
 
     <!-- Customized Bootstrap Stylesheet -->
     <link href="css/bootstrap.min.css" rel="stylesheet">
@@ -64,6 +61,7 @@
     <!-- Template Stylesheet -->
     <link href="css/style.css" rel="stylesheet">
     <link href="css/incargo-redesign.css" rel="stylesheet">
+    <link href="css/incargo-fixes.css" rel="stylesheet">
     <script>document.addEventListener("DOMContentLoaded", function () {
       var spinner = document.getElementById("spinner"); if (spinner) spinner.classList.remove("show");
       var toggle = document.querySelector(".navbar-toggler"), menu = document.getElementById("navbarCollapse");
@@ -86,7 +84,7 @@
     <!-- Navbar Start -->
     <nav class="navbar navbar-expand-lg bg-white navbar-light shadow border-top border-5 border-primary sticky-top p-0">
         <a href="index.html" class="navbar-brand bg-primary d-flex align-items-center px-4 px-lg-5">
-            <img src="img/Logo.png" alt="INCARGO" style="height: 50px; filter: brightness(0);">
+            <picture><source type="image/webp" srcset="img/Logo-400.webp"><img src="img/Logo.png" alt="INCARGO" style="height: 50px; filter: brightness(0);"></picture>
             <sup style="color: #000; font-size: 28px; margin-left: 0px; vertical-align: super; position: relative; top: -15px;">®</sup>
         </a>
         <button type="button" class="navbar-toggler me-4" aria-label="Abrir menú" aria-controls="navbarCollapse" aria-expanded="false" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
@@ -111,7 +109,7 @@
                 <a href="contact.html" class="nav-item nav-link">Contacto</a>
                 <a href="cliente.html" class="nav-item nav-link inc-access">Mis envíos <i class="fa fa-arrow-right" aria-hidden="true"></i></a>
             </div>
-            <h4 class="m-0 pe-lg-5 d-none d-lg-block"><i class="fa fa-headphones text-primary me-3"></i>+57 310 380 96 12</h4>
+            <h4 class="m-0 pe-lg-5 d-none d-lg-block"><i class="fa fa-headphones text-primary me-3" aria-hidden="true"></i>+57 310 380 96 12</h4>
         </div>
     </nav>
     <!-- Navbar End -->
@@ -121,8 +119,8 @@
     <!-- Page Header Start -->
     <div class="container-fluid page-header py-5" style="margin-bottom: 6rem;">
         <div class="container py-5">
-            <h1 class="display-3 text-white mb-3 animated slideInDown">Servicios</h1>
-            <nav aria-label="breadcrumb animated slideInDown">
+            <h1 class="display-3 text-white mb-3">Servicios</h1>
+            <nav aria-label="Ruta de navegación">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a class="text-white" href="index.html">Inicio</a></li>
                     <li class="breadcrumb-item text-white active" aria-current="page">Servicios</li>
@@ -136,107 +134,107 @@
     <!-- Service Start -->
     <div class="container-xxl py-5">
         <div class="container py-5">
-            <div class="text-center wow fadeInUp" data-wow-delay="0.1s">
-                <h6 class="text-secondary text-uppercase">Nuestros Servicios</h6>
+            <div class="text-center">
+                <p class="inc-eyebrow">Nuestros Servicios</p>
                 <h1 class="mb-5">Descubre Nuestros Servicios</h1>
             </div>
             <div class="row g-4">
-                <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="0.1s">
+                <div class="col-md-6 col-lg-4">
                     <div class="service-item p-4">
                         <div class="overflow-hidden mb-4">
-                            <img class="img-fluid" src="img/service-1.jpg" alt="Servicio de Transporte Nacional INCARGO - Camión de carga en carretera">
+                            <picture><source type="image/webp" srcset="img/service-1-600.webp 600w, img/service-1-1200.webp 1200w" sizes="(max-width: 768px) 100vw, 600px"><img loading="lazy" decoding="async" class="img-fluid" src="img/service-1.jpg" alt="Servicio de Transporte Nacional INCARGO - Camión de carga en carretera"></picture>
                         </div>
-                        <h4 class="mb-3">Transporte Nacional</h4>
+                        <h2 class="h4 mb-3">Transporte Nacional</h2>
                         <p>Soluciones integrales de transporte terrestre en todo el territorio colombiano con seguridad y puntualidad.</p>
                         <a class="btn-slide mt-2" href=""><i class="fa fa-arrow-right"></i><span>Leer Más</span></a>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="0.2s">
+                <div class="col-md-6 col-lg-4">
                     <div class="service-item p-4">
                         <div class="overflow-hidden mb-4">
-                            <img class="img-fluid" src="img/service-2.jpg" alt="Transporte de Carga Masiva INCARGO - Flota de camiónes">
+                            <picture><source type="image/webp" srcset="img/service-2-600.webp 600w, img/service-2-1200.webp 1200w" sizes="(max-width: 768px) 100vw, 600px"><img loading="lazy" decoding="async" class="img-fluid" src="img/service-2.jpg" alt="Transporte de Carga Masiva INCARGO - Flota de camiónes"></picture>
                         </div>
-                        <h4 class="mb-3">Transporte de Carga Masiva</h4>
+                        <h2 class="h4 mb-3">Transporte de Carga Masiva</h2>
                         <p>Movilización de volúmenes importantes de mercancías utilizando el espacio y peso total permitido del vehículo con tecnología de monitoreo y seguridad.</p>
                         <a class="btn-slide mt-2" href=""><i class="fa fa-arrow-right"></i><span>Leer Más</span></a>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="0.3s">
+                <div class="col-md-6 col-lg-4">
                     <div class="service-item p-4">
                         <div class="overflow-hidden mb-4">
-                            <img class="img-fluid" src="img/service-3.jpg" alt="Bodegaje INCARGO">
+                            <picture><source type="image/webp" srcset="img/service-3-600.webp 600w, img/service-3-1200.webp 1200w" sizes="(max-width: 768px) 100vw, 600px"><img loading="lazy" decoding="async" class="img-fluid" src="img/service-3.jpg" alt="Bodegaje INCARGO"></picture>
                         </div>
-                        <h4 class="mb-3">Bodegaje</h4>
+                        <h2 class="h4 mb-3">Bodegaje</h2>
                         <p>Soluciones completas de almacenamiento con infraestructura moderna y sistemas de seguridad certificados.</p>
                         <a class="btn-slide mt-2" href=""><i class="fa fa-arrow-right"></i><span>Leer Más</span></a>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="0.4s">
+                <div class="col-md-6 col-lg-4">
                     <div class="service-item p-4">
                         <div class="overflow-hidden mb-4">
                             <img class="img-fluid" src="img/transportedevehiculos.jpeg" alt="Transporte de Vehículos INCARGO">
                         </div>
-                        <h4 class="mb-3">Transporte de Vehículos</h4>
+                        <h2 class="h4 mb-3">Transporte de Vehículos</h2>
                         <p>Servicio especializado en transporte de vehículos con unidades equipadas y personal capacitado.</p>
                         <a class="btn-slide mt-2" href=""><i class="fa fa-arrow-right"></i><span>Leer Más</span></a>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="0.5s">
+                <div class="col-md-6 col-lg-4">
                     <div class="service-item p-4">
                         <div class="overflow-hidden mb-4">
-                            <img class="img-fluid" src="img/service-5.jpg" alt="Transporte de Mercancía Peligrosa INCARGO - Camión especializado">
+                            <picture><source type="image/webp" srcset="img/service-5-600.webp 600w, img/service-5-1200.webp 1200w" sizes="(max-width: 768px) 100vw, 600px"><img loading="lazy" decoding="async" class="img-fluid" src="img/service-5.jpg" alt="Transporte de Mercancía Peligrosa INCARGO - Camión especializado"></picture>
                         </div>
-                        <h4 class="mb-3">Transporte Mercancía Peligrosa</h4>
+                        <h2 class="h4 mb-3">Transporte Mercancía Peligrosa</h2>
                         <p>Movimiento de mercancías peligrosas cumpliendo con el Decreto 1609 y todos los estándares de seguridad en el manejo de sustancias químicas.</p>
                         <a class="btn-slide mt-2" href=""><i class="fa fa-arrow-right"></i><span>Leer Más</span></a>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="0.6s">
+                <div class="col-md-6 col-lg-4">
                     <div class="service-item p-4">
                         <div class="overflow-hidden mb-4">
-                            <img class="img-fluid" src="img/service-6.jpg" alt="Manejo de Contenedores INCARGO - Transporte de contenedores marítimos">
+                            <picture><source type="image/webp" srcset="img/service-6-600.webp 600w, img/service-6-1200.webp 1200w" sizes="(max-width: 768px) 100vw, 600px"><img loading="lazy" decoding="async" class="img-fluid" src="img/service-6.jpg" alt="Manejo de Contenedores INCARGO - Transporte de contenedores marítimos"></picture>
                         </div>
-                        <h4 class="mb-3">Manejo de Contenedores</h4>
+                        <h2 class="h4 mb-3">Manejo de Contenedores</h2>
                         <p>Experto manejo de contenedores desde y hacia los principales puertos del país con seguimiento completo de su operación.</p>
                         <a class="btn-slide mt-2" href=""><i class="fa fa-arrow-right"></i><span>Leer Más</span></a>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="0.7s">
+                <div class="col-md-6 col-lg-4">
                     <div class="service-item p-4">
                         <div class="overflow-hidden mb-4">
-                            <img class="img-fluid" src="img/service-4.jpg" alt="Importaciones y Exportaciones INCARGO">
+                            <picture><source type="image/webp" srcset="img/service-4-600.webp 600w, img/service-4-1200.webp 1200w" sizes="(max-width: 768px) 100vw, 600px"><img loading="lazy" decoding="async" class="img-fluid" src="img/service-4.jpg" alt="Importaciones y Exportaciones INCARGO"></picture>
                         </div>
-                        <h4 class="mb-3">Importaciones y Exportaciones</h4>
+                        <h2 class="h4 mb-3">Importaciones y Exportaciones</h2>
                         <p>Transporte de mercancía desde los puertos hacia el interior y viceversa, con registro fotográfico y clasificación de mercancía.</p>
                         <a class="btn-slide mt-2" href=""><i class="fa fa-arrow-right"></i><span>Leer Más</span></a>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="0.8s">
+                <div class="col-md-6 col-lg-4">
                     <div class="service-item p-4">
                         <div class="overflow-hidden mb-4">
-                            <img class="img-fluid" src="img/service-5.jpg" alt="Carga Consolidada INCARGO">
+                            <picture><source type="image/webp" srcset="img/service-5-600.webp 600w, img/service-5-1200.webp 1200w" sizes="(max-width: 768px) 100vw, 600px"><img loading="lazy" decoding="async" class="img-fluid" src="img/service-5.jpg" alt="Carga Consolidada INCARGO"></picture>
                         </div>
-                        <h4 class="mb-3">Carga Consolidada</h4>
+                        <h2 class="h4 mb-3">Carga Consolidada</h2>
                         <p>Transporte de carga semimasiva o consolidada agrupando cargas según destino, ideal para cupos no completos con menor costo.</p>
                         <a class="btn-slide mt-2" href=""><i class="fa fa-arrow-right"></i><span>Leer Más</span></a>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="0.9s">
+                <div class="col-md-6 col-lg-4">
                     <div class="service-item p-4">
                         <div class="overflow-hidden mb-4">
-                            <img class="img-fluid" src="img/service-6.jpg" alt="Transporte Urbano INCARGO">
+                            <picture><source type="image/webp" srcset="img/service-6-600.webp 600w, img/service-6-1200.webp 1200w" sizes="(max-width: 768px) 100vw, 600px"><img loading="lazy" decoding="async" class="img-fluid" src="img/service-6.jpg" alt="Transporte Urbano INCARGO"></picture>
                         </div>
-                        <h4 class="mb-3">Transporte Urbano</h4>
+                        <h2 class="h4 mb-3">Transporte Urbano</h2>
                         <p>Servicio de transporte urbano en cualquier tipo de vehículo para entrega segura y oportuna, por día o demanda.</p>
                         <a class="btn-slide mt-2" href=""><i class="fa fa-arrow-right"></i><span>Leer Más</span></a>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4 wow fadeInUp" data-wow-delay="1.0s">
+                <div class="col-md-6 col-lg-4">
                     <div class="service-item p-4">
                         <div class="overflow-hidden mb-4">
-                            <img class="img-fluid" src="img/8.jpg" alt="Proyectos Logísticos INCARGO">
+                            <picture><source type="image/webp" srcset="img/8-600.webp 600w, img/8-1200.webp 1200w" sizes="(max-width: 768px) 100vw, 600px"><img loading="lazy" decoding="async" class="img-fluid" src="img/8.jpg" alt="Proyectos Logísticos INCARGO"></picture>
                         </div>
-                        <h4 class="mb-3">Proyectos Logísticos</h4>
+                        <h2 class="h4 mb-3">Proyectos Logísticos</h2>
                         <p>Diseño e implementación de soluciones logísticas personalizadas para proyectos de gran escala con asesoramiento especializado.</p>
                         <a class="btn-slide mt-2" href=""><i class="fa fa-arrow-right"></i><span>Leer Más</span></a>
                     </div>
@@ -249,11 +247,11 @@
 
     </main>
     <!-- Footer Start -->
-    <div class="container-fluid bg-dark text-light footer pt-5 wow fadeIn" data-wow-delay="0.1s" style="margin-top: 6rem;">
+    <div role="contentinfo" class="container-fluid bg-dark text-light footer pt-5" style="margin-top: 6rem;">
         <div class="container py-5">
             <div class="row g-5">
                 <div class="col-lg-3 col-md-6">
-                    <h4 class="text-light mb-4">Dirección</h4>
+                    <h2 class="h4 text-light mb-4">Dirección</h2>
                     <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>Calle 15 71-54, Medellín, Colombia</p>
                     <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>Calle 4c # 87-36, Cali - Valle del Cauca</p>
                     <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>Callé 8a # 32-25, Bogotá</p>
@@ -261,14 +259,14 @@
                     <p class="mb-2"><i class="fa fa-envelope me-3"></i>operaciones@incargo.co</p>
                     <p class="mb-2"><i class="fa fa-envelope me-3"></i>negocios@incargo.co</p>
                     <div class="d-flex pt-2">
-                        <a class="btn btn-outline-light btn-social" href=""><i class="fab fa-twitter"></i></a>
-                        <a class="btn btn-outline-light btn-social" href=""><i class="fab fa-facebook-f"></i></a>
-                        <a class="btn btn-outline-light btn-social" href=""><i class="fab fa-youtube"></i></a>
-                        <a class="btn btn-outline-light btn-social" href=""><i class="fab fa-linkedin-in"></i></a>
+                        <a aria-label="Twitter" class="btn btn-outline-light btn-social" href=""><i class="fab fa-twitter" aria-hidden="true"></i></a>
+                        <a aria-label="Facebook" class="btn btn-outline-light btn-social" href=""><i class="fab fa-facebook-f" aria-hidden="true"></i></a>
+                        <a aria-label="YouTube" class="btn btn-outline-light btn-social" href=""><i class="fab fa-youtube" aria-hidden="true"></i></a>
+                        <a aria-label="LinkedIn" class="btn btn-outline-light btn-social" href=""><i class="fab fa-linkedin-in" aria-hidden="true"></i></a>
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6">
-                    <h4 class="text-light mb-4">Servicios</h4>
+                    <h2 class="h4 text-light mb-4">Servicios</h2>
                     <a class="btn btn-link" href="service.html">Transporte Nacional</a>
                     <a class="btn btn-link" href="service.html">Carga de Mercancía</a>
                     <a class="btn btn-link" href="service.html">Bodegaje</a>
@@ -276,7 +274,7 @@
                     <a class="btn btn-link" href="service.html">Proyectos Logísticos</a>
                 </div>
                 <div class="col-lg-3 col-md-6">
-                    <h4 class="text-light mb-4">Enlaces Rápidos</h4>
+                    <h2 class="h4 text-light mb-4">Enlaces Rápidos</h2>
                     <a class="btn btn-link" href="about.html">Sobre Nosotros</a>
                     <a class="btn btn-link" href="contact.html">Contáctanos</a>
                     <a class="btn btn-link" href="service.html">Nuestros Servicios</a>
@@ -284,10 +282,10 @@
                     <a class="btn btn-link" href="faq.html">Soporte</a>
                 </div>
                 <div class="col-lg-3 col-md-6">
-                    <h4 class="text-light mb-4">Boletín</h4>
+                    <h2 class="h4 text-light mb-4">Boletín</h2>
                     <p>Suscríbete para recibir noticias y actualizaciones de INCARGO.</p>
                     <div class="position-relative mx-auto" style="max-width: 400px;">
-                        <input class="form-control border-0 w-100 py-3 ps-4 pe-5" type="text" placeholder="Tu correo">
+                        <input aria-label="Correo para el boletín" class="form-control border-0 w-100 py-3 ps-4 pe-5" type="email" placeholder="Tu correo">
                         <button type="button" class="btn btn-primary py-2 position-absolute top-0 end-0 mt-2 me-2">Suscribir</button>
                     </div>
                 </div>
@@ -310,22 +308,17 @@
 
 
     <!-- Back to Top -->
-    <a href="#" class="btn btn-lg btn-primary btn-lg-square rounded-0 back-to-top"><i class="bi bi-arrow-up"></i></a>
+    <aside class="inc-floaters" aria-label="Accesos rápidos"><a href="#" aria-label="Volver arriba" class="btn btn-lg btn-primary btn-lg-square rounded-0 back-to-top"><i class="fa fa-arrow-up" aria-hidden="true"></i></a></aside>
 
     <!-- WhatsApp Float Button -->
-    <a href="https://api.whatsapp.com/send?phone=573103809612&text=Hola%20INCARGO,%20quisiera%20información%20sobre%20sus%20servicios" class="whatsapp-float" target="_blank" rel="noopener noreferrer" title="Chatea con nosotros por WhatsApp">
+    <aside class="inc-floaters" aria-label="WhatsApp"><a href="https://api.whatsapp.com/send?phone=573103809612&text=Hola%20INCARGO,%20quisiera%20información%20sobre%20sus%20servicios" class="whatsapp-float" target="_blank" rel="noopener noreferrer" title="Chatea con nosotros por WhatsApp">
         <i class="fab fa-whatsapp"></i>
-    </a>
+    </a></aside>
 
 
     <!-- JavaScript Libraries -->
     <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="lib/wow/wow.min.js"></script>
-    <script src="lib/easing/easing.min.js"></script>
-    <script src="lib/waypoints/waypoints.min.js"></script>
-    <script src="lib/counterup/counterup.min.js"></script>
-    <script src="lib/owlcarousel/owl.carousel.min.js"></script>
 
     <!-- Template Javascript -->
     <script src="js/main.js"></script>

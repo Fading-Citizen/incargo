@@ -6,7 +6,7 @@
 
     <!-- Página Principal -->
     <url>
-        <loc>https://incargo.com/</loc>
+        <loc>https://www.incargo.co/</loc>
         <lastmod>2026-01-14</lastmod>
         <changefreq>weekly</changefreq>
         <priority>1.0</priority>
@@ -14,7 +14,7 @@
 
     <!-- Nosotros -->
     <url>
-        <loc>https://incargo.com/about.html</loc>
+        <loc>https://www.incargo.co/about</loc>
         <lastmod>2026-01-14</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.9</priority>
@@ -22,7 +22,7 @@
 
     <!-- Servicios -->
     <url>
-        <loc>https://incargo.com/service.html</loc>
+        <loc>https://www.incargo.co/service</loc>
         <lastmod>2026-01-14</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.9</priority>
@@ -30,7 +30,7 @@
 
     <!-- Galería -->
     <url>
-        <loc>https://incargo.com/gallery.html</loc>
+        <loc>https://www.incargo.co/gallery</loc>
         <lastmod>2026-01-14</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.7</priority>
@@ -38,7 +38,7 @@
 
     <!-- Cobertura -->
     <url>
-        <loc>https://incargo.com/coverage.html</loc>
+        <loc>https://www.incargo.co/coverage</loc>
         <lastmod>2026-01-14</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.8</priority>
@@ -46,7 +46,7 @@
 
     <!-- Cotizaciones -->
     <url>
-        <loc>https://incargo.com/quote.html</loc>
+        <loc>https://www.incargo.co/quote</loc>
         <lastmod>2026-01-14</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.9</priority>
@@ -54,7 +54,7 @@
 
     <!-- Blog/Noticias -->
     <url>
-        <loc>https://incargo.com/blog.html</loc>
+        <loc>https://www.incargo.co/blog</loc>
         <lastmod>2026-01-14</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.8</priority>
@@ -62,7 +62,7 @@
 
     <!-- Responsabilidad Social -->
     <url>
-        <loc>https://incargo.com/responsibility.html</loc>
+        <loc>https://www.incargo.co/responsibility</loc>
         <lastmod>2026-01-14</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.6</priority>
@@ -70,7 +70,7 @@
 
     <!-- Trabaja con Nosotros -->
     <url>
-        <loc>https://incargo.com/careers.html</loc>
+        <loc>https://www.incargo.co/careers</loc>
         <lastmod>2026-01-14</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.7</priority>
@@ -78,7 +78,7 @@
 
     <!-- FAQ -->
     <url>
-        <loc>https://incargo.com/faq.html</loc>
+        <loc>https://www.incargo.co/faq</loc>
         <lastmod>2026-01-14</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.7</priority>
@@ -86,7 +86,7 @@
 
     <!-- Políticas -->
     <url>
-        <loc>https://incargo.com/policies.html</loc>
+        <loc>https://www.incargo.co/policies</loc>
         <lastmod>2026-01-14</lastmod>
         <changefreq>yearly</changefreq>
         <priority>0.5</priority>
@@ -94,7 +94,7 @@
 
     <!-- Contacto -->
     <url>
-        <loc>https://incargo.com/contact.html</loc>
+        <loc>https://www.incargo.co/contact</loc>
         <lastmod>2026-01-14</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.8</priority>

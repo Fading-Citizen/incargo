@@ -12,8 +12,7 @@
     spinner();
     
     
-    // Initiate the wowjs
-    new WOW().init();
+    // WOW.js removed: content must stay visible without JS or with reduced motion.
 
 
     // Sticky Navbar
@@ -63,35 +62,18 @@
         }
     });
     $('.back-to-top').click(function () {
-        $('html, body').animate({scrollTop: 0}, 1500, 'easeInOutExpo');
+        var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        window.scrollTo({top: 0, behavior: reduce ? 'auto' : 'smooth'});
         return false;
     });
 
 
-    // Facts counter
-    $('[data-toggle="counter-up"]').counterUp({
-        delay: 10,
-        time: 2000
-    });
 
 
-    // Header carousel
-    $(".header-carousel").owlCarousel({
-        autoplay: false,
-        smartSpeed: 1500,
-        items: 1,
-        dots: false,
-        loop: true,
-        nav : true,
-        navText : [
-            '<i class="bi bi-chevron-left"></i>',
-            '<i class="bi bi-chevron-right"></i>'
-        ]
-    });
 
 
     // Testimonials carousel
-    $(".testimonial-carousel").owlCarousel({
+    if ($.fn.owlCarousel) $(".testimonial-carousel").owlCarousel({
         autoplay: false,
         smartSpeed: 1000,
         center: true,
