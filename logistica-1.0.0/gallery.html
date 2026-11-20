@@ -56,6 +56,7 @@
     <!-- Template Stylesheet -->
     <link href="css/style.css" rel="stylesheet">
     <link href="css/incargo-redesign.css" rel="stylesheet">
+    <link href="css/gallery-slider.css" rel="stylesheet">
     <script>document.addEventListener("DOMContentLoaded", function () {
       var spinner = document.getElementById("spinner"); if (spinner) spinner.classList.remove("show");
       var toggle = document.querySelector(".navbar-toggler"), menu = document.getElementById("navbarCollapse");
@@ -191,6 +192,30 @@
                 <h6 class="text-secondary text-uppercase">Nuestra Galería</h6>
                 <h1 class="mb-5">Conoce Nuestros Servicios</h1>
             </div>
+
+            <!-- Additional gallery carousel; original gallery grid retained below. -->
+            <section class="inc-gallery-slider" data-gallery-slider aria-labelledby="gallery-slider-title" aria-roledescription="carrusel">
+                <h2 id="gallery-slider-title">Imágenes de transporte</h2>
+                <div class="inc-gallery-track" id="gallery-slider-track" data-gallery-track tabindex="0" aria-label="Fotografías. Usa las flechas izquierda y derecha para cambiar de imagen.">
+                    <figure class="inc-gallery-slide" role="group" aria-roledescription="diapositiva" aria-label="1 de 3">
+                        <img src="img/servicios/11111111111.jpeg" alt="Preparación de carga sobre la plataforma de un camión" loading="lazy" decoding="async" width="1600" height="1200">
+                        <figcaption>Preparación de carga.</figcaption>
+                    </figure>
+                    <figure class="inc-gallery-slide" role="group" aria-roledescription="diapositiva" aria-label="2 de 3">
+                        <img src="img/servicios/123124.jpeg" alt="Mercancía embalada junto a un camión en una zona de carga" loading="lazy" decoding="async" width="720" height="1280">
+                        <figcaption>Mercancía lista para transportar.</figcaption>
+                    </figure>
+                    <figure class="inc-gallery-slide" role="group" aria-roledescription="diapositiva" aria-label="3 de 3">
+                        <img src="img/servicios/camion-remolque-noche.png" alt="Camión blanco con remolque cubierto estacionado durante la noche" loading="lazy" decoding="async" width="720" height="596">
+                        <figcaption>Camión con remolque durante la noche.</figcaption>
+                    </figure>
+                </div>
+                <div class="inc-gallery-controls" data-gallery-controls hidden>
+                    <span class="inc-gallery-position" data-gallery-position aria-live="polite" aria-atomic="true">1 / 3</span>
+                    <button type="button" data-gallery-prev aria-label="Imagen anterior" aria-controls="gallery-slider-track">←</button>
+                    <button type="button" data-gallery-next aria-label="Imagen siguiente" aria-controls="gallery-slider-track">→</button>
+                </div>
+            </section>
 
             <!-- Gallery Grid -->
             <div class="row g-4">
@@ -485,6 +510,8 @@
 
     <!-- Template Javascript -->
     <script src="js/main.js"></script>
+
+    <script src="js/gallery-slider.js" defer></script>
 
     <!-- Gallery Scripts -->
     <script>

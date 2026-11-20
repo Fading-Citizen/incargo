@@ -1,0 +1,30 @@
+name: Public gallery
+on:
+  push:
+    paths: ['logistica-1.0.0/**', 'qa-redesign/gallery-tests/**', '.github/workflows/public-gallery.yml']
+  pull_request:
+    paths: ['logistica-1.0.0/**', 'qa-redesign/gallery-tests/**', '.github/workflows/public-gallery.yml']
+permissions:
+  contents: read
+jobs:
+  gallery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --check logistica-1.0.0/js/gallery-slider.js && node --test qa-redesign/gallery-tests/static.test.cjs
+      - run: npm install --prefix /tmp/incargo-playwright --ignore-scripts --no-audit --no-fund @playwright/test@1.58.2
+      - run: /tmp/incargo-playwright/node_modules/.bin/playwright install --with-deps chromium
+      - name: Gallery in browser, no external calls
+        run: |
+          python3 -m http.server 8750 --directory logistica-1.0.0 >/tmp/incargo-gallery-server.log 2>&1 &
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:8750/gallery.html >/dev/null && break; sleep 1; done
+          PLAYWRIGHT_MODULE=/tmp/incargo-playwright/node_modules/@playwright/test node qa-redesign/gallery-tests/browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: incargo-gallery-evidence
+          path: /tmp/incargo-gallery-qa/

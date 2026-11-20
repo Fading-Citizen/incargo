@@ -1,0 +1,14 @@
+/* Scoped gallery addition; existing grid and home remain unchanged. */
+.inc-gallery-slider { margin: 0 auto 3rem; max-width: 920px; }
+.inc-gallery-slider h2 { font-size: clamp(1.25rem, 3vw, 1.65rem); margin-bottom: 1rem; }
+.inc-gallery-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; border-radius: 12px; background: #111c26; }
+.inc-gallery-track:focus-visible, .inc-gallery-controls button:focus-visible { outline: 3px solid #e77817; outline-offset: 4px; }
+.inc-gallery-slide { flex: 0 0 100%; min-width: 0; margin: 0; scroll-snap-align: start; }
+.inc-gallery-slide img { display: block; width: 100%; height: clamp(240px, 48vw, 420px); object-fit: contain; }
+.inc-gallery-slide figcaption { padding: 12px 18px; color: #fff; background: #111c26; font-size: .9rem; line-height: 1.5; }
+.inc-gallery-controls { align-items: center; justify-content: flex-end; gap: 12px; margin-top: 12px; }
+.inc-gallery-controls:not([hidden]) { display: flex; }
+.inc-gallery-controls button { width: 44px; height: 44px; border: 1px solid #b8c2cb; border-radius: 50%; background: #fff; color: #172839; font-size: 22px; cursor: pointer; }
+.inc-gallery-controls button:hover { background: #eff3f6; }
+.inc-gallery-position { margin-right: auto; font-size: .9rem; color: #435466; }
+@media(max-width: 575px) { .inc-gallery-slide figcaption { padding: 12px; font-size: .85rem; } }
